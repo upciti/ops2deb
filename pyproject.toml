@@ -39,6 +39,7 @@ pytest-cov = "*"
 flake8 = "*"
 black = ">=20.8b1"
 isort = "^5.0.5"
+safety = "*"
 
 [tool.taskipy.tasks]
 check = """
