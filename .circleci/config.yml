@@ -1,0 +1,69 @@
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.5
+
+jobs:
+  test:
+    working_directory: ~/repo
+    parameters:
+      python-version:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python-version >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - venv-<< parameters.python-version >>-{{ checksum "poetry.lock" }}
+      - run:
+          name: Install Dependencies
+          command: |
+            pip install poetry --user --upgrade
+            poetry config virtualenvs.in-project true
+            poetry install
+      - run:
+          name: Create Test Results Dir
+          command: mkdir -p test-reports/safety test-reports/mypy test-reports/pytest
+
+      - run:
+          name: Black
+          command: poetry run black . --check
+
+      - run:
+          name: isort
+          command: poetry run isort . --check
+
+      - run:
+          name: Safety
+          command: poetry export -f requirements.txt | poetry run safety check --stdin
+
+      - run:
+          name: mypy
+          command: poetry run mypy src --junit-xml=test-reports/mypy/results.xml
+
+      - run:
+          name: Unit Tests
+          command: |
+            poetry run pytest --junitxml=test-reports/pytest/results.xml --cov=src tests
+            poetry run coverage xml
+      - codecov/upload:
+          file: coverage.xml
+
+      - store_test_results:
+          path: test-reports
+
+      - run:
+          command: poetry run pip uninstall debops -y
+          name: Uninstall Package
+      - save_cache:
+          key: venv-<< parameters.python-version >>-{{ checksum "poetry.lock" }}
+          paths:
+            - ./.venv
+
+workflows:
+  tests:
+    jobs:
+      - test:
+          matrix:
+            parameters:
+              python-version: ["3.8"]

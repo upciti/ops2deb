@@ -1,0 +1,73 @@
+[tool.poetry]
+name = "debops"
+version = "0.1"
+description = "Build debian packages"
+repository = "https://gitlab.internal.upciti.com/devops/debops"
+license = "MIT"
+keywords=["ASGI", "Client", "HTTP"]
+authors = ["Upciti <support@upciti.com>"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Code Generators",
+    "Typing :: Typed",
+]
+readme = "README.md"
+packages = [
+    {include = "debops", from  = "src"},
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+httpx = ">=0.15.4,<0.17.0"
+typer = "*"
+pyyaml = "*"
+pydantic = "*"
+aiofiles = "*"
+semver = "3.0.0-dev.2"
+jinja2 = "*"
+
+[tool.poetry.scripts]
+debops = "debops.cli:main"
+
+[tool.poetry.dev-dependencies]
+starlette = "*"
+pytest = "*"
+mypy = "*"
+taskipy = "*"
+pytest-cov = "*"
+flake8 = "*"
+black = ">=20.8b1"
+isort = "^5.0.5"
+
+[tool.taskipy.tasks]
+check = """
+isort .\
+ && black .\
+ && flake8 src\
+ && mypy src\
+ && pytest --cov src tests\
+"""
+
+[tool.black]
+line-length = 90
+target_version = ['py38']
+exclude = '''
+(
+  /(
+    | \.git
+    | \.venv
+    | \.mypy_cache
+    | openapi_python_client/templates
+    | tests/test_templates
+  )/
+)
+'''
+
+[tool.isort]
+line_length = 90
+profile = "black"
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"

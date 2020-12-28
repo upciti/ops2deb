@@ -1,0 +1,12 @@
+Source: {{ package.name }}
+Section: python
+Priority: optional
+Maintainer: debops <debops@upciti.com>
+Build-Depends: debhelper
+Standards-Version: 3.9.6
+
+Package: {{ package.name }}
+Architecture: {{ package.arch }}
+Depends: {{ package.depends|sort|join(', ') }}
+Description: {{ package.summary }}
+  {{ package.description | indent(2) }}
