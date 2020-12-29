@@ -11,7 +11,7 @@ from .fetcher import fetch
 from .parser import Blueprint
 from .settings import settings
 
-environment = Environment(loader=PackageLoader("debops", "templates"))
+environment = Environment(loader=PackageLoader("ops2deb", "templates"))
 
 
 class SourcePackage:
@@ -20,8 +20,8 @@ class SourcePackage:
         self.output_directory = (settings.work_dir / self.directory_name).absolute()
         self.debian_directory = self.output_directory / "debian"
         self.src_directory = self.output_directory / "src"
-        self.tmp_directory = Path(f"/tmp/debops_{self.directory_name}")
-        self.debian_version = f"{blueprint.version}-{blueprint.revision}~debops"
+        self.tmp_directory = Path(f"/tmp/ops2deb_{self.directory_name}")
+        self.debian_version = f"{blueprint.version}-{blueprint.revision}~ops2deb"
         self.blueprint = blueprint.render(self.src_directory)
 
     def render_tpl(self, template_name: str) -> None:

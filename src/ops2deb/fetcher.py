@@ -9,7 +9,7 @@ import typer
 
 from .parser import RemoteFile
 
-_cache_path: Path = Path("/tmp/debops_cache")
+_cache_path: Path = Path("/tmp/ops2deb_cache")
 
 
 def purge_cache() -> None:

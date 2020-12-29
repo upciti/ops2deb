@@ -5,7 +5,7 @@ import yaml
 from jinja2 import Environment, PackageLoader
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
 
-environment = Environment(loader=PackageLoader("debops", "templates"))
+environment = Environment(loader=PackageLoader("ops2deb", "templates"))
 Architecture = Literal["all", "amd64", "armhf"]
 
 

@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "debops"
+name = "ops2deb"
 version = "0.1"
 description = "Build debian packages"
-repository = "https://gitlab.internal.upciti.com/devops/debops"
+repository = "https://github.com/upciti/ops2deb"
 license = "MIT"
 keywords=["ASGI", "Client", "HTTP"]
 authors = ["Upciti <support@upciti.com>"]
@@ -14,7 +14,7 @@ classifiers = [
 ]
 readme = "README.md"
 packages = [
-    {include = "debops", from  = "src"},
+    {include = "ops2deb", from  = "src"},
 ]
 
 [tool.poetry.dependencies]
@@ -28,7 +28,7 @@ semver = "3.0.0-dev.2"
 jinja2 = "*"
 
 [tool.poetry.scripts]
-debops = "debops.cli:main"
+ops2deb = "ops2deb.cli:main"
 
 [tool.poetry.dev-dependencies]
 starlette = "*"
@@ -59,7 +59,7 @@ exclude = '''
     | \.git
     | \.venv
     | \.mypy_cache
-    | src/debops/templates
+    | src/ops2deb/templates
   )/
 )
 '''

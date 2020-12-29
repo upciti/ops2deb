@@ -5,7 +5,7 @@ from starlette.applications import Starlette
 from starlette.responses import Response
 from typer.testing import CliRunner
 
-from debops.cli import app
+from ops2deb.cli import app
 
 runner = CliRunner()
 
@@ -52,12 +52,12 @@ async def great_app(request):
     )
 
 
-def test_debops(tmp_path):
+def test_ops2deb(tmp_path):
     # generate dummy source package
-    config = tmp_path / "debops.yml"
+    config = tmp_path / "ops2deb.yml"
     config.write_text(dummy_config)
     result = runner.invoke(
-        app, ["-w", str(tmp_path), "-c", str(tmp_path / "debops.yml"), "generate"]
+        app, ["-w", str(tmp_path), "-c", str(tmp_path / "ops2deb.yml"), "generate"]
     )
 
     print(result.stdout)
@@ -70,10 +70,10 @@ def test_debops(tmp_path):
 
     print(result.stdout)
     assert result.exit_code == 0
-    assert (tmp_path / "mypackage_1.0.0-1~debops_all.deb").is_file()
+    assert (tmp_path / "mypackage_1.0.0-1~ops2deb_all.deb").is_file()
 
     # check if dummy source package has new releases
-    result = runner.invoke(app, ["-v", "-c", str(tmp_path / "debops.yml"), "update"])
+    result = runner.invoke(app, ["-v", "-c", str(tmp_path / "ops2deb.yml"), "update"])
 
     print(result.stdout)
     assert result.exit_code == 0

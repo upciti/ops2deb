@@ -38,7 +38,7 @@ def build_packages() -> None:
         error(e)
 
 
-@app.command(help="Clear debops download cache")
+@app.command(help="Clear ops2deb download cache")
 def purge() -> None:
     purge_cache()
 
