@@ -4,7 +4,7 @@ version = "0.1.1"
 description = "Build debian packages"
 repository = "https://github.com/upciti/ops2deb"
 license = "MIT"
-keywords=["ASGI", "Client", "HTTP"]
+keywords=["Debian", "DevOps", "Automation", "Kubernetes", "APT"]
 authors = ["Upciti <support@upciti.com>"]
 classifiers = [
     "Development Status :: 3 - Alpha",
