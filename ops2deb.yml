@@ -41,14 +41,14 @@
     - mv linux-amd64/helm {{src}}/usr/bin/
 
 - name: istioctl
-  version: 1.6.13
+  version: 1.8.1
   depends:
     - kubectl
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
   fetch:
     url: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
-    sha256: 34ee63458f2cb65d8e0b9a2d67f386f13eb1c8c8456f72a02f389380d86bb2f4
+    sha256: cb39fb7fc8d99b172aefc7dba197588839d15ce682f515684548ec21301e13ff
   script:
     - install -d {{src}}/opt/istio
     - mv * {{src}}/opt/istio/
@@ -80,3 +80,21 @@
     sha256: d8aaea6c07401f9e32bc09f8fb601458cbf2d5d8d196e4e06935358e76d46d05
   script:
     - install -m 755 helmfile_linux_amd64 {{src}}/usr/bin/helmfile
+
+- name: minikube
+  version: 1.16.0
+  summary: Quickly set up a local Kubernetes cluster
+  description: |
+    Focus on helping application developers and new Kubernetes users.
+    Supports the latest Kubernetes release (+6 previous minor versions)
+    Cross-platform (Linux, macOS, Windows)
+    Deploy as a VM, a container, or on bare-metal
+    Multiple container runtimes (CRI-O, containerd, docker)
+    Docker API endpoint for blazing fast image pushes
+    Advanced features such as LoadBalancer, filesystem mounts, and FeatureGates
+    Addons for easily installed Kubernetes applications
+  fetch:
+    url: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
+    sha256: af29a48b2d79075f9d57be3a28724eef2cd628bb87283ed58dd72cbe1f8967c4
+  script:
+    - install -m 755 minikube-linux-amd64 {{src}}/usr/bin/minikube

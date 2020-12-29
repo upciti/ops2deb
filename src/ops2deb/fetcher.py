@@ -29,7 +29,7 @@ async def run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Process
 
 
 async def untar(file_path: Path) -> None:
-    proc = await run("/usr/bin/tar", "zxf", str(file_path), cwd=file_path.parent)
+    proc = await run("/bin/tar", "zxf", str(file_path), cwd=file_path.parent)
     if proc.returncode:
         raise RuntimeError(f"Failed to untar archive {file_path.name}")
     else:

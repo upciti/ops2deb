@@ -24,8 +24,8 @@ Written in YAML and composed of a list of package blueprints. A blueprint is def
 | `arch`        | Package architecture                                                                           | `amd64`      |
 | `revision`    | Package revistion                                                                              | `1`          |
 | `summary`     | Package short description                                                                      |              |
-| `description` | Package full description                                                                       | `Null`       |
-| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz` archives are extracted automatically   |              |
+| `description` | Package full description                                                                       |              |
+| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz` archives are extracted automatically   | `Null`       |
 | `script`      | A list of build instructions templated with jinja2 and intepreted with the default `shell`     |              |
 
 Example: 
@@ -49,7 +49,7 @@ Example:
 * To build debian packages with `ops2deb build` you need the following packages on your host:
 
 ```shell
-sudo apt install fakeroot debhelper
+sudo apt install build-essential fakeroot debhelper
 ```
 
 ## Usage example

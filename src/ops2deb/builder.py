@@ -43,15 +43,17 @@ async def build_package(cwd: Path) -> Optional[int]:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    await proc.communicate()
+    stdout, stderr = await proc.communicate()
 
-    if settings.verbose:
-        if proc.stdout:
-            typer.secho((await proc.stdout.read()).decode(), fg=typer.colors.BRIGHT_BLACK)
-        if proc.stderr:
-            typer.secho((await proc.stderr.read()).decode(), fg=typer.colors.BRIGHT_BLACK)
     if proc.returncode:
         typer.secho(f"Failed to build package in {str(cwd)}", fg=typer.colors.RED)
+    else:
+        typer.secho(f"* Successfully built {str(cwd)}", fg=typer.colors.WHITE)
+    if settings.verbose:
+        if stdout:
+            typer.secho(stdout.decode(), fg=typer.colors.BRIGHT_BLACK)
+        if stderr:
+            typer.secho(stderr.decode(), fg=typer.colors.BRIGHT_BLACK)
 
     return proc.returncode
 
