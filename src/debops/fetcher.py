@@ -2,7 +2,6 @@ import asyncio
 import hashlib
 import shutil
 from pathlib import Path
-from typing import Callable, Optional
 
 import aiofiles
 import httpx
@@ -11,13 +10,6 @@ import typer
 from .parser import RemoteFile
 
 _cache_path: Path = Path("/tmp/debops_cache")
-_app: Optional[Callable] = None  # type: ignore
-
-
-def set_app(app: Callable) -> None:  # type: ignore
-    """ ASGI to use with httpx for tests """
-    global _app
-    _app = app
 
 
 def purge_cache() -> None:
@@ -60,7 +52,7 @@ async def sha256(file_name: str, expected_hash: str) -> str:
 
 async def download(url: str, file_path: Path) -> None:
     tmp_path = f"{file_path}.part"
-    async with httpx.AsyncClient(app=_app) as client:
+    async with httpx.AsyncClient() as client:
         async with client.stream("GET", url) as r:
             # FIXME: https://github.com/Tinche/aiofiles/issues/91
             async with aiofiles.open(tmp_path, "wb") as f:  # type: ignore

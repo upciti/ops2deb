@@ -41,7 +41,7 @@ Example:
 * To build debian packages with `debops build` you need the following packages on your host:
 
 ```shell
-sudo apt install build-essential fakeroot devscripts
+sudo apt install fakeroot debhelper
 ```
 
 ## Usage example
