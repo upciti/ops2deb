@@ -1,3 +1,11 @@
+[![upciti](https://circleci.com/gh/upciti/debops.svg?style=svg)](https://circleci.com/gh/upciti/debops)
+[![codecov](https://codecov.io/gh/upciti/debops/branch/main/graph/badge.svg)](https://codecov.io/gh/upciti/debops)
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
+[![Generic badge](https://img.shields.io/badge/type_checked-mypy-informational.svg)](https://mypy.readthedocs.io/en/stable/introduction.html)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/debops.svg)](https://pypi.python.org/pypi/debops/)
+[![Downloads](https://static.pepy.tech/personalized-badge/debops?period=total&units=international_system&left_color=blue&right_color=green&left_text=Downloads)](https://pepy.tech/project/debops)
+
 # debops
 
 Are you tired of checking if your favorite devops tools are up-to-date? Are you using a debian based GNU/Linux distribution? 
