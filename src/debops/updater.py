@@ -14,13 +14,11 @@ async def _search(
     blueprint: Blueprint,
     version: Version,
     bump_patch: bool = False,
-    remove_zero: bool = False,
 ) -> Version:
     new_version = version
     while True:
         version = version.bump_patch() if bump_patch else version.bump_minor()
-        str_version = f"{version.major}.{version.minor}" if remove_zero else str(version)
-        if (remote_file := blueprint.render(version=str_version).fetch) is None:
+        if (remote_file := blueprint.render(version=str(version)).fetch) is None:
             break
         url = remote_file.url
         if settings.verbose:
@@ -37,10 +35,8 @@ async def _search(
 async def _update(blueprint: Blueprint) -> None:
     async with httpx.AsyncClient() as client:
         old_version = version = Version.parse(blueprint.version)
-        version = await _search(client, blueprint, version, False, False)
-        if old_version == version:
-            version = await _search(client, blueprint, version, False, True)
-        version = await _search(client, blueprint, version, True, False)
+        version = await _search(client, blueprint, version, False)
+        version = await _search(client, blueprint, version, True)
         if version != old_version:
             typer.secho(
                 f"{blueprint.name} can be bumped from {old_version} to {version}",

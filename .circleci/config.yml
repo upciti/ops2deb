@@ -18,6 +18,7 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
+            sudo apt-get update -yq && sudo apt-get install -y --no-install-recommends debhelper fakeroot
             pip install poetry --user --upgrade
             poetry config virtualenvs.in-project true
             poetry install

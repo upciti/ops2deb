@@ -1,11 +1,11 @@
 import base64
 
+import httpx
 from starlette.applications import Starlette
 from starlette.responses import Response
 from typer.testing import CliRunner
 
 from debops.cli import app
-from debops.fetcher import set_app
 
 runner = CliRunner()
 
@@ -18,24 +18,32 @@ dummy_tar_gz_file = (
 
 dummy_config = """
 - name: mypackage
-  version: 1.0
+  version: 1.0.0
   arch: all
   summary: Great package
   description: |
     A detailed description of the great package 
   fetch:
-    url: http://testserver/great-app.tar.gz
+    url: http://testserver/{{version}}/great-app.tar.gz
     sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
   script:
-    - install -d {{src}}/usr/bin/
     - mv great-app {{src}}/usr/bin/great-app
 """
 
 starlette_app = Starlette(debug=True)
-set_app(starlette_app)
+AsyncClient = httpx.AsyncClient
 
 
-@starlette_app.route("/great-app.tar.gz")
+def async_client_mock(**kwargs):
+    return AsyncClient(app=starlette_app, **kwargs)
+
+
+httpx.AsyncClient = async_client_mock
+
+
+@starlette_app.route("/1.0.0/great-app.tar.gz")
+@starlette_app.route("/1.1.0/great-app.tar.gz")
+@starlette_app.route("/1.1.1/great-app.tar.gz")
 async def great_app(request):
     return Response(
         base64.b64decode(dummy_tar_gz_file),
@@ -54,11 +62,18 @@ def test_debops(tmp_path):
 
     print(result.stdout)
     assert result.exit_code == 0
-    assert (tmp_path / "mypackage_1.0_all/src/usr/bin/great-app").is_file()
-    assert (tmp_path / "mypackage_1.0_all/debian/control").is_file()
+    assert (tmp_path / "mypackage_1.0.0_all/src/usr/bin/great-app").is_file()
+    assert (tmp_path / "mypackage_1.0.0_all/debian/control").is_file()
 
     # build dummy source package
-    result = runner.invoke(app, ["-w", str(tmp_path), "build"])
+    result = runner.invoke(app, ["-v", "-w", str(tmp_path), "build"])
 
+    print(result.stdout)
     assert result.exit_code == 0
-    assert (tmp_path / "mypackage_1.0-1~debops_all.deb").is_file()
+    assert (tmp_path / "mypackage_1.0.0-1~debops_all.deb").is_file()
+
+    # check if dummy source package has new releases
+    result = runner.invoke(app, ["-v", "-c", str(tmp_path / "debops.yml"), "update"])
+
+    print(result.stdout)
+    assert result.exit_code == 0
