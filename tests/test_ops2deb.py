@@ -1,11 +1,16 @@
 import base64
+from copy import deepcopy
 
 import httpx
+import yaml
+import pytest
 from starlette.applications import Starlette
 from starlette.responses import Response
 from typer.testing import CliRunner
 
 from ops2deb.cli import app
+from ops2deb.parser import Configuration
+from ops2deb.generator import generate
 
 runner = CliRunner()
 
@@ -30,15 +35,8 @@ dummy_config = """
     - mv great-app {{src}}/usr/bin/great-app
 """
 
+dummy_config_dict = yaml.safe_load(dummy_config)
 starlette_app = Starlette(debug=True)
-AsyncClient = httpx.AsyncClient
-
-
-def async_client_mock(**kwargs):
-    return AsyncClient(app=starlette_app, **kwargs)
-
-
-httpx.AsyncClient = async_client_mock
 
 
 @starlette_app.route("/1.0.0/great-app.tar.gz")
@@ -52,28 +50,56 @@ async def great_app(request):
     )
 
 
-def test_ops2deb(tmp_path):
+@pytest.fixture
+def mock_httpx_client():
+    real_async_client = httpx.AsyncClient
+
+    def async_client_mock(**kwargs):
+        return real_async_client(app=starlette_app, **kwargs)
+    httpx.AsyncClient = async_client_mock
+    yield
+    httpx.AsyncClient = real_async_client
+
+
+def test_ops2deb(tmp_path, mock_httpx_client):
+    # purge download cache
+    result = runner.invoke(
+        app, ["purge"]
+    )
+    print(result.stdout)
+    assert result.exit_code == 0
+
     # generate dummy source package
     config = tmp_path / "ops2deb.yml"
     config.write_text(dummy_config)
     result = runner.invoke(
         app, ["-w", str(tmp_path), "-c", str(tmp_path / "ops2deb.yml"), "generate"]
     )
-
     print(result.stdout)
     assert result.exit_code == 0
     assert (tmp_path / "mypackage_1.0.0_all/src/usr/bin/great-app").is_file()
     assert (tmp_path / "mypackage_1.0.0_all/debian/control").is_file()
 
+    # re-generate, but this time nothing should be downloaded
+    result = runner.invoke(
+        app, ["-w", str(tmp_path), "-c", str(tmp_path / "ops2deb.yml"), "generate"]
+    )
+    assert "Downloading" not in result.stdout
+
     # build dummy source package
     result = runner.invoke(app, ["-v", "-w", str(tmp_path), "build"])
-
     print(result.stdout)
     assert result.exit_code == 0
     assert (tmp_path / "mypackage_1.0.0-1~ops2deb_all.deb").is_file()
 
     # check if dummy source package has new releases
     result = runner.invoke(app, ["-v", "-c", str(tmp_path / "ops2deb.yml"), "update"])
-
     print(result.stdout)
     assert result.exit_code == 0
+
+
+def test_invalid_file_checksum():
+    config = deepcopy(dummy_config_dict)
+    config[0]['fetch']['sha256'] = "deadbeef"
+    with pytest.raises(ValueError, match="Wrong checksum for file great-app.tar.gz."):
+        generate(Configuration.parse_obj(config).__root__)

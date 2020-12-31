@@ -5,12 +5,10 @@ from typing import NoReturn
 
 import typer
 
-from .builder import build
-from .fetcher import purge_cache
-from .generator import generate
+from . import builder, generator, updater
 from .parser import parse
+from .fetcher import purge_cache
 from .settings import settings
-from .updater import update
 
 app = typer.Typer()
 
@@ -22,18 +20,18 @@ def error(exception: Exception) -> NoReturn:
     sys.exit(1)
 
 
-@app.command(name="generate", help="Generate debian source packages")
-def generate_packages() -> None:
+@app.command(help="Generate debian source packages")
+def generate() -> None:
     try:
-        generate(parse(settings.config).__root__)
+        generator.generate(parse(settings.config).__root__)
     except Exception as e:
         error(e)
 
 
-@app.command(name="build", help="Build debian source packages")
-def build_packages() -> None:
+@app.command(help="Build debian source packages")
+def build() -> None:
     try:
-        build(settings.work_dir)
+        builder.build(settings.work_dir)
     except Exception as e:
         error(e)
 
@@ -43,10 +41,10 @@ def purge() -> None:
     purge_cache()
 
 
-@app.command(name="update", help="Look for new application releases")
-def update_applications() -> None:
+@app.command(help="Look for new application releases")
+def update() -> None:
     try:
-        update(parse(settings.config).__root__)
+        updater.update(parse(settings.config).__root__)
     except Exception as e:
         error(e)
 

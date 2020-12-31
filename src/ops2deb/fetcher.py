@@ -36,18 +36,13 @@ async def untar(file_path: Path) -> None:
         file_path.unlink()
 
 
-async def sha256(file_name: str, expected_hash: str) -> str:
+async def sha256(file_path: Path) -> str:
     sha256_hash = hashlib.sha256()
-    with (_cache_path / file_name).open("rb") as f:
+    with file_path.open("rb") as f:
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
             await asyncio.sleep(0)
-    if (digest := sha256_hash.hexdigest()) != expected_hash:
-        raise ValueError(
-            f"Wrong checksum for file {file_name}. "
-            f"Expected {expected_hash}, got {digest}."
-        )
-    return digest
+    return sha256_hash.hexdigest()
 
 
 async def download(url: str, file_path: Path) -> None:
@@ -68,15 +63,22 @@ def log(msg: str) -> None:
 
 async def fetch(remote_file: RemoteFile, output_path: Path) -> None:
     _cache_path.mkdir(exist_ok=True)
-    file_name = remote_file.url.split("/")[-1]
+    url_hash = hashlib.sha256(remote_file.url.encode()).hexdigest()
+    file_name = remote_file.url.split('/')[-1]
+    file_path = _cache_path / f"{url_hash}_{file_name}"
 
-    if not (_cache_path / file_name).is_file():
+    if not file_path.is_file():
         log(f"Downloading {file_name}...")
-        await download(remote_file.url, _cache_path / file_name)
+        await download(remote_file.url, file_path)
 
     log(f"Verifying {file_name}...")
-    await sha256(file_name, remote_file.sha256)
-    shutil.copy(_cache_path / file_name, output_path / file_name)
+    digest = await sha256(file_path)
+    if digest != remote_file.sha256:
+        raise ValueError(
+            f"Wrong checksum for file {file_name}. "
+            f"Expected {remote_file.sha256}, got {digest}."
+        )
+    shutil.copy(file_path, output_path / file_name)
 
     if file_name.endswith(".tar.gz"):
         log(f"Extracting {file_name}...")
