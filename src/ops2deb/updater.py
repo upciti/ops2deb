@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import Any, List, Optional
 
 import httpx
 import typer
@@ -32,19 +32,21 @@ async def _search(
     return new_version
 
 
-async def _update(blueprint: Blueprint) -> None:
+async def _update(blueprint: Blueprint) -> Optional[Version]:
     async with httpx.AsyncClient() as client:
         old_version = version = Version.parse(blueprint.version)
         version = await _search(client, blueprint, version, False)
         version = await _search(client, blueprint, version, True)
         if version != old_version:
             typer.secho(
-                f"{blueprint.name} can be bumped from {old_version} to {version}",
+                f"* {blueprint.name} can be bumped from {old_version} to {version}",
                 fg=typer.colors.WHITE,
             )
+            return version
+        return None
 
 
-def update(blueprints: List[Blueprint]) -> None:
+def update(blueprints: List[Blueprint]) -> bool:
     typer.secho("Looking for new releases...", fg=typer.colors.BLUE, bold=True)
 
     tasks = []
@@ -53,13 +55,15 @@ def update(blueprints: List[Blueprint]) -> None:
             continue
         if not Version.isvalid(blueprint.version):
             typer.secho(
-                f"{blueprint.name} is not using semantic versioning",
+                f"* {blueprint.name} is not using semantic versioning",
                 fg=typer.colors.YELLOW,
             )
             continue
         tasks.append(_update(blueprint))
 
-    async def _update_all() -> None:
-        await asyncio.gather(*tasks)
+    # FIXME: return type
+    async def _update_all() -> Any:
+        return await asyncio.gather(*tasks)
 
-    asyncio.run(_update_all())
+    results = asyncio.run(_update_all())
+    return bool([True for r in results if r is not None])

@@ -2,15 +2,15 @@ import base64
 from copy import deepcopy
 
 import httpx
-import yaml
 import pytest
+import yaml
 from starlette.applications import Starlette
 from starlette.responses import Response
 from typer.testing import CliRunner
 
 from ops2deb.cli import app
-from ops2deb.parser import Configuration
 from ops2deb.generator import generate
+from ops2deb.parser import Configuration
 
 runner = CliRunner()
 
@@ -56,6 +56,7 @@ def mock_httpx_client():
 
     def async_client_mock(**kwargs):
         return real_async_client(app=starlette_app, **kwargs)
+
     httpx.AsyncClient = async_client_mock
     yield
     httpx.AsyncClient = real_async_client
@@ -63,9 +64,7 @@ def mock_httpx_client():
 
 def test_ops2deb(tmp_path, mock_httpx_client):
     # purge download cache
-    result = runner.invoke(
-        app, ["purge"]
-    )
+    result = runner.invoke(app, ["purge"])
     print(result.stdout)
     assert result.exit_code == 0
 
@@ -95,11 +94,11 @@ def test_ops2deb(tmp_path, mock_httpx_client):
     # check if dummy source package has new releases
     result = runner.invoke(app, ["-v", "-c", str(tmp_path / "ops2deb.yml"), "update"])
     print(result.stdout)
-    assert result.exit_code == 0
+    assert result.exit_code == 1
 
 
 def test_invalid_file_checksum():
     config = deepcopy(dummy_config_dict)
-    config[0]['fetch']['sha256'] = "deadbeef"
+    config[0]["fetch"]["sha256"] = "deadbeef"
     with pytest.raises(ValueError, match="Wrong checksum for file great-app.tar.gz."):
         generate(Configuration.parse_obj(config).__root__)

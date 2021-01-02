@@ -6,8 +6,8 @@ from typing import NoReturn
 import typer
 
 from . import builder, generator, updater
-from .parser import parse
 from .fetcher import purge_cache
+from .parser import parse
 from .settings import settings
 
 app = typer.Typer()
@@ -44,7 +44,7 @@ def purge() -> None:
 @app.command(help="Look for new application releases")
 def update() -> None:
     try:
-        updater.update(parse(settings.config).__root__)
+        sys.exit(updater.update(parse(settings.config).__root__))
     except Exception as e:
         error(e)
 

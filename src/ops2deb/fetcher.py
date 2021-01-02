@@ -64,7 +64,7 @@ def log(msg: str) -> None:
 async def fetch(remote_file: RemoteFile, output_path: Path) -> None:
     _cache_path.mkdir(exist_ok=True)
     url_hash = hashlib.sha256(remote_file.url.encode()).hexdigest()
-    file_name = remote_file.url.split('/')[-1]
+    file_name = remote_file.url.split("/")[-1]
     file_path = _cache_path / f"{url_hash}_{file_name}"
 
     if not file_path.is_file():
