@@ -1,15 +1,24 @@
 import asyncio
-from typing import Any, List, Optional
+from pathlib import Path
+from typing import Any, Optional, Tuple
 
 import httpx
 import typer
+from pydantic import BaseModel
 from semver.version import Version
 
-from .parser import Blueprint
+from .fetcher import download
+from .parser import Blueprint, parse
 from .settings import settings
 
 
-async def _search(
+class NewRelease(BaseModel):
+    file_path: Path
+    sha256: str
+    version: str
+
+
+async def _bump_and_poll(
     client: httpx.AsyncClient,
     blueprint: Blueprint,
     version: Version,
@@ -32,38 +41,62 @@ async def _search(
     return new_version
 
 
-async def _update(blueprint: Blueprint) -> Optional[Version]:
+async def _find_latest_release(
+    blueprint: Blueprint,
+) -> Tuple[Blueprint, Optional[NewRelease]]:
+
+    if blueprint.fetch is None:
+        return blueprint, None
+
+    if not Version.isvalid(blueprint.version):
+        typer.secho(
+            f"* {blueprint.name} is not using semantic versioning",
+            fg=typer.colors.YELLOW,
+        )
+        return blueprint, None
+
+    old_version = version = Version.parse(blueprint.version)
     async with httpx.AsyncClient() as client:
-        old_version = version = Version.parse(blueprint.version)
-        version = await _search(client, blueprint, version, False)
-        version = await _search(client, blueprint, version, True)
-        if version != old_version:
-            typer.secho(
-                f"* {blueprint.name} can be bumped from {old_version} to {version}",
-                fg=typer.colors.WHITE,
-            )
-            return version
-        return None
+        version = await _bump_and_poll(client, blueprint, version, False)
+        version = await _bump_and_poll(client, blueprint, version, True)
+
+    if version != old_version:
+        typer.secho(
+            f"* {blueprint.name} can be bumped from {old_version} to {version}",
+            fg=typer.colors.WHITE,
+        )
+
+        file_path, sha256 = await download(
+            blueprint.render(version=str(version)).fetch.url  # type: ignore
+        )
+        return blueprint, NewRelease(
+            file_path=file_path,
+            sha256=sha256,
+            version=str(version),
+        )
+
+    return blueprint, None
 
 
-def update(blueprints: List[Blueprint]) -> bool:
+def update(config: Path, dry_run: bool = False) -> bool:
+    blueprints = parse(config).__root__
+
     typer.secho("Looking for new releases...", fg=typer.colors.BLUE, bold=True)
 
-    tasks = []
-    for blueprint in blueprints:
-        if blueprint.fetch is None:
-            continue
-        if not Version.isvalid(blueprint.version):
-            typer.secho(
-                f"* {blueprint.name} is not using semantic versioning",
-                fg=typer.colors.YELLOW,
-            )
-            continue
-        tasks.append(_update(blueprint))
+    async def run_tasks() -> Any:
+        return await asyncio.gather(*[_find_latest_release(b) for b in blueprints])
 
-    # FIXME: return type
-    async def _update_all() -> Any:
-        return await asyncio.gather(*tasks)
+    results = asyncio.run(run_tasks())
 
-    results = asyncio.run(_update_all())
-    return bool([True for r in results if r is not None])
+    raw_config = config.read_text()
+    for blueprint, release in results:
+        if release is not None:
+            # FIXME: what if two blueprint have the same version?
+            raw_config = raw_config.replace(blueprint.version, release.version)
+            raw_config = raw_config.replace(blueprint.fetch.sha256, release.sha256)
+
+    if dry_run is False:
+        config.write_text(raw_config)
+        typer.secho("Configuration file updated", fg=typer.colors.BLUE, bold=True)
+
+    return bool([True for b, r in results if r is not None])

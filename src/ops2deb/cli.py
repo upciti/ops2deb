@@ -44,7 +44,7 @@ def purge() -> None:
 @app.command(help="Look for new application releases")
 def update() -> None:
     try:
-        sys.exit(updater.update(parse(settings.config).__root__))
+        sys.exit(updater.update(settings.config))
     except Exception as e:
         error(e)
 

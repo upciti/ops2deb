@@ -42,7 +42,11 @@ class SourcePackage:
 
     async def fetch(self) -> None:
         if (remote_file := self.blueprint.fetch) is not None:
-            await fetch(remote_file, self.tmp_directory)
+            await fetch(
+                url=remote_file.url,
+                expected_hash=remote_file.sha256,
+                save_path=self.tmp_directory,
+            )
 
     def generate(self) -> None:
         typer.secho(
