@@ -10,7 +10,7 @@
     - mv kubectl {{src}}/usr/bin/
 
 - name: kustomize
-  version: 3.8.8
+  version: 3.8.9
   depends:
     - kubectl
   summary: Kubernetes native configuration management
@@ -22,7 +22,7 @@
     and it's like sed, in that it emits edited text.
   fetch:
     url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
-    sha256: 175938206f23956ec18dac3da0816ea5b5b485a8493a839da278faac82e3c303
+    sha256: 0829ad1df8b25c70e6e686638c83bdf0987d25a2b357ccca5cf80a5877f3674d
   script:
     - mv kustomize {{src}}/usr/bin/
 
@@ -65,7 +65,7 @@
     - install -m 755 kubeseal-linux-amd64 {{src}}/usr/bin/kubeseal
 
 - name: helmfile
-  version: 0.135.0
+  version: 0.136.0
   depends:
     - kubectl
     - helm
@@ -77,7 +77,7 @@
     - Periodically sync to avoid skew in environments.
   fetch:
     url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_amd64
-    sha256: d8aaea6c07401f9e32bc09f8fb601458cbf2d5d8d196e4e06935358e76d46d05
+    sha256: 90d22349f816ffb46cee1ea55f1a7838deb9c42aac89186930c7850586e3639f
   script:
     - install -m 755 helmfile_linux_amd64 {{src}}/usr/bin/helmfile
 
