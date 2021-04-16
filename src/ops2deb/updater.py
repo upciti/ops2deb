@@ -34,7 +34,8 @@ async def _bump_and_poll(
             typer.secho(f"Trying {url}", fg=typer.colors.BRIGHT_BLACK)
         response = await client.head(url)
         status = response.status_code
-        if status >= 500 or status == 404:
+        # FIXME: retry once on 500
+        if status >= 400:
             break
         else:
             new_version = version
