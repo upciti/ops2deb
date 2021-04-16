@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ops2deb"
-version = "0.3.0"
+version = "0.4.0"
 description = "Build debian packages"
 repository = "https://github.com/upciti/ops2deb"
 license = "MIT"
