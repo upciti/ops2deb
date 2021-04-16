@@ -21,6 +21,13 @@ dummy_tar_gz_file = (
     b"u1BwAAAAAAAAAAgD96AGPmdYsAKAAA"
 )
 
+dummy_zip_file = (
+    b"UEsDBBQACAAIAFVdkFIAAAAAAAAAAAAAAAAJACAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1"
+    b"eAsAAQToAwAABOgDAAADAFBLBwgAAAAAAgAAAAAAAABQSwECFAMUAAgACABVXZBSAAAAAAIAAAAA"
+    b"AAAACQAgAAAAAAAAAAAAtIEAAAAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1eAsAAQToAwAA"
+    b"BOgDAABQSwUGAAAAAAEAAQBXAAAAWQAAAAAA"
+)
+
 dummy_config = """
 - name: mypackage
   version: 1.0.0
@@ -33,6 +40,19 @@ dummy_config = """
     sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
   script:
     - mv great-app {{src}}/usr/bin/great-app
+
+- name: mypackage2
+  version: 1.0.0
+  arch: all
+  summary: Great package
+  description: |
+    A detailed description of the great package
+  fetch:
+    url: http://testserver/{{version}}/great-app.zip
+    sha256: 5d5e3a6e8449040d6a25082675295e1aa44b3ea474166c24090d27054a58627a
+  script:
+    - ls
+    - mv great-app {{src}}/usr/bin/great-app
 """
 
 dummy_config_dict = yaml.safe_load(dummy_config)
@@ -42,11 +62,20 @@ starlette_app = Starlette(debug=True)
 @starlette_app.route("/1.0.0/great-app.tar.gz")
 @starlette_app.route("/1.1.0/great-app.tar.gz")
 @starlette_app.route("/1.1.1/great-app.tar.gz")
-async def great_app(request):
+async def download_tar_gz(request):
     return Response(
         base64.b64decode(dummy_tar_gz_file),
         status_code=200,
         media_type="application/x-gzip",
+    )
+
+
+@starlette_app.route("/1.0.0/great-app.zip")
+async def download_zip(request):
+    return Response(
+        base64.b64decode(dummy_zip_file),
+        status_code=200,
+        media_type="application/zip",
     )
 
 
@@ -72,7 +101,7 @@ def test_ops2deb(tmp_path, mock_httpx_client):
     config = tmp_path / "ops2deb.yml"
     config.write_text(dummy_config)
     result = runner.invoke(
-        app, ["-w", str(tmp_path), "-c", str(tmp_path / "ops2deb.yml"), "generate"]
+        app, ["-v", "-w", str(tmp_path), "-c", str(tmp_path / "ops2deb.yml"), "generate"]
     )
     print(result.stdout)
     assert result.exit_code == 0

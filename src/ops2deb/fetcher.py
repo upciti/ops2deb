@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import aiofiles
 import httpx
@@ -31,12 +31,24 @@ async def run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Process
     return proc
 
 
-async def untar(file_path: Path) -> None:
-    proc = await run("/bin/tar", "zxf", str(file_path), cwd=file_path.parent)
-    if proc.returncode:
-        raise RuntimeError(f"Failed to untar archive {file_path.name}")
-    else:
-        file_path.unlink()
+async def extract(file_path: Path) -> None:
+    commands = [
+        ({".tar.gz", ".tar.xz", ".tar"}, ["/bin/tar", "xf", str(file_path)]),
+        ({".zip"}, ["/bin/unzip", str(file_path)]),
+    ]
+    selected_command: Optional[List[str]] = None
+    for extensions, command in commands:
+        for extension in extensions:
+            if file_path.name.endswith(extension):
+                selected_command = command
+                break
+    if selected_command is not None:
+        log(f"Extracting {file_path.name}...")
+        proc = await run(*selected_command, cwd=file_path.parent)
+        if proc.returncode:
+            raise RuntimeError(f"Failed to extract archive {file_path.name}")
+        else:
+            file_path.unlink()
 
 
 async def compute_checksum(file_path: Path) -> str:
@@ -83,9 +95,5 @@ async def fetch(url: str, expected_hash: str, save_path: Path) -> None:
     file_name = url.split("/")[-1]
     file_path, _ = await download(url, expected_hash)
     shutil.copy(file_path, save_path / file_name)
-
-    if file_name.endswith(".tar.gz"):
-        log(f"Extracting {file_name}...")
-        await untar(save_path / file_name)
-
+    await extract(save_path / file_name)
     log(f"Done with {file_name}")
