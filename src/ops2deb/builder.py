@@ -28,7 +28,7 @@ def parse_debian_control(cwd: Path) -> Dict[str, str]:
 
 
 async def build_package(cwd: Path) -> Optional[int]:
-    """ Run dpkg-buildpackage in specified path. """
+    """Run dpkg-buildpackage in specified path."""
     args = ["-us", "-uc"]
     arch = parse_debian_control(cwd)["Architecture"]
     if arch != "all":
