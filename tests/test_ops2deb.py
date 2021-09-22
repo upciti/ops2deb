@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import httpx
 import pytest
-import yaml
+import ruamel.yaml
 from starlette.applications import Starlette
 from starlette.responses import Response
 from typer.testing import CliRunner
@@ -12,6 +12,7 @@ from ops2deb.cli import app
 from ops2deb.generator import generate
 from ops2deb.parser import Configuration
 
+yaml = ruamel.yaml.YAML(typ="safe")
 runner = CliRunner()
 
 # b64 encoded tar.gz with an empty "great-app" file
@@ -55,7 +56,7 @@ dummy_config = """
     - mv great-app {{src}}/usr/bin/great-app
 """
 
-dummy_config_dict = yaml.safe_load(dummy_config)
+dummy_config_dict = yaml.load(dummy_config)
 starlette_app = Starlette(debug=True)
 
 
@@ -123,7 +124,7 @@ def test_ops2deb(tmp_path, mock_httpx_client):
     # check if dummy source package has new releases
     result = runner.invoke(app, ["-v", "-c", str(tmp_path / "ops2deb.yml"), "update"])
     print(result.stdout)
-    assert result.exit_code == 1
+    assert result.exit_code == 0
 
 
 def test_invalid_file_checksum():

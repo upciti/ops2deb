@@ -44,7 +44,7 @@ def purge() -> None:
 @app.command(help="Look for new application releases")
 def update(dry_run: bool = typer.Option(False, "--dry-run", "-d")) -> None:
     try:
-        sys.exit(updater.update(settings.config, dry_run))
+        sys.exit(not updater.update(settings.config, dry_run))
     except Exception as e:
         error(e)
 

@@ -21,11 +21,11 @@ packages = [
 python = "^3.8"
 httpx = ">=0.15.4,<0.19.0"
 typer = "*"
-pyyaml = "*"
 pydantic = "*"
 aiofiles = "*"
 semver = "3.0.0-dev.2"
 jinja2 = "*"
+"ruamel.yaml" = "^0.17.16"
 
 [tool.poetry.scripts]
 ops2deb = "ops2deb.cli:main"
@@ -43,7 +43,7 @@ safety = "*"
 
 [tool.taskipy.tasks]
 check = """
-isort .\
+isort src tests\
  && black .\
  && flake8 src\
  && mypy src\

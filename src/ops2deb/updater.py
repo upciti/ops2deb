@@ -1,14 +1,15 @@
 import asyncio
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import httpx
+import ruamel.yaml
 import typer
 from pydantic import BaseModel
 from semver.version import Version
 
 from .fetcher import download
-from .parser import Blueprint, parse
+from .parser import Blueprint, load, validate
 from .settings import settings
 
 
@@ -44,17 +45,14 @@ async def _bump_and_poll(
 
 async def _find_latest_release(
     blueprint: Blueprint,
-) -> Tuple[Blueprint, Optional[NewRelease]]:
-
-    if blueprint.fetch is None:
-        return blueprint, None
+) -> Optional[NewRelease]:
 
     if not Version.isvalid(blueprint.version):
         typer.secho(
             f"* {blueprint.name} is not using semantic versioning",
             fg=typer.colors.YELLOW,
         )
-        return blueprint, None
+        return None
 
     old_version = version = Version.parse(blueprint.version)
     async with httpx.AsyncClient() as client:
@@ -70,34 +68,46 @@ async def _find_latest_release(
         file_path, sha256 = await download(
             blueprint.render(version=str(version)).fetch.url  # type: ignore
         )
-        return blueprint, NewRelease(
+        return NewRelease(
             file_path=file_path,
             sha256=sha256,
             version=str(version),
         )
 
-    return blueprint, None
+    return None
 
 
-def update(config: Path, dry_run: bool = False) -> bool:
-    blueprints = parse(config).__root__
+async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> bool:
+    blueprint = Blueprint.parse_obj(blueprint_dict)
+    if blueprint.fetch is None:
+        return True
+
+    release = await _find_latest_release(blueprint)
+    if release is None:
+        return False
+
+    blueprint_dict["version"] = release.version
+    blueprint_dict["fetch"]["sha256"] = release.sha256
+    return True
+
+
+def update(configuration_path: Path, dry_run: bool = False) -> bool:
+    yaml = ruamel.yaml.YAML()
+    configuration_dict = load(configuration_path, yaml)
+    validate(configuration_dict)
 
     typer.secho("Looking for new releases...", fg=typer.colors.BLUE, bold=True)
 
     async def run_tasks() -> Any:
-        return await asyncio.gather(*[_find_latest_release(b) for b in blueprints])
+        return await asyncio.gather(
+            *[_update_blueprint_dict(b) for b in configuration_dict]
+        )
 
     results = asyncio.run(run_tasks())
 
-    raw_config = config.read_text()
-    for blueprint, release in results:
-        if release is not None:
-            # FIXME: what if two blueprint have the same version?
-            raw_config = raw_config.replace(blueprint.version, release.version)
-            raw_config = raw_config.replace(blueprint.fetch.sha256, release.sha256)
-
     if dry_run is False:
-        config.write_text(raw_config)
+        with configuration_path.open("w") as output:
+            yaml.dump(configuration_dict, output)
         typer.secho("Configuration file updated", fg=typer.colors.BLUE, bold=True)
 
-    return bool([True for b, r in results if r is not None])
+    return bool(list(results))
