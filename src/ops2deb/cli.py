@@ -54,10 +54,12 @@ def args_cb(
     verbose: bool = typer.Option(settings.verbose, "--verbose", "-v"),
     config: Path = typer.Option(settings.config, "--config", "-c"),
     work_dir: Path = typer.Option(settings.work_dir, "--work-dir", "-w"),
+    cache_dir: Path = typer.Option(settings.cache_dir, "--cache-dir"),
 ) -> None:
     settings.verbose = verbose
     settings.config = config
     settings.work_dir = work_dir
+    settings.cache_dir = cache_dir
 
 
 def main() -> None:

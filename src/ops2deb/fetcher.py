@@ -8,7 +8,7 @@ import aiofiles
 import httpx
 import typer
 
-_cache_path: Path = Path("/tmp/ops2deb_cache")
+from .settings import settings
 
 
 def log(msg: str) -> None:
@@ -16,7 +16,7 @@ def log(msg: str) -> None:
 
 
 def purge_cache() -> None:
-    shutil.rmtree(_cache_path, ignore_errors=True)
+    shutil.rmtree(settings.cache_dir, ignore_errors=True)
 
 
 async def run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Process:
@@ -61,10 +61,10 @@ async def compute_checksum(file_path: Path) -> str:
 
 
 async def download(url: str, expected_hash: Optional[str] = None) -> Tuple[Path, str]:
-    _cache_path.mkdir(exist_ok=True)
+    settings.cache_dir.mkdir(exist_ok=True)
     url_hash = hashlib.sha256(url.encode()).hexdigest()
     file_name = url.split("/")[-1]
-    file_path = _cache_path / f"{url_hash}_{file_name}"
+    file_path = settings.cache_dir / f"{url_hash}_{file_name}"
     tmp_path = f"{file_path}.part"
 
     if not file_path.is_file():
