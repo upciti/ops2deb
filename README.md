@@ -45,7 +45,7 @@ Example:
 
 ## Dependencies
 
-* Python >= 3.8
+* Python >= 3.9
 * To build debian packages with `ops2deb build` you need the following packages on your host:
 
 ```shell
