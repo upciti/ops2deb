@@ -1,3 +1,4 @@
+import shutil
 import sys
 import traceback
 from pathlib import Path
@@ -5,63 +6,101 @@ from typing import NoReturn
 
 import typer
 
-from . import builder, generator, updater
+from . import builder, fetcher, generator, logger, updater
 from .exceptions import Ops2debError
-from .fetcher import purge_cache
 from .parser import parse
-from .settings import settings
+
+DEFAULT_EXIT_CODE = 1
+
+OPTION_CONFIGURATION = typer.Option(
+    "ops2deb.yml",
+    "--config",
+    "-c",
+    envvar="OPS2DEB_CONFIG",
+)
+OPTION_CACHE_DIRECTORY: Path = typer.Option(
+    fetcher.DEFAULT_CACHE_DIRECTORY,
+    "--cache-dir",
+    envvar="OPS2DEB_CACHE_DIR",
+)
+OPTION_WORK_DIRECTORY: Path = typer.Option(
+    "output",
+    "--work-dir",
+    "-w",
+    envvar="OPS2DEB_WORK_DIR",
+)
+
+# Common options
+OPTION_EXIT_CODE: int = typer.Option(
+    DEFAULT_EXIT_CODE,
+    "--exit-code",
+    "-e",
+    envvar="OPS2DEB_EXIT_CODE",
+)
+OPTION_VERBOSE: bool = typer.Option(
+    False,
+    "--verbose",
+    "-v",
+    envvar="OPS2DEB_VERBOSE",
+)
 
 app = typer.Typer()
+exit_code = DEFAULT_EXIT_CODE
 
 
 def error(exception: Exception) -> NoReturn:
-    typer.secho(str(exception), fg=typer.colors.RED, err=True)
-    if settings.verbose:
-        typer.secho(traceback.format_exc(), fg=typer.colors.BRIGHT_BLACK, err=True)
-    sys.exit(1)
+    logger.error(str(exception))
+    logger.debug(traceback.format_exc())
+    sys.exit(exit_code)
 
 
 @app.command(help="Generate debian source packages")
-def generate() -> None:
+def generate(
+    ctx: typer.Context,
+    configuration_path: Path = OPTION_CONFIGURATION,
+    work_directory: Path = OPTION_WORK_DIRECTORY,
+    cache_directory: Path = OPTION_CACHE_DIRECTORY,
+) -> None:
+    fetcher.set_cache_directory(cache_directory)
     try:
-        if generator.generate(parse(settings.config).__root__) is False:
-            sys.exit(1)
+        generator.generate(parse(configuration_path).__root__, work_directory)
     except Ops2debError as e:
         error(e)
 
 
 @app.command(help="Build debian source packages")
-def build() -> None:
+def build(work_directory: Path = OPTION_WORK_DIRECTORY) -> None:
     try:
-        builder.build(settings.work_dir)
+        builder.build(work_directory)
     except Ops2debError as e:
         error(e)
 
 
 @app.command(help="Clear ops2deb download cache")
-def purge() -> None:
-    purge_cache()
+def purge(cache_directory: Path = OPTION_CACHE_DIRECTORY) -> None:
+    shutil.rmtree(cache_directory, ignore_errors=True)
 
 
 @app.command(help="Look for new application releases")
-def update(dry_run: bool = typer.Option(False, "--dry-run", "-d")) -> None:
+def update(
+    config: Path = OPTION_CONFIGURATION,
+    cache_directory: Path = OPTION_CACHE_DIRECTORY,
+    dry_run: bool = typer.Option(False, "--dry-run", "-d"),
+) -> None:
+    fetcher.set_cache_directory(cache_directory)
     try:
-        sys.exit(not updater.update(settings.config, dry_run))
+        sys.exit(not updater.update(config, dry_run))
     except Ops2debError as e:
         error(e)
 
 
 @app.callback()
-def args_cb(
-    verbose: bool = typer.Option(settings.verbose, "--verbose", "-v"),
-    config: Path = typer.Option(settings.config, "--config", "-c"),
-    work_dir: Path = typer.Option(settings.work_dir, "--work-dir", "-w"),
-    cache_dir: Path = typer.Option(settings.cache_dir, "--cache-dir"),
-) -> None:
-    settings.verbose = verbose
-    settings.config = config
-    settings.work_dir = work_dir
-    settings.cache_dir = cache_dir
+def args_cb(verbose: bool = OPTION_VERBOSE, code: int = OPTION_EXIT_CODE) -> None:
+    global exit_code
+    exit_code = code
+    if exit_code > 255 or exit_code < 0:
+        raise typer.BadParameter("Invalid exit code")
+    logger.enable_debug(verbose)
 
 
 def main() -> None:

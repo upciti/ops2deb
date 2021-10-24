@@ -4,21 +4,26 @@ import subprocess
 from pathlib import Path
 from typing import Any, List
 
-import typer
 from jinja2 import Environment, PackageLoader
 
-from .exceptions import FetchError, GenerateError
+from . import logger
+from .exceptions import FetchError, GenerateError, GenerateScriptError
 from .fetcher import fetch
 from .parser import Blueprint
-from .settings import settings
 
-environment = Environment(loader=PackageLoader("ops2deb", "templates"))
+_environment = Environment(loader=PackageLoader("ops2deb", "templates"))
+
+
+def _format_command_output(output: str) -> str:
+    lines = output.splitlines()
+    output = "\n  ".join([line for line in lines])
+    return "> " + output
 
 
 class SourcePackage:
-    def __init__(self, blueprint: Blueprint):
+    def __init__(self, blueprint: Blueprint, work_directory: Path):
         self.directory_name = f"{blueprint.name}_{blueprint.version}_{blueprint.arch}"
-        self.output_directory = (settings.work_dir / self.directory_name).absolute()
+        self.output_directory = (work_directory / self.directory_name).absolute()
         self.debian_directory = self.output_directory / "debian"
         self.src_directory = self.output_directory / "src"
         self.tmp_directory = Path(f"/tmp/ops2deb_{self.directory_name}")
@@ -26,7 +31,7 @@ class SourcePackage:
         self.blueprint = blueprint.render(self.src_directory)
 
     def render_tpl(self, template_name: str) -> None:
-        template = environment.get_template(f"{template_name}.j2")
+        template = _environment.get_template(f"{template_name}.j2")
         package = self.blueprint.dict(exclude={"fetch", "script"})
         package.update({"version": self.debian_version})
         template.stream(package=package).dump(str(self.debian_directory / template_name))
@@ -51,24 +56,20 @@ class SourcePackage:
         return self
 
     def generate(self) -> None:
-        typer.secho(
-            f"Generating source package {self.directory_name}...",
-            fg=typer.colors.BLUE,
-            bold=True,
-        )
+        logger.title(f"Generating source package {self.directory_name}...")
 
         # run script
         for line in self.blueprint.script:
-            typer.secho(f"$ {line}", fg=typer.colors.WHITE)
+            logger.info(f"$ {line}")
             result = subprocess.run(
                 line, shell=True, cwd=self.tmp_directory, capture_output=True
             )
             if stdout := result.stdout.decode():
-                typer.secho(stdout.strip(), fg=typer.colors.GREEN)
+                logger.info(_format_command_output(stdout))
             if stderr := result.stderr.decode():
-                typer.secho(stderr.strip(), fg=typer.colors.RED)
+                logger.error(_format_command_output(stderr))
             if result.returncode:
-                raise GenerateError("Script failed")
+                raise GenerateScriptError
 
         # render debian/* files
         for template in [
@@ -82,8 +83,8 @@ class SourcePackage:
             self.render_tpl(template)
 
 
-def generate(blueprints: List[Blueprint]) -> bool:
-    packages = [SourcePackage(b) for b in blueprints]
+def generate(blueprints: List[Blueprint], work_directory: Path) -> None:
+    packages = [SourcePackage(b, work_directory) for b in blueprints]
 
     # make sure we generate source packages in a clean environment
     # without artifacts from previous builds
@@ -92,7 +93,7 @@ def generate(blueprints: List[Blueprint]) -> bool:
 
     # run fetch instructions (download, verify, extract) in parallel
     file_count = sum([1 for b in blueprints if b.fetch is not None])
-    typer.secho(f"Fetching {file_count} files...", fg=typer.colors.BLUE, bold=True)
+    logger.title(f"Fetching {file_count} files...")
 
     async def fetch_all() -> Any:
         return await asyncio.gather(
@@ -111,4 +112,5 @@ def generate(blueprints: List[Blueprint]) -> bool:
     for package in packages:
         package.generate()
 
-    return not bool(errors)
+    if errors:
+        raise GenerateError

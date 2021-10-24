@@ -1,4 +1,5 @@
 import base64
+import os
 from typing import Optional
 
 import httpx
@@ -133,22 +134,18 @@ mock_configuration_with_archive_not_found = """
 
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path):
-    def _invoke(*extra_args, configuration: Optional[str] = None):
+    def _invoke(*args, configuration: Optional[str] = None):
         configuration_path = tmp_path / "ops2deb.yml"
         configuration_path.write_text(configuration or mock_valid_configuration)
-        return runner.invoke(
-            app,
-            [
-                "--verbose",
-                "--work-dir",
-                str(tmp_path),
-                "--cache-dir",
-                str(tmp_path / "cache"),
-                "--config",
-                str(tmp_path / "ops2deb.yml"),
-            ]
-            + [*extra_args],
+        os.environ.update(
+            {
+                "OPS2DEB_VERBOSE": "1",
+                "OPS2DEB_WORK_DIR": str(tmp_path),
+                "OPS2DEB_CACHE_DIR": str(tmp_path / "cache"),
+                "OPS2DEB_CONFIG": str(configuration_path),
+            }
         )
+        return runner.invoke(app, [*args])
 
     return _invoke
 

@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 import typer
 
-from .settings import settings
+from . import logger
 
 
 def parse_debian_control(cwd: Path) -> Dict[str, str]:
@@ -49,11 +49,10 @@ async def build_package(cwd: Path) -> Optional[int]:
         typer.secho(f"Failed to build package in {str(cwd)}", fg=typer.colors.RED)
     else:
         typer.secho(f"* Successfully built {str(cwd)}", fg=typer.colors.WHITE)
-    if settings.verbose:
         if stdout:
-            typer.secho(stdout.decode(), fg=typer.colors.BRIGHT_BLACK)
+            logger.debug(stdout.decode())
         if stderr:
-            typer.secho(stderr.decode(), fg=typer.colors.BRIGHT_BLACK)
+            logger.debug(stderr.decode())
 
     return proc.returncode
 
@@ -65,7 +64,7 @@ def build(path: Path, workers: int = 4) -> None:
     :param workers: Number of threads to run in parallel
     """
 
-    typer.secho("Building source packages...", fg=typer.colors.BLUE, bold=True)
+    logger.title("Building source packages...")
 
     paths = []
     for path in path.iterdir():

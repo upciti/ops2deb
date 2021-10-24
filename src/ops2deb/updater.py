@@ -4,13 +4,12 @@ from typing import Any, Dict, Optional
 
 import httpx
 import ruamel.yaml
-import typer
 from pydantic import BaseModel
 from semver.version import Version
 
+from . import logger
 from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
-from .settings import settings
 
 
 class NewRelease(BaseModel):
@@ -31,8 +30,7 @@ async def _bump_and_poll(
         if (remote_file := blueprint.render(version=str(version)).fetch) is None:
             break
         url = remote_file.url
-        if settings.verbose:
-            typer.secho(f"Trying {url}", fg=typer.colors.BRIGHT_BLACK)
+        logger.debug(f"Trying {url}")
         response = await client.head(url)
         status = response.status_code
         # FIXME: retry once on 500
@@ -48,10 +46,7 @@ async def _find_latest_release(
 ) -> Optional[NewRelease]:
 
     if not Version.isvalid(blueprint.version):
-        typer.secho(
-            f"* {blueprint.name} is not using semantic versioning",
-            fg=typer.colors.YELLOW,
-        )
+        logger.warning(f"{blueprint.name} is not using semantic versioning")
         return None
 
     old_version = version = Version.parse(blueprint.version)
@@ -60,10 +55,7 @@ async def _find_latest_release(
         version = await _bump_and_poll(client, blueprint, version, True)
 
     if version != old_version:
-        typer.secho(
-            f"* {blueprint.name} can be bumped from {old_version} to {version}",
-            fg=typer.colors.WHITE,
-        )
+        logger.info(f"{blueprint.name} can be bumped from {old_version} to {version}")
 
         file_path, sha256 = await download_file_to_cache(
             blueprint.render(version=str(version)).fetch.url  # type: ignore
@@ -98,7 +90,7 @@ def update(configuration_path: Path, dry_run: bool = False) -> bool:
     configuration_dict = load(configuration_path, yaml)
     validate(configuration_dict)
 
-    typer.secho("Looking for new releases...", fg=typer.colors.BLUE, bold=True)
+    logger.title("Looking for new releases...")
 
     async def run_tasks() -> Any:
         return await asyncio.gather(
@@ -110,6 +102,6 @@ def update(configuration_path: Path, dry_run: bool = False) -> bool:
     if dry_run is False:
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
-        typer.secho("Configuration file updated", fg=typer.colors.BLUE, bold=True)
+        logger.info("Configuration file updated")
 
     return bool(list(results))

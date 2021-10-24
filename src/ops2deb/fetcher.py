@@ -6,26 +6,26 @@ from typing import List, Optional, Tuple
 
 import aiofiles
 import httpx
-import typer
 
+from . import logger
 from .exceptions import FetchError
-from .settings import settings
+
+DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
+_cache_directory = DEFAULT_CACHE_DIRECTORY
 
 
-def log(msg: str) -> None:
-    typer.secho(f"* {msg}", fg=typer.colors.WHITE)
+def set_cache_directory(path: Path) -> None:
+    """Directory in which files are downloaded"""
+    global _cache_directory
+    _cache_directory = path
 
 
-def error(msg: str) -> None:
-    typer.secho(f"* {msg}", fg=typer.colors.RED)
+def _error(msg: str) -> None:
+    logger.error(msg)
     raise FetchError(msg)
 
 
-def purge_cache() -> None:
-    shutil.rmtree(settings.cache_dir, ignore_errors=True)
-
-
-async def run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Process:
+async def _run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Process:
     proc = await asyncio.create_subprocess_exec(
         program,
         *args,
@@ -49,10 +49,10 @@ async def _extract_and_delete_archive(file_path: Path) -> None:
                 selected_command = command
                 break
     if selected_command is not None:
-        log(f"Extracting {file_path.name}...")
-        proc = await run(*selected_command, cwd=file_path.parent)
+        logger.info(f"Extracting {file_path.name}...")
+        proc = await _run(*selected_command, cwd=file_path.parent)
         if proc.returncode:
-            error(f"Failed to extract archive {file_path.name}")
+            _error(f"Failed to extract archive {file_path.name}")
         else:
             file_path.unlink()
 
@@ -70,7 +70,9 @@ async def _download_file(url: str, file_path: str) -> None:
     async with httpx.AsyncClient() as client:
         async with client.stream("GET", url) as r:
             if 400 <= r.status_code < 600:
-                error(f"Failed to download {url}. Server responded with {r.status_code}.")
+                _error(
+                    f"Failed to download {url}. Server responded with {r.status_code}."
+                )
             # FIXME: https://github.com/Tinche/aiofiles/issues/91
             async with aiofiles.open(file_path, "wb") as f:  # type: ignore
                 async for chunk in r.aiter_bytes():
@@ -80,26 +82,26 @@ async def _download_file(url: str, file_path: str) -> None:
 async def download_file_to_cache(
     url: str, expected_hash: Optional[str] = None
 ) -> Tuple[Path, str]:
-    settings.cache_dir.mkdir(exist_ok=True)
+    _cache_directory.mkdir(exist_ok=True)
     url_hash = hashlib.sha256(url.encode()).hexdigest()
     file_name = url.split("/")[-1]
-    file_path = settings.cache_dir / f"{url_hash}_{file_name}"
+    file_path = _cache_directory / f"{url_hash}_{file_name}"
     tmp_path = f"{file_path}.part"
 
     if not file_path.is_file():
-        log(f"Downloading {file_name}...")
+        logger.info(f"Downloading {file_name}...")
         try:
             await _download_file(url, tmp_path)
         except httpx.HTTPError as e:
-            error(f"Failed to download {url}: {str(e)}")
+            _error(f"Failed to download {url}. {str(e)}")
         shutil.move(tmp_path, file_path)
 
-    log(f"Computing checksum for {file_name}...")
+    logger.info(f"Computing checksum for {file_name}...")
     computed_hash = await _compute_file_checksum(file_path)
 
     if expected_hash is not None:
         if computed_hash != expected_hash:
-            error(
+            _error(
                 f"Wrong checksum for file {file_name}. "
                 f"Expected {expected_hash}, got {computed_hash}."
             )
@@ -112,4 +114,4 @@ async def fetch(url: str, expected_hash: str, save_path: Path) -> None:
     file_path, _ = await download_file_to_cache(url, expected_hash)
     shutil.copy(file_path, save_path / file_name)
     await _extract_and_delete_archive(save_path / file_name)
-    log(f"Done with {file_name}")
+    logger.info(f"Done with {file_name}")

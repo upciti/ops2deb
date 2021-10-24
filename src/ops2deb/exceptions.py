@@ -6,6 +6,10 @@ class GenerateError(Ops2debError):
     pass
 
 
+class GenerateScriptError(GenerateError):
+    pass
+
+
 class FetchError(Ops2debError):
     pass
 
