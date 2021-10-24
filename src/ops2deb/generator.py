@@ -7,6 +7,7 @@ from typing import Any, List
 import typer
 from jinja2 import Environment, PackageLoader
 
+from .exceptions import FetchError, GenerateError
 from .fetcher import fetch
 from .parser import Blueprint
 from .settings import settings
@@ -40,13 +41,14 @@ class SourcePackage:
         for path in ["usr/bin", "usr/share", "usr/lib"]:
             (self.src_directory / path).mkdir(parents=True)
 
-    async def fetch(self) -> None:
+    async def fetch(self) -> "SourcePackage":
         if (remote_file := self.blueprint.fetch) is not None:
             await fetch(
                 url=remote_file.url,
                 expected_hash=remote_file.sha256,
                 save_path=self.tmp_directory,
             )
+        return self
 
     def generate(self) -> None:
         typer.secho(
@@ -66,7 +68,7 @@ class SourcePackage:
             if stderr := result.stderr.decode():
                 typer.secho(stderr.strip(), fg=typer.colors.RED)
             if result.returncode:
-                raise RuntimeError("Script failed")
+                raise GenerateError("Script failed")
 
         # render debian/* files
         for template in [
@@ -80,7 +82,7 @@ class SourcePackage:
             self.render_tpl(template)
 
 
-def generate(blueprints: List[Blueprint]) -> None:
+def generate(blueprints: List[Blueprint]) -> bool:
     packages = [SourcePackage(b) for b in blueprints]
 
     # make sure we generate source packages in a clean environment
@@ -92,11 +94,21 @@ def generate(blueprints: List[Blueprint]) -> None:
     file_count = sum([1 for b in blueprints if b.fetch is not None])
     typer.secho(f"Fetching {file_count} files...", fg=typer.colors.BLUE, bold=True)
 
-    async def fetch() -> Any:
-        return await asyncio.gather(*[p.fetch() for p in packages])
+    async def fetch_all() -> Any:
+        return await asyncio.gather(
+            *[p.fetch() for p in packages], return_exceptions=True
+        )
 
-    asyncio.run(fetch())
+    results = asyncio.run(fetch_all())
+
+    errors = [e for e in results if isinstance(e, Exception)]
+    for error in errors:
+        if not isinstance(error, FetchError):
+            raise error
 
     # run scripts, build debian/* files
+    packages = [p for p in results if isinstance(p, SourcePackage)]
     for package in packages:
         package.generate()
+
+    return not bool(errors)

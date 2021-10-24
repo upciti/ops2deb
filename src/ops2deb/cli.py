@@ -6,6 +6,7 @@ from typing import NoReturn
 import typer
 
 from . import builder, generator, updater
+from .exceptions import Ops2debError
 from .fetcher import purge_cache
 from .parser import parse
 from .settings import settings
@@ -23,8 +24,9 @@ def error(exception: Exception) -> NoReturn:
 @app.command(help="Generate debian source packages")
 def generate() -> None:
     try:
-        generator.generate(parse(settings.config).__root__)
-    except Exception as e:
+        if generator.generate(parse(settings.config).__root__) is False:
+            sys.exit(1)
+    except Ops2debError as e:
         error(e)
 
 
@@ -32,7 +34,7 @@ def generate() -> None:
 def build() -> None:
     try:
         builder.build(settings.work_dir)
-    except Exception as e:
+    except Ops2debError as e:
         error(e)
 
 
@@ -45,7 +47,7 @@ def purge() -> None:
 def update(dry_run: bool = typer.Option(False, "--dry-run", "-d")) -> None:
     try:
         sys.exit(not updater.update(settings.config, dry_run))
-    except Exception as e:
+    except Ops2debError as e:
         error(e)
 
 

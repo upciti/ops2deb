@@ -5,6 +5,8 @@ from jinja2 import Environment, PackageLoader
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
 from ruamel.yaml import YAML, YAMLError
 
+from .exceptions import ParseError
+
 environment = Environment(loader=PackageLoader("ops2deb", "templates"))
 Architecture = Literal["all", "amd64", "armhf"]
 
@@ -71,16 +73,16 @@ def load(configuration_path: Path, yaml: YAML) -> List[Dict[str, Any]]:
     try:
         return yaml.load(configuration_path.open("r"))
     except YAMLError as e:
-        raise RuntimeError(f"Invalid YAML file.\n{e}")
+        raise ParseError(f"Invalid YAML file.\n{e}")
     except FileNotFoundError:
-        raise FileNotFoundError(f"File not found: {configuration_path.absolute()}")
+        raise ParseError(f"File not found: {configuration_path.absolute()}")
 
 
 def validate(configuration_dict: List[Dict[str, Any]]) -> Configuration:
     try:
         return Configuration.parse_obj(configuration_dict)
     except ValidationError as e:
-        raise ValueError(f"Invalid configuration file.\n{e}")
+        raise ParseError(f"Invalid configuration file.\n{e}")
 
 
 def parse(configuration_path: Path) -> Configuration:

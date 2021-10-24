@@ -8,7 +8,7 @@ import typer
 from pydantic import BaseModel
 from semver.version import Version
 
-from .fetcher import download
+from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
 from .settings import settings
 
@@ -65,7 +65,7 @@ async def _find_latest_release(
             fg=typer.colors.WHITE,
         )
 
-        file_path, sha256 = await download(
+        file_path, sha256 = await download_file_to_cache(
             blueprint.render(version=str(version)).fetch.url  # type: ignore
         )
         return NewRelease(
