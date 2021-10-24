@@ -9,6 +9,7 @@ from starlette.responses import Response
 from typer.testing import CliRunner
 
 from ops2deb.cli import app
+from ops2deb.parser import load, parse
 
 yaml = ruamel.yaml.YAML(typ="safe")
 runner = CliRunner()
@@ -63,6 +64,7 @@ def mock_httpx_client():
 mock_valid_configuration = """
 - name: great-app
   version: 1.0.0
+  revision: 2
   arch: all
   summary: Great package
   description: |
@@ -196,11 +198,20 @@ def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_op
     result = call_ops2deb("build")
     print(result.stdout)
     assert result.exit_code == 0
-    assert (tmp_path / "great-app_1.0.0-1~ops2deb_all.deb").is_file()
+    assert (tmp_path / "great-app_1.0.0-2~ops2deb_all.deb").is_file()
 
 
 def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     result = call_ops2deb("update")
     print(result.stdout)
+    configuration = parse(tmp_path / "ops2deb.yml")
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
+    assert configuration.__root__[0].version == "1.1.1"
+
+
+def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_ops2deb):
+    call_ops2deb("update")
+    configuration = load(tmp_path / "ops2deb.yml", yaml)
+    assert configuration[0]["revision"] == 1
+    assert "revision" not in configuration[1]

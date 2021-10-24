@@ -88,6 +88,8 @@ async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> bool:
 
     blueprint_dict["version"] = release.version
     blueprint_dict["fetch"]["sha256"] = release.sha256
+    if "revision" in blueprint_dict.keys():
+        blueprint_dict["revision"] = 1
     return True
 
 
