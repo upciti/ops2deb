@@ -113,4 +113,4 @@ def generate(blueprints: List[Blueprint], work_directory: Path) -> None:
         package.generate()
 
     if errors:
-        raise GenerateError
+        raise GenerateError(f"{len(errors)} failures occurred")

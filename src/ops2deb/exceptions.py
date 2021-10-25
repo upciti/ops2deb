@@ -14,5 +14,9 @@ class FetchError(Ops2debError):
     pass
 
 
+class UpdaterError(Ops2debError):
+    pass
+
+
 class ParseError(Ops2debError):
     pass

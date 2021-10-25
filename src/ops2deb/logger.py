@@ -9,7 +9,7 @@ def enable_debug(enable: bool) -> None:
 
 
 def info(message: str) -> None:
-    secho(message, fg=colors.WHITE)
+    secho(message)
 
 
 def debug(message: str) -> None:

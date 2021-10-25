@@ -2,7 +2,7 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, Optional
 
 import typer
 
@@ -17,17 +17,20 @@ OPTION_CONFIGURATION = typer.Option(
     "--config",
     "-c",
     envvar="OPS2DEB_CONFIG",
+    help="Path to configuration file.",
 )
 OPTION_CACHE_DIRECTORY: Path = typer.Option(
     fetcher.DEFAULT_CACHE_DIRECTORY,
     "--cache-dir",
     envvar="OPS2DEB_CACHE_DIR",
+    help="Directory where files specified in fetch instructions are downloaded.",
 )
 OPTION_WORK_DIRECTORY: Path = typer.Option(
     "output",
     "--work-dir",
     "-w",
     envvar="OPS2DEB_WORK_DIR",
+    help="Directory where debian source packages are generated and built.",
 )
 
 # Common options
@@ -36,12 +39,14 @@ OPTION_EXIT_CODE: int = typer.Option(
     "--exit-code",
     "-e",
     envvar="OPS2DEB_EXIT_CODE",
+    help="Exit code to use in case of failure.",
 )
 OPTION_VERBOSE: bool = typer.Option(
     False,
     "--verbose",
     "-v",
     envvar="OPS2DEB_VERBOSE",
+    help="Enable more logs.",
 )
 
 app = typer.Typer()
@@ -86,10 +91,11 @@ def update(
     config: Path = OPTION_CONFIGURATION,
     cache_directory: Path = OPTION_CACHE_DIRECTORY,
     dry_run: bool = typer.Option(False, "--dry-run", "-d"),
+    output_path: Optional[Path] = typer.Option(None, "--output-path"),
 ) -> None:
     fetcher.set_cache_directory(cache_directory)
     try:
-        sys.exit(not updater.update(config, dry_run))
+        updater.update(config, dry_run, output_path)
     except Ops2debError as e:
         error(e)
 

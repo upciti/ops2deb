@@ -8,14 +8,22 @@ from pydantic import BaseModel
 from semver.version import Version
 
 from . import logger
+from .exceptions import Ops2debError, UpdaterError
 from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
 
 
 class NewRelease(BaseModel):
+    name: str
     file_path: Path
     sha256: str
-    version: str
+    old_version: str
+    new_version: str
+
+
+def _error(msg: str) -> None:
+    logger.error(msg)
+    raise UpdaterError(msg)
 
 
 async def _bump_and_poll(
@@ -31,7 +39,10 @@ async def _bump_and_poll(
             break
         url = remote_file.url
         logger.debug(f"Trying {url}")
-        response = await client.head(url)
+        try:
+            response = await client.head(url)
+        except httpx.HTTPError as e:
+            _error(f"Failed HEAD request to {url}. {str(e)}")
         status = response.status_code
         # FIXME: retry once on 500
         if status >= 400:
@@ -61,31 +72,35 @@ async def _find_latest_release(
             blueprint.render(version=str(version)).fetch.url  # type: ignore
         )
         return NewRelease(
+            name=blueprint.name,
             file_path=file_path,
             sha256=sha256,
-            version=str(version),
+            old_version=blueprint.version,
+            new_version=str(version),
         )
 
     return None
 
 
-async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> bool:
+async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> Optional[NewRelease]:
     blueprint = Blueprint.parse_obj(blueprint_dict)
     if blueprint.fetch is None:
-        return True
+        return None
 
     release = await _find_latest_release(blueprint)
     if release is None:
-        return False
+        return None
 
-    blueprint_dict["version"] = release.version
+    blueprint_dict["version"] = release.new_version
     blueprint_dict["fetch"]["sha256"] = release.sha256
     if "revision" in blueprint_dict.keys():
         blueprint_dict["revision"] = 1
-    return True
+    return release
 
 
-def update(configuration_path: Path, dry_run: bool = False) -> bool:
+def update(
+    configuration_path: Path, dry_run: bool = False, output_path: Optional[Path] = None
+) -> None:
     yaml = ruamel.yaml.YAML()
     configuration_dict = load(configuration_path, yaml)
     validate(configuration_dict)
@@ -94,14 +109,32 @@ def update(configuration_path: Path, dry_run: bool = False) -> bool:
 
     async def run_tasks() -> Any:
         return await asyncio.gather(
-            *[_update_blueprint_dict(b) for b in configuration_dict]
+            *[_update_blueprint_dict(b) for b in configuration_dict],
+            return_exceptions=True,
         )
 
     results = asyncio.run(run_tasks())
+    new_releases = [r for r in results if isinstance(r, NewRelease)]
+    errors = [e for e in results if isinstance(e, Exception)]
 
-    if dry_run is False:
+    for error in errors:
+        if not isinstance(error, Ops2debError):
+            raise error
+
+    if dry_run is False and new_releases:
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
         logger.info("Configuration file updated")
 
-    return bool(list(results))
+        if output_path is not None:
+            lines = [
+                f"Updated {r.name} from {r.old_version} to {r.new_version}"
+                for r in new_releases
+            ]
+            output_path.write_text("\n".join(lines))
+
+    if not new_releases:
+        logger.info("Did not found any updates")
+
+    if errors:
+        raise UpdaterError(f"{len(errors)} failures occurred")
