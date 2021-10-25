@@ -10,8 +10,7 @@ from . import builder, fetcher, generator, logger, updater
 from .exceptions import Ops2debError
 from .parser import parse
 
-DEFAULT_EXIT_CODE = 1
-
+# Options below are used by multiple subcommands
 OPTION_CONFIGURATION = typer.Option(
     "ops2deb.yml",
     "--config",
@@ -33,35 +32,20 @@ OPTION_WORK_DIRECTORY: Path = typer.Option(
     help="Directory where debian source packages are generated and built.",
 )
 
-# Common options
-OPTION_EXIT_CODE: int = typer.Option(
-    DEFAULT_EXIT_CODE,
-    "--exit-code",
-    "-e",
-    envvar="OPS2DEB_EXIT_CODE",
-    help="Exit code to use in case of failure.",
-)
-OPTION_VERBOSE: bool = typer.Option(
-    False,
-    "--verbose",
-    "-v",
-    envvar="OPS2DEB_VERBOSE",
-    help="Enable more logs.",
-)
+DEFAULT_EXIT_CODE = 1
+_exit_code = DEFAULT_EXIT_CODE
 
 app = typer.Typer()
-exit_code = DEFAULT_EXIT_CODE
 
 
 def error(exception: Exception) -> NoReturn:
     logger.error(str(exception))
     logger.debug(traceback.format_exc())
-    sys.exit(exit_code)
+    sys.exit(_exit_code)
 
 
-@app.command(help="Generate debian source packages")
+@app.command(help="Generate debian source packages.")
 def generate(
-    ctx: typer.Context,
     configuration_path: Path = OPTION_CONFIGURATION,
     work_directory: Path = OPTION_WORK_DIRECTORY,
     cache_directory: Path = OPTION_CACHE_DIRECTORY,
@@ -73,7 +57,7 @@ def generate(
         error(e)
 
 
-@app.command(help="Build debian source packages")
+@app.command(help="Build debian source packages.")
 def build(work_directory: Path = OPTION_WORK_DIRECTORY) -> None:
     try:
         builder.build(work_directory)
@@ -81,17 +65,23 @@ def build(work_directory: Path = OPTION_WORK_DIRECTORY) -> None:
         error(e)
 
 
-@app.command(help="Clear ops2deb download cache")
+@app.command(help="Clear ops2deb download cache.")
 def purge(cache_directory: Path = OPTION_CACHE_DIRECTORY) -> None:
     shutil.rmtree(cache_directory, ignore_errors=True)
 
 
-@app.command(help="Look for new application releases")
+@app.command(help="Look for new application releases and edit configuration file.")
 def update(
     config: Path = OPTION_CONFIGURATION,
     cache_directory: Path = OPTION_CACHE_DIRECTORY,
-    dry_run: bool = typer.Option(False, "--dry-run", "-d"),
-    output_path: Optional[Path] = typer.Option(None, "--output-path"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-d", help="Don't edit config file."
+    ),
+    output_path: Optional[Path] = typer.Option(
+        None,
+        "--output-file",
+        help="Path to text file where the list of updated packages will be saved.",
+    ),
 ) -> None:
     fetcher.set_cache_directory(cache_directory)
     try:
@@ -101,9 +91,20 @@ def update(
 
 
 @app.callback()
-def args_cb(verbose: bool = OPTION_VERBOSE, code: int = OPTION_EXIT_CODE) -> None:
-    global exit_code
-    exit_code = code
+def args_cb(
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", envvar="OPS2DEB_VERBOSE", help="Enable more logs."
+    ),
+    exit_code: int = typer.Option(
+        DEFAULT_EXIT_CODE,
+        "--exit-code",
+        "-e",
+        envvar="OPS2DEB_EXIT_CODE",
+        help="Exit code to use in case of failure.",
+    ),
+) -> None:
+    global _exit_code
+    _exit_code = exit_code
     if exit_code > 255 or exit_code < 0:
         raise typer.BadParameter("Invalid exit code")
     logger.enable_debug(verbose)
