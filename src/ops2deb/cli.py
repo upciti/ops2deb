@@ -80,7 +80,8 @@ def update(
     output_path: Optional[Path] = typer.Option(
         None,
         "--output-file",
-        help="Path to text file where the list of updated packages will be saved.",
+        envvar="OPS2DEB_OUTPUT_FILE",
+        help="Path to file where to save a summary of updated files.",
     ),
 ) -> None:
     fetcher.set_cache_directory(cache_directory)

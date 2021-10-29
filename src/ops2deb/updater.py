@@ -131,7 +131,7 @@ def update(
                 f"Updated {r.name} from {r.old_version} to {r.new_version}"
                 for r in new_releases
             ]
-            output_path.write_text("\n".join(lines))
+            output_path.write_text("\n".join(lines) + "\n")
 
     if not new_releases:
         logger.info("Did not found any updates")
