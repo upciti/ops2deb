@@ -50,6 +50,11 @@ async def download_zip(request):
     )
 
 
+@starlette_app.route("/1.1.0/bad-app.zip")
+async def error_500(request):
+    return Response(status_code=500)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def mock_httpx_client():
     real_async_client = httpx.AsyncClient
@@ -132,6 +137,20 @@ mock_configuration_with_archive_not_found = """
 """
 
 
+mock_configuration_with_server_error = """
+- name: bad-package
+  version: 1.0.0
+  summary: Bad package
+  description: |
+    A detailed description of the bad package
+  fetch:
+    url: http://testserver/{{version}}/bad-app.zip
+    sha256: deadbeef
+  script:
+    - mv bad-app {{src}}/usr/bin/bad-app
+"""
+
+
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path):
     def _invoke(*args, configuration: Optional[str] = None):
@@ -143,6 +162,7 @@ def call_ops2deb(tmp_path):
                 "OPS2DEB_WORK_DIR": str(tmp_path),
                 "OPS2DEB_CACHE_DIR": str(tmp_path / "cache"),
                 "OPS2DEB_CONFIG": str(configuration_path),
+                "OPS2DEB_EXIT_CODE": "77",
             }
         )
         return runner.invoke(app, [*args])
@@ -179,6 +199,7 @@ def test_ops2deb_generate_should_fail_with_invalid_checksum(call_ops2deb):
         "generate", configuration=mock_configuration_with_invalid_archive_checksum
     )
     assert "Wrong checksum for file super-app.zip" in result.stdout
+    assert result.exit_code == 77
 
 
 def test_ops2deb_generate_should_fail_if_archive_not_found(tmp_path, call_ops2deb):
@@ -187,7 +208,7 @@ def test_ops2deb_generate_should_fail_if_archive_not_found(tmp_path, call_ops2de
     )
     print(result.stdout)
     assert "404" in result.stdout
-    assert result.exit_code == 1
+    assert result.exit_code == 77
 
 
 def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
@@ -212,3 +233,9 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_op
     configuration = load(tmp_path / "ops2deb.yml", yaml)
     assert configuration[0]["revision"] == 1
     assert "revision" not in configuration[1]
+
+
+def test_ops2deb_update_should_fail_when_server_error(tmp_path, call_ops2deb):
+    result = call_ops2deb("update", configuration=mock_configuration_with_server_error)
+    assert "Server error" in result.stdout
+    assert result.exit_code == 77

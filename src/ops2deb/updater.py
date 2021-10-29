@@ -45,6 +45,8 @@ async def _bump_and_poll(
             _error(f"Failed HEAD request to {url}. {str(e)}")
         status = response.status_code
         # FIXME: retry once on 500
+        if status >= 500:
+            _error(f"Server error when requesting {url}")
         if status >= 400:
             break
         else:
