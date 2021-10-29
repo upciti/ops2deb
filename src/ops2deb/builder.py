@@ -3,8 +3,6 @@ import re
 from pathlib import Path
 from typing import Dict, Optional
 
-import typer
-
 from . import logger
 
 
@@ -34,7 +32,7 @@ async def build_package(cwd: Path) -> Optional[int]:
     if arch != "all":
         args += ["--host-arch", arch]
 
-    typer.secho(f"* Building {cwd}...", fg=typer.colors.WHITE)
+    logger.info(f"Building {cwd}...")
 
     proc = await asyncio.create_subprocess_exec(
         "/usr/bin/dpkg-buildpackage",
@@ -46,9 +44,9 @@ async def build_package(cwd: Path) -> Optional[int]:
     stdout, stderr = await proc.communicate()
 
     if proc.returncode:
-        typer.secho(f"Failed to build package in {str(cwd)}", fg=typer.colors.RED)
+        logger.error(f"Failed to build package in {str(cwd)}")
     else:
-        typer.secho(f"* Successfully built {str(cwd)}", fg=typer.colors.WHITE)
+        logger.info(f"* Successfully built {str(cwd)}")
         if stdout:
             logger.debug(stdout.decode())
         if stderr:
