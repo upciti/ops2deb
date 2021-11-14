@@ -20,3 +20,7 @@ class UpdaterError(Ops2debError):
 
 class ParseError(Ops2debError):
     pass
+
+
+class AptError(Ops2debError):
+    pass

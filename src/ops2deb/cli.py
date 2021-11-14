@@ -49,10 +49,21 @@ def generate(
     configuration_path: Path = OPTION_CONFIGURATION,
     work_directory: Path = OPTION_WORK_DIRECTORY,
     cache_directory: Path = OPTION_CACHE_DIRECTORY,
+    debian_repository: str = typer.Option(
+        None,
+        "--repository",
+        "-r",
+        envvar="OPS2DEB_REPOSITORY",
+        help='Format: "{debian_repo_url} {distribution_name}". '
+        'Example: "http://deb.wakemeops.com/ stable". '
+        "Packages already published in the repo won't be generated.",
+    ),
 ) -> None:
     fetcher.set_cache_directory(cache_directory)
     try:
-        generator.generate(parse(configuration_path).__root__, work_directory)
+        generator.generate(
+            parse(configuration_path).__root__, work_directory, debian_repository
+        )
     except Ops2debError as e:
         error(e)
 

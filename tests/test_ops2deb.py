@@ -1,70 +1,14 @@
-import base64
 import os
 from typing import Optional
 
-import httpx
 import pytest
 import ruamel.yaml
-from starlette.applications import Starlette
-from starlette.responses import Response
 from typer.testing import CliRunner
 
 from ops2deb.cli import app
 from ops2deb.parser import load, parse
 
 yaml = ruamel.yaml.YAML(typ="safe")
-runner = CliRunner()
-
-starlette_app = Starlette(debug=True)
-
-
-@starlette_app.route("/1.0.0/great-app.tar.gz")
-@starlette_app.route("/1.1.0/great-app.tar.gz")
-@starlette_app.route("/1.1.1/great-app.tar.gz")
-async def download_tar_gz(request):
-    # b64 encoded tar.gz with an empty "great-app" file
-    dummy_tar_gz_file = (
-        b"H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF"
-        b"fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf"
-        b"u1BwAAAAAAAAAAgD96AGPmdYsAKAAA"
-    )
-    return Response(
-        base64.b64decode(dummy_tar_gz_file),
-        status_code=200,
-        media_type="application/x-gzip",
-    )
-
-
-@starlette_app.route("/1.0.0/super-app.zip")
-async def download_zip(request):
-    dummy_zip_file = (
-        b"UEsDBBQACAAIAFVdkFIAAAAAAAAAAAAAAAAJACAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1"
-        b"eAsAAQToAwAABOgDAAADAFBLBwgAAAAAAgAAAAAAAABQSwECFAMUAAgACABVXZBSAAAAAAIAAAAA"
-        b"AAAACQAgAAAAAAAAAAAAtIEAAAAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1eAsAAQToAwAA"
-        b"BOgDAABQSwUGAAAAAAEAAQBXAAAAWQAAAAAA"
-    )
-    return Response(
-        base64.b64decode(dummy_zip_file),
-        status_code=200,
-        media_type="application/zip",
-    )
-
-
-@starlette_app.route("/1.1.0/bad-app.zip")
-async def error_500(request):
-    return Response(status_code=500)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def mock_httpx_client():
-    real_async_client = httpx.AsyncClient
-
-    def async_client_mock(**kwargs):
-        return real_async_client(app=starlette_app, **kwargs)
-
-    httpx.AsyncClient = async_client_mock
-    yield
-    httpx.AsyncClient = real_async_client
 
 
 mock_valid_configuration = """
@@ -152,8 +96,9 @@ mock_configuration_with_server_error = """
 
 
 @pytest.fixture(scope="function")
-def call_ops2deb(tmp_path):
+def call_ops2deb(tmp_path, mock_httpx_client):
     def _invoke(*args, configuration: Optional[str] = None):
+        runner = CliRunner()
         configuration_path = tmp_path / "ops2deb.yml"
         configuration_path.write_text(configuration or mock_valid_configuration)
         os.environ.update(
@@ -202,13 +147,22 @@ def test_ops2deb_generate_should_fail_with_invalid_checksum(call_ops2deb):
     assert result.exit_code == 77
 
 
-def test_ops2deb_generate_should_fail_if_archive_not_found(tmp_path, call_ops2deb):
+def test_ops2deb_generate_should_fail_when_archive_not_found(tmp_path, call_ops2deb):
     result = call_ops2deb(
         "generate", configuration=mock_configuration_with_archive_not_found
     )
-    print(result.stdout)
     assert "404" in result.stdout
     assert result.exit_code == 77
+
+
+def test_ops2deb_generate_should_not_generate_packages_already_published_in_debian_repo(
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb("generate", "-r", "http://deb.wakemeops.com stable")
+    print(result.stdout)
+    assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
+    assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
+    assert result.exit_code == 0
 
 
 def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):

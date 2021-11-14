@@ -26,6 +26,7 @@ aiofiles = "*"
 semver = "3.0.0-dev.2"
 jinja2 = "*"
 "ruamel.yaml" = "^0.17.16"
+python-debian = "^0.1.42"
 
 [tool.poetry.scripts]
 ops2deb = "ops2deb.cli:main"

@@ -36,6 +36,10 @@ class Blueprint(Base):
     class Config:
         anystr_strip_whitespace = True
 
+    @property
+    def debian_version(self) -> str:
+        return f"{self.version}-{self.revision}~ops2deb"
+
     def _render_str(self, string: str, **kwargs: Optional[str]) -> str:
         version = kwargs.pop("version", None)
         version = version or self.version

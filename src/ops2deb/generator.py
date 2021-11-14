@@ -2,11 +2,12 @@ import asyncio
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Optional
 
 from jinja2 import Environment, PackageLoader
 
 from . import logger
+from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import FetchError, GenerateError, GenerateScriptError
 from .fetcher import fetch
 from .parser import Blueprint
@@ -27,13 +28,12 @@ class SourcePackage:
         self.debian_directory = self.output_directory / "debian"
         self.src_directory = self.output_directory / "src"
         self.tmp_directory = Path(f"/tmp/ops2deb_{self.directory_name}")
-        self.debian_version = f"{blueprint.version}-{blueprint.revision}~ops2deb"
         self.blueprint = blueprint.render(self.src_directory)
 
     def render_tpl(self, template_name: str) -> None:
         template = _environment.get_template(f"{template_name}.j2")
         package = self.blueprint.dict(exclude={"fetch", "script"})
-        package.update({"version": self.debian_version})
+        package.update({"version": self.blueprint.debian_version})
         template.stream(package=package).dump(str(self.debian_directory / template_name))
 
     def init(self) -> None:
@@ -83,7 +83,30 @@ class SourcePackage:
             self.render_tpl(template)
 
 
-def generate(blueprints: List[Blueprint], work_directory: Path) -> None:
+def filter_already_published_blueprints(
+    blueprints: List[Blueprint], debian_repository: str
+) -> List[Blueprint]:
+    already_published_packages = sync_list_repository_packages(debian_repository)
+    filtered_blueprints: List[Blueprint] = []
+    for blueprint in blueprints:
+        if (
+            DebianRepositoryPackage(
+                blueprint.name, blueprint.debian_version, blueprint.arch
+            )
+            not in already_published_packages
+        ):
+            filtered_blueprints.append(blueprint)
+    return filtered_blueprints
+
+
+def generate(
+    blueprints: List[Blueprint], work_directory: Path, debian_repository: Optional[str]
+) -> None:
+
+    # filter out blueprints that build packages already available in the debian repository
+    if debian_repository is not None:
+        blueprints = filter_already_published_blueprints(blueprints, debian_repository)
+
     packages = [SourcePackage(b, work_directory) for b in blueprints]
 
     # make sure we generate source packages in a clean environment
