@@ -30,6 +30,14 @@ class Blueprint(Base):
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field(..., description="Package description")
     depends: List[str] = Field(default_factory=list, description="Package dependencies")
+    recommends: List[str] = Field(
+        default_factory=list, description="Package recommended dependencies"
+    )
+    conflicts: List[str] = Field(
+        default_factory=list,
+        description="Conflicting packages, for more information read "
+        "https://www.debian.org/doc/debian-policy/ch-relationships.html",
+    )
     fetch: Optional[RemoteFile] = Field(None, description="File to download")
     script: List[str] = Field(default_factory=list, description="Build instructions")
 

@@ -100,7 +100,9 @@ def filter_already_published_blueprints(
 
 
 def generate(
-    blueprints: List[Blueprint], work_directory: Path, debian_repository: Optional[str]
+    blueprints: List[Blueprint],
+    work_directory: Path,
+    debian_repository: Optional[str] = None,
 ) -> None:
 
     # filter out blueprints that build packages already available in the debian repository
