@@ -17,16 +17,19 @@ but it could be used to package any statically linked application. In short, it 
 Written in YAML and composed of a list of package blueprints. A blueprint is defined by the following:
 
 
-| Field         | Meaning                                                                                                                                    | Default      |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------   | ------------ |
-| `name`        | Component name, e.g. `kustomize`                                                                                                           |              |
-| `version`     | Application release to package                                                                                                             |              |
-| `arch`        | Package architecture                                                                                                                       | `amd64`      |
-| `revision`    | Package revistion                                                                                                                          | `1`          |
-| `summary`     | Package short description                                                                                                                  |              |
-| `description` | Package full description                                                                                                                   |              |
-| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically | `Null`       |
-| `script`      | A list of build instructions templated with jinja2 and intepreted with the default `shell`                                                 |              |
+| Field         | Meaning                                                                                                                                     | Default      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `name`        | Component name, e.g. `kustomize`.                                                                                                           |              |
+| `version`     | Application release to package.                                                                                                             |              |
+| `arch`        | Package architecture.                                                                                                                       | `amd64`      |
+| `revision`    | Package revistion.                                                                                                                          | `1`          |
+| `summary`     | Package short description.                                                                                                                  |              |
+| `description` | Package full description.                                                                                                                   |              |
+| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically. | `Null`       |
+| `script`      | List of build instructions templated with jinja2 and intepreted with the default `shell`.                                                   | `[]`         |
+| `depends`     | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                                                           | `[]`         |
+| `recommends`  | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`         |
+| `conflicts`   | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`         |
 
 Example: 
 
