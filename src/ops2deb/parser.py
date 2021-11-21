@@ -31,7 +31,7 @@ class Blueprint(Base):
     description: str = Field(..., description="Package description")
     depends: List[str] = Field(default_factory=list, description="Package dependencies")
     fetch: Optional[RemoteFile] = Field(None, description="File to download")
-    script: List[str] = Field(..., description="Build instructions")
+    script: List[str] = Field(default_factory=list, description="Build instructions")
 
     class Config:
         anystr_strip_whitespace = True
