@@ -46,7 +46,7 @@ async def build_package(cwd: Path) -> Optional[int]:
     if proc.returncode:
         logger.error(f"Failed to build package in {str(cwd)}")
     else:
-        logger.info(f"* Successfully built {str(cwd)}")
+        logger.info(f"Successfully built {str(cwd)}")
         if stdout:
             logger.debug(stdout.decode())
         if stderr:
