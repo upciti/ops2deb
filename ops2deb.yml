@@ -1,11 +1,11 @@
 - name: kubectl
-  version: 1.22.2
+  version: 1.22.4
   summary: Command line client for controlling a Kubernetes cluster
   description: |
     kubectl is a command line client for running commands against Kubernetes clusters.
   fetch:
     url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
-    sha256: aeca0018958c1cae0bf2f36f566315e52f87bdab38b440df349cd091e9f13f36
+    sha256: 21f24aa723002353eba1cc2668d0be22651f9063f444fd01626dce2b6e1c568c
   script:
   - mv kubectl {{src}}/usr/bin/
 
@@ -27,7 +27,7 @@
   - mv kustomize {{src}}/usr/bin/
 
 - name: helm
-  version: 3.7.0
+  version: 3.7.1
   depends:
   - kubectl
   summary: The Kubernetes package manager
@@ -36,19 +36,19 @@
     Charts are packages of pre-configured Kubernetes resources.
   fetch:
     url: https://get.helm.sh/helm-v{{version}}-linux-amd64.tar.gz
-    sha256: 096e30f54c3ccdabe30a8093f8e128dba76bb67af697b85db6ed0453a2701bf9
+    sha256: 6cd6cad4b97e10c33c978ff3ac97bb42b68f79766f1d2284cfd62ec04cd177f4
   script:
   - mv linux-amd64/helm {{src}}/usr/bin/
 
 - name: istioctl
-  version: 1.11.2
+  version: 1.12.0
   depends:
   - kubectl
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
   fetch:
     url: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
-    sha256: cd6a9311ac72a535932ff025fbd217717f855d9c8022d906f1c088c9c994716e
+    sha256: 7b219d9d0f48bd92901ef4cacb048c10c9f812dd4af120b0e3b353c006b3226e
   script:
   - install -d {{src}}/opt/istio
   - mv * {{src}}/opt/istio/
@@ -66,7 +66,7 @@
   - install -m 755 kubeseal-linux-amd64 {{src}}/usr/bin/kubeseal
 
 - name: helmfile
-  version: 0.140.1
+  version: 0.142.0
   depends:
   - kubectl
   - helm
@@ -78,12 +78,12 @@
     - Periodically sync to avoid skew in environments.
   fetch:
     url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_amd64
-    sha256: 8a705454cbbeea6d4c53949c59c7ce011fd737aa578ef208f57608fa573125b1
+    sha256: ec01b884cbb9d072f4a6784b33a29f3311248e85e714ebacabba85a79a3ba3db
   script:
   - install -m 755 helmfile_linux_amd64 {{src}}/usr/bin/helmfile
 
 - name: minikube
-  version: 1.23.2
+  version: 1.24.0
   summary: Quickly set up a local Kubernetes cluster
   description: |
     Focus on helping application developers and new Kubernetes users.
@@ -96,6 +96,6 @@
     Addons for easily installed Kubernetes applications
   fetch:
     url: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
-    sha256: 752d91414793b6a88b309c806b65841ffa62a3bf07383146bd54afbf15de80b4
+    sha256: 3bc218476cf205acf11b078d45210a4882e136d24a3cbb7d8d645408e423b8fe
   script:
   - install -m 755 minikube-linux-amd64 {{src}}/usr/bin/minikube
