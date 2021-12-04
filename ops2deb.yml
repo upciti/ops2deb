@@ -1,5 +1,6 @@
 - name: kubectl
   version: 1.22.4
+  homepage: https://github.com/kubernetes/kubectl
   summary: Command line client for controlling a Kubernetes cluster
   description: |
     kubectl is a command line client for running commands against Kubernetes clusters.
@@ -11,6 +12,7 @@
 
 - name: kustomize
   version: 3.8.10
+  homepage: https://kustomize.io/
   depends:
   - kubectl
   summary: Kubernetes native configuration management
@@ -28,6 +30,7 @@
 
 - name: helm
   version: 3.7.1
+  homepage: https://helm.sh/
   depends:
   - kubectl
   summary: The Kubernetes package manager
@@ -42,6 +45,7 @@
 
 - name: istioctl
   version: 1.12.0
+  homepage: https://istio.io/
   depends:
   - kubectl
   summary: Istio service mesh CLI
@@ -55,6 +59,7 @@
   - ln -s /opt/istio/istio-{{version}}/bin/istioctl {{src}}/usr/bin/istioctl
 
 - name: kubeseal
+  homepage: https://github.com/bitnami-labs/sealed-secrets
   version: 0.16.0
   summary: Secret management solution for k8s
   description: Encrypt your Secret into a SealedSecret, which is safe to store - even
@@ -67,6 +72,7 @@
 
 - name: helmfile
   version: 0.142.0
+  homepage: https://github.com/roboll/helmfile
   depends:
   - kubectl
   - helm
@@ -84,6 +90,7 @@
 
 - name: minikube
   version: 1.24.0
+  homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
   description: |
     Focus on helping application developers and new Kubernetes users.

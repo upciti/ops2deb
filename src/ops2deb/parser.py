@@ -25,6 +25,7 @@ class RemoteFile(Base):
 class Blueprint(Base):
     name: str = Field(..., description="Package name")
     version: str = Field(..., description="Package name")
+    homepage: Optional[AnyHttpUrl] = Field(None, description="Upstream project homepage")
     revision: int = Field(1, description="Package revision")
     arch: Architecture = Field("amd64", description="Package architecture")
     summary: str = Field(..., description="Package short description, one line only")

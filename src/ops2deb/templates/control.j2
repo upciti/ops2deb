@@ -3,6 +3,7 @@ Priority: optional
 Maintainer: ops2deb <ops2deb@upciti.com>
 Build-Depends: debhelper
 Standards-Version: 3.9.6
+{%- if package.homepage %}{{ '\n' }}Homepage: {{ package.homepage }}{% endif %}
 
 Package: {{ package.name }}
 Architecture: {{ package.arch }}
