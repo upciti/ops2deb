@@ -8,6 +8,7 @@ import aiofiles
 import httpx
 
 from . import logger
+from .client import client_factory
 from .exceptions import FetchError
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
@@ -67,7 +68,7 @@ async def _compute_file_checksum(file_path: Path) -> str:
 
 
 async def _download_file(url: str, file_path: str) -> None:
-    async with httpx.AsyncClient() as client:
+    async with client_factory() as client:
         async with client.stream("GET", url) as r:
             if 400 <= r.status_code < 600:
                 _error(

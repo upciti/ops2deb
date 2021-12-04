@@ -8,6 +8,7 @@ from debian.deb822 import Packages, Release
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
 from . import logger
+from .client import client_factory
 from .exceptions import AptError
 
 
@@ -66,7 +67,7 @@ async def list_repository_packages(
     debian_repository: str,
 ) -> List[DebianRepositoryPackage]:
     repository = _parse_debian_repository_option(debian_repository)
-    async with httpx.AsyncClient(base_url=repository.url) as client:
+    async with client_factory(base_url=repository.url) as client:
         release = await _download_repository_release_file(client, repository.distribution)
         architectures = release["Architectures"].split(" ")
         components = release["Components"].split(" ")

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from semver.version import Version
 
 from . import logger
+from .client import client_factory
 from .exceptions import Ops2debError, UpdaterError
 from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
@@ -63,7 +64,7 @@ async def _find_latest_release(
         return None
 
     old_version = version = Version.parse(blueprint.version)
-    async with httpx.AsyncClient() as client:
+    async with client_factory() as client:
         version = await _bump_and_poll(client, blueprint, version, False)
         version = await _bump_and_poll(client, blueprint, version, True)
 

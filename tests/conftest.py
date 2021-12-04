@@ -130,6 +130,7 @@ def mock_httpx_client():
     real_async_client = httpx.AsyncClient
 
     def async_client_mock(**kwargs):
+        kwargs.pop("transport", None)
         return real_async_client(app=starlette_app, **kwargs)
 
     httpx.AsyncClient = async_client_mock
