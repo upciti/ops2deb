@@ -19,7 +19,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.9"
-httpx = ">=0.15.4,<0.22.0"
+httpx = ">=0.20.0,<0.22.0"
 typer = "*"
 pydantic = "*"
 aiofiles = "*"

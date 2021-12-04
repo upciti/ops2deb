@@ -644,7 +644,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "9dbc3527307b22bafdb8e41c878076c71e428bd1c5e64d125e9a2b5dd9712e7c"
+content-hash = "e872a1ffefaef5bec648cd37619c4a03b171586e7417ea80eafd2cfa05069d72"
 
 [metadata.files]
 aiofiles = [
