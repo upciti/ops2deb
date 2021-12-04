@@ -27,7 +27,7 @@ Depends: package_a
 Recommends: package_b
 Conflicts: package_c
 Description: My great app
-  A detailed description of the super package
+ A detailed description of the super package
 """
 
 blueprint_2 = Blueprint(
@@ -53,7 +53,7 @@ Architecture: all
 Depends: package_a
 Conflicts: package_c
 Description: My great app
-  A detailed description of the super package
+ A detailed description of the super package
 """
 
 
@@ -74,7 +74,7 @@ Standards-Version: 3.9.6
 Package: great-app
 Architecture: amd64
 Description: My great app
-  A detailed description of the super package
+ A detailed description of the super package
 """
 
 
@@ -86,6 +86,5 @@ def test_generate_should_produce_identical_control_file_snapshot(
     tmp_path, blueprint, control
 ):
     generate([blueprint], tmp_path)
-    assert (
-        tmp_path / f"great-app_1.0.0_{blueprint.arch}/debian/control"
-    ).read_text() == control
+    control_file = tmp_path / f"great-app_1.0.0_{blueprint.arch}/debian/control"
+    assert control_file.read_text() == control
