@@ -12,4 +12,3 @@ Architecture: {{ package.arch }}
 {%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
 Description: {{ package.summary }}
  {{ package.description | wordwrap | indent(1) }}
-

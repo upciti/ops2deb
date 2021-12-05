@@ -8,7 +8,7 @@
 
 # ops2deb
 
-Are you tired of checking if your favorite devops tools are up-to-date? Are you using a debian based GNU/Linux distribution? 
+Are you tired of checking if your favorite devops tools are up-to-date? Are you using a debian based GNU/Linux distribution?
 `ops2deb` is designed to generate Debian packages for common devops tools such as kubectl, kustomize, helm, ...,
 but it could be used to package any statically linked application. In short, it consumes a configuration file and outputs `.deb` packages.
 
@@ -16,22 +16,22 @@ but it could be used to package any statically linked application. In short, it 
 
 Written in YAML and composed of a list of package blueprints. A blueprint is defined by the following:
 
+| Field         | Meaning                                                                                                                                     | Default |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `name`        | Component name, e.g. `kustomize`.                                                                                                           |         |
+| `version`     | Application release to package.                                                                                                             |         |
+| `homepage`    | Upstream project homepage.                                                                                                                  | `None`  |
+| `arch`        | Package architecture.                                                                                                                       | `amd64` |
+| `revision`    | Package revistion.                                                                                                                          | `1`     |
+| `summary`     | Package short description.                                                                                                                  |         |
+| `description` | Package full description.                                                                                                                   |         |
+| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically. | `Null`  |
+| `script`      | List of build instructions templated with jinja2 and intepreted with the default `shell`.                                                   | `[]`    |
+| `depends`     | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                                                           | `[]`    |
+| `recommends`  | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`    |
+| `conflicts`   | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`    |
 
-| Field         | Meaning                                                                                                                                     | Default      |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `name`        | Component name, e.g. `kustomize`.                                                                                                           |              |
-| `version`     | Application release to package.                                                                                                             |              |
-| `arch`        | Package architecture.                                                                                                                       | `amd64`      |
-| `revision`    | Package revistion.                                                                                                                          | `1`          |
-| `summary`     | Package short description.                                                                                                                  |              |
-| `description` | Package full description.                                                                                                                   |              |
-| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically. | `Null`       |
-| `script`      | List of build instructions templated with jinja2 and intepreted with the default `shell`.                                                   | `[]`         |
-| `depends`     | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                                                           | `[]`         |
-| `recommends`  | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`         |
-| `conflicts`   | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`         |
-
-Example: 
+Example:
 
 ```yaml
 - name: kubectl
@@ -48,8 +48,8 @@ Example:
 
 ## Dependencies
 
-* Python >= 3.9
-* To build debian packages with `ops2deb build` you need the following packages on your host:
+- Python >= 3.9
+- To build debian packages with `ops2deb build` you need the following packages on your host:
 
 ```shell
 sudo apt install build-essential fakeroot debhelper
@@ -84,6 +84,7 @@ tree /tmp/ops2deb_*
 ```
 
 The cache can be flushed with:
+
 ```shell
 ops2deb purge
 ```

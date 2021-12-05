@@ -29,8 +29,7 @@ Depends: package_a
 Recommends: package_b
 Conflicts: package_c
 Description: My great app
- A detailed description of the super package
-"""
+ A detailed description of the super package"""
 
 blueprint_2 = Blueprint(
     name="great-app",
@@ -55,8 +54,7 @@ Architecture: all
 Depends: package_a
 Conflicts: package_c
 Description: My great app
- A detailed description of the super package
-"""
+ A detailed description of the super package"""
 
 
 blueprint_3 = Blueprint(
@@ -76,8 +74,7 @@ Standards-Version: 3.9.6
 Package: great-app
 Architecture: amd64
 Description: My great app
- A detailed description of the super package
-"""
+ A detailed description of the super package"""
 
 
 @pytest.mark.parametrize(

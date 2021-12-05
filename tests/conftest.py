@@ -30,8 +30,7 @@ Size: 3922220
 MD5sum: a016569e433f172fa177487f7dab444b
 SHA1: f0e3c72da12bf03fa7a864ef4c4694abe53c64f2
 SHA256: 6be2a102643da0b5d1f4ccfc1888fc06b1dcf4836fdd6d50a59af0c012c2f4b7
-SHA512: 84b3405fbb1924d19ce5cdf1807cf87b231f4045f5978082f05cb0811b795ac8276a8d8374568acc9ec23a56b7571e02328072a65a0dd8345a1b8c6575d7e783
-Description: Kubernetes object analysis with recommendations for improved reliability and security.
+Description: Kubernetes object analysis for improved reliability and security.
   kube-score is a tool that performs static code analysis of
   your Kubernetes object definitions.
 """
@@ -49,7 +48,6 @@ Size: 9511932
 MD5sum: 9a8bb37b97b3e235f24d6a863c72dfa2
 SHA1: e3e49a07cccb660b8f5f4419ac982d10724b0ff6
 SHA256: 0898efd0c85c6c66e028b88442d2e8f1d75ef3d0d487e2b2d545a43ac2e8134e
-SHA512: d835b92cee91b48e308cd5a47502f0743174c1aafd026a30718e93bf92344ad56e3cd02ae0e8e47bbde719eeaf5f4bd10a873966f81347de0c80dce8cf73e5a7
 Description: Great package
   A detailed description of the great package
 
@@ -65,7 +63,6 @@ Size: 25678524
 MD5sum: 62f729a690646275abdc8c5414f2aa02
 SHA1: 7b3fc5a1ae0dbc18f9abb3293d12689c4e59ad33
 SHA256: 11be2fa0f0d63469a5b4f9c296f77dac69d98441c8c84f9544eb66bd8832d39f
-SHA512: 7cc122b9406f52f6bd0955eff05b1efd17ba104c598953ba7000b23f63df1419aa4c7f6ce790cf193263f693a617050f20a38decc216027fda93007659b2020d
 Description: Super package
   A detailed description of the super package
 """
