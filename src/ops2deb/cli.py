@@ -6,9 +6,8 @@ from typing import NoReturn, Optional
 
 import typer
 
-from . import builder, fetcher, generator, logger, updater
+from . import builder, fetcher, generator, logger, parser, updater
 from .exceptions import Ops2debError
-from .parser import parse
 
 # Options below are used by multiple subcommands
 OPTION_CONFIGURATION = typer.Option(
@@ -44,7 +43,7 @@ def error(exception: Exception) -> NoReturn:
     sys.exit(_exit_code)
 
 
-@app.command(help="Generate debian source packages.")
+@app.command(help="Generate debian source packages from configuration file.")
 def generate(
     configuration_path: Path = OPTION_CONFIGURATION,
     work_directory: Path = OPTION_WORK_DIRECTORY,
@@ -62,13 +61,13 @@ def generate(
     fetcher.set_cache_directory(cache_directory)
     try:
         generator.generate(
-            parse(configuration_path).__root__, work_directory, debian_repository
+            parser.parse(configuration_path).__root__, work_directory, debian_repository
         )
     except Ops2debError as e:
         error(e)
 
 
-@app.command(help="Build debian source packages.")
+@app.command(help="Build debian packages from source packages.")
 def build(work_directory: Path = OPTION_WORK_DIRECTORY) -> None:
     try:
         builder.build(work_directory)
@@ -98,6 +97,14 @@ def update(
     fetcher.set_cache_directory(cache_directory)
     try:
         updater.update(config, dry_run, output_path)
+    except Ops2debError as e:
+        error(e)
+
+
+@app.command(help="Validate configuration file.")
+def validate(configuration_path: Path = OPTION_CONFIGURATION) -> None:
+    try:
+        parser.validate(parser.load(configuration_path))
     except Ops2debError as e:
         error(e)
 

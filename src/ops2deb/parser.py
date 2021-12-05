@@ -82,7 +82,7 @@ class Configuration(Base):
     __root__: List[Blueprint]
 
 
-def load(configuration_path: Path, yaml: YAML) -> List[Dict[str, Any]]:
+def load(configuration_path: Path, yaml: YAML = YAML()) -> List[Dict[str, Any]]:
     try:
         return yaml.load(configuration_path.open("r"))
     except YAMLError as e:
