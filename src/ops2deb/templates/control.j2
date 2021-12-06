@@ -11,4 +11,4 @@ Architecture: {{ package.arch }}
 {%- if package.recommends %}{{ '\n' }}Recommends: {{ package.recommends|sort|join(', ') }}{% endif %}
 {%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
 Description: {{ package.summary }}
- {{ package.description | wordwrap | indent(1) }}
+ {{ package.description | indent(1) }}
