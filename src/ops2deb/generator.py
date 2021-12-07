@@ -3,15 +3,16 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment, FunctionLoader
 
 from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from .fetcher import Fetcher, FetchResult
 from .parser import Blueprint
+from .templates import template_loader
 
-_environment = Environment(loader=PackageLoader("ops2deb", "templates"))
+_environment = Environment(loader=FunctionLoader(template_loader))
 
 
 def _format_command_output(output: str) -> str:
@@ -33,7 +34,7 @@ class SourcePackage:
         )
 
     def _render_tpl(self, template_name: str) -> None:
-        template = _environment.get_template(f"{template_name}.j2")
+        template = _environment.get_template(f"{template_name}")
         package = self.blueprint.dict(exclude={"fetch", "script"})
         package.update({"version": self.debian_version})
         template.stream(package=package).dump(str(self.debian_directory / template_name))
