@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
 from ruamel.yaml import YAML, YAMLError
 
 from .exceptions import Ops2debParserError
 
-environment = Environment(loader=PackageLoader("ops2deb", "templates"))
+environment = Environment()
 Architecture = Literal["all", "amd64", "armhf"]
 
 

@@ -140,7 +140,3 @@ def args_cb(
 
 def main() -> None:
     app()
-
-
-if __name__ == "__main__":
-    main()
