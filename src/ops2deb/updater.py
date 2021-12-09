@@ -1,10 +1,10 @@
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import httpx
 import ruamel.yaml
-from pydantic import BaseModel
 from semver.version import Version
 
 from . import logger
@@ -14,7 +14,8 @@ from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
 
 
-class NewRelease(BaseModel):
+@dataclass(frozen=True)
+class NewRelease:
     name: str
     file_path: Path
     sha256: str
@@ -45,7 +46,6 @@ async def _bump_and_poll(
         except httpx.HTTPError as e:
             _error(f"Failed HEAD request to {url}. {str(e)}")
         status = response.status_code
-        # FIXME: retry once on 500
         if status >= 500:
             _error(f"Server error when requesting {url}")
         if status >= 400:

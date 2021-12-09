@@ -23,11 +23,11 @@ OPTION_CACHE_DIRECTORY: Path = typer.Option(
     envvar="OPS2DEB_CACHE_DIR",
     help="Directory where files specified in fetch instructions are downloaded.",
 )
-OPTION_WORK_DIRECTORY: Path = typer.Option(
+OPTION_OUTPUT_DIRECTORY: Path = typer.Option(
     "output",
-    "--work-dir",
-    "-w",
-    envvar="OPS2DEB_WORK_DIR",
+    "--output-dir",
+    "-o",
+    envvar="OPS2DEB_OUTPUT_DIR",
     help="Directory where debian source packages are generated and built.",
 )
 
@@ -46,7 +46,7 @@ def error(exception: Exception) -> NoReturn:
 @app.command(help="Generate debian source packages from configuration file.")
 def generate(
     configuration_path: Path = OPTION_CONFIGURATION,
-    work_directory: Path = OPTION_WORK_DIRECTORY,
+    output_directory: Path = OPTION_OUTPUT_DIRECTORY,
     cache_directory: Path = OPTION_CACHE_DIRECTORY,
     debian_repository: str = typer.Option(
         None,
@@ -61,16 +61,16 @@ def generate(
     fetcher.set_cache_directory(cache_directory)
     try:
         generator.generate(
-            parser.parse(configuration_path).__root__, work_directory, debian_repository
+            parser.parse(configuration_path).__root__, output_directory, debian_repository
         )
     except Ops2debError as e:
         error(e)
 
 
 @app.command(help="Build debian packages from source packages.")
-def build(work_directory: Path = OPTION_WORK_DIRECTORY) -> None:
+def build(output_directory: Path = OPTION_OUTPUT_DIRECTORY) -> None:
     try:
-        builder.build(work_directory)
+        builder.build(output_directory)
     except Ops2debError as e:
         error(e)
 

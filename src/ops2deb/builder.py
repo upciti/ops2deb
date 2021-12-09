@@ -55,19 +55,19 @@ async def build_package(cwd: Path) -> Optional[int]:
     return proc.returncode
 
 
-def build(path: Path, workers: int = 4) -> None:
+def build(output_directory: Path, workers: int = 4) -> None:
     """
     Run several instances of dpkg-buildpackage in parallel.
-    :param path: path where to search for source packages
+    :param output_directory: path where to search for source packages
     :param workers: Number of threads to run in parallel
     """
 
     logger.title("Building source packages...")
 
     paths = []
-    for path in path.iterdir():
-        if path.is_dir() and (path / "debian/control").is_file():
-            paths.append(path)
+    for output_directory in output_directory.iterdir():
+        if output_directory.is_dir() and (output_directory / "debian/control").is_file():
+            paths.append(output_directory)
 
     async def _build_package(sem: asyncio.Semaphore, _path: Path) -> Optional[int]:
         async with sem:  # semaphore limits num of simultaneous builds

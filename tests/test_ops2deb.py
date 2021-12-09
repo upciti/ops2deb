@@ -104,7 +104,7 @@ def call_ops2deb(tmp_path, mock_httpx_client):
         os.environ.update(
             {
                 "OPS2DEB_VERBOSE": "1",
-                "OPS2DEB_WORK_DIR": str(tmp_path),
+                "OPS2DEB_OUTPUT_DIR": str(tmp_path),
                 "OPS2DEB_CACHE_DIR": str(tmp_path / "cache"),
                 "OPS2DEB_CONFIG": str(configuration_path),
                 "OPS2DEB_EXIT_CODE": "77",
@@ -162,6 +162,7 @@ def test_ops2deb_generate_should_not_generate_packages_already_published_in_debi
     print(result.stdout)
     assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/debian/control").is_file() is False
     assert result.exit_code == 0
 
 
