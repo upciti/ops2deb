@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from jinja2 import Environment, PackageLoader
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
@@ -75,7 +75,7 @@ class Blueprint(Base):
 
 
 class Configuration(Base):
-    __root__: List[Blueprint]
+    __root__: Union[List[Blueprint], Blueprint]
 
 
 def load(configuration_path: Path, yaml: YAML = YAML()) -> List[Dict[str, Any]]:
@@ -87,13 +87,16 @@ def load(configuration_path: Path, yaml: YAML = YAML()) -> List[Dict[str, Any]]:
         raise ParseError(f"File not found: {configuration_path.absolute()}")
 
 
-def validate(configuration_dict: List[Dict[str, Any]]) -> Configuration:
+def validate(configuration_dict: List[Dict[str, Any]]) -> List[Blueprint]:
     try:
-        return Configuration.parse_obj(configuration_dict)
+        blueprints = Configuration.parse_obj(configuration_dict).__root__
     except ValidationError as e:
         raise ParseError(f"Invalid configuration file.\n{e}")
+    if isinstance(blueprints, Blueprint):
+        blueprints = [blueprints]
+    return blueprints
 
 
-def parse(configuration_path: Path) -> Configuration:
+def parse(configuration_path: Path) -> List[Blueprint]:
     yaml = YAML(typ="safe")
     return validate(load(configuration_path, yaml))
