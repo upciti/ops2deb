@@ -40,7 +40,7 @@ mock_valid_configuration = """
 """
 
 mock_configuration_with_invalid_archive_checksum = """
-- name: bad-package
+- name: bad-app
   version: 1.0.0
   arch: all
   summary: Bad package
@@ -55,7 +55,7 @@ mock_configuration_with_invalid_archive_checksum = """
 
 
 mock_configuration_with_archive_not_found = """
-- name: bad-package
+- name: bad-app
   version: 1.0.0
   arch: all
   summary: Bad package
@@ -82,7 +82,7 @@ mock_configuration_with_archive_not_found = """
 
 
 mock_configuration_with_server_error = """
-- name: bad-package
+- name: bad-app
   version: 1.0.0
   summary: Bad package
   description: |
@@ -92,6 +92,18 @@ mock_configuration_with_server_error = """
     sha256: deadbeef
   script:
     - mv bad-app {{src}}/usr/bin/bad-app
+"""
+
+
+mock_configuration_single_blueprint_without_fetch = """
+name: cool-app
+version: 1.0.0
+arch: all
+summary: Cool package
+description: |
+  A detailed description of the cool package
+script:
+  - install -m 755 cool-app.sh {{src}}/usr/bin/cool-app
 """
 
 
@@ -164,6 +176,17 @@ def test_ops2deb_generate_should_not_generate_packages_already_published_in_debi
     assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
     assert (tmp_path / "super-app_1.0.0_all/debian/control").is_file() is False
     assert result.exit_code == 0
+
+
+def test_ops2deb_generate_should_run_script_from_current_directory_when_blueprint_has_not_fetch_instruction(  # noqa: E501
+    tmp_path, tmp_working_directory, call_ops2deb
+):
+    (tmp_path / "cool-app.sh").touch()
+    result = call_ops2deb(
+        "generate", configuration=mock_configuration_single_blueprint_without_fetch
+    )
+    assert result.exit_code == 0
+    assert (tmp_path / "cool-app_1.0.0_all/src/usr/bin/cool-app").is_file()
 
 
 def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):

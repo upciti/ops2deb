@@ -61,12 +61,14 @@ class SourcePackage:
     def generate(self) -> None:
         logger.title(f"Generating source package {self.directory_name}...")
 
+        # if blueprint has no fetch instruction, we stay in the directory from which
+        # ops2deb was called
+        cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
+
         # run script
         for line in self.blueprint.script:
             logger.info(f"$ {line}")
-            result = subprocess.run(
-                line, shell=True, cwd=self.fetch_directory, capture_output=True
-            )
+            result = subprocess.run(line, shell=True, cwd=cwd, capture_output=True)
             if stdout := result.stdout.decode():
                 logger.info(_format_command_output(stdout))
             if stderr := result.stderr.decode():

@@ -1,3 +1,4 @@
+import os
 import base64
 
 import httpx
@@ -133,3 +134,13 @@ def mock_httpx_client():
     httpx.AsyncClient = async_client_mock
     yield
     httpx.AsyncClient = real_async_client
+
+
+@pytest.fixture(scope="function")
+def tmp_working_directory(tmp_path):
+    previous_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        yield
+    finally:
+        os.chdir(previous_cwd)
