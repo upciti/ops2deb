@@ -180,7 +180,7 @@ def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_o
     configuration = parse(tmp_path / "ops2deb.yml")
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
-    assert configuration.__root__[0].version == "1.1.1"
+    assert configuration[0].version == "1.1.1"
 
 
 def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_ops2deb):

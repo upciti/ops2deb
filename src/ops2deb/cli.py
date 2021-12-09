@@ -61,7 +61,7 @@ def generate(
     fetcher.set_cache_directory(cache_directory)
     try:
         generator.generate(
-            parser.parse(configuration_path).__root__, output_directory, debian_repository
+            parser.parse(configuration_path), output_directory, debian_repository
         )
     except Ops2debError as e:
         error(e)
