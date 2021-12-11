@@ -41,7 +41,7 @@ async def _run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Proces
 async def _extract_and_delete_archive(file_path: Path) -> None:
     commands = [
         ({".tar.gz", ".tar.xz", ".tar"}, ["/bin/tar", "xf", str(file_path)]),
-        ({".zip"}, ["/bin/unzip", str(file_path)]),
+        ({".zip"}, ["/usr/bin/unzip", str(file_path)]),
     ]
     selected_command: Optional[List[str]] = None
     for extensions, command in commands:
