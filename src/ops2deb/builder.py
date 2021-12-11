@@ -45,14 +45,15 @@ async def build_package(cwd: Path) -> None:
     )
     stdout, stderr = await proc.communicate()
 
-    if proc.returncode:
-        log_and_raise(Ops2debBuilderError(f"Failed to build package in {str(cwd)}"))
-    else:
-        logger.info(f"Successfully built {str(cwd)}")
     if stdout:
         logger.debug(stdout.decode())
     if stderr:
         logger.debug(stderr.decode())
+
+    if proc.returncode:
+        log_and_raise(Ops2debBuilderError(f"Failed to build package in {str(cwd)}"))
+    else:
+        logger.info(f"Successfully built {str(cwd)}")
 
 
 def build(output_directory: Path, workers: int = 4) -> None:

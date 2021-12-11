@@ -12,7 +12,7 @@ def log_and_raise(exception: Exception) -> None:
 T = TypeVar("T")
 
 
-def split_successes_from_errors(
+def separate_successes_from_errors(
     items: Iterable[Union[T, Exception]]
 ) -> Tuple[List[T], List[Ops2debError]]:
     results: List[T] = []
