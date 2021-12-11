@@ -6,7 +6,7 @@ from typing import NoReturn, Optional
 
 import typer
 
-from . import builder, fetcher, generator, logger, parser, updater
+from . import builder, fetcher, formatter, generator, logger, parser, updater
 from .exceptions import Ops2debError
 
 # Options below are used by multiple subcommands
@@ -104,7 +104,15 @@ def update(
 @app.command(help="Validate configuration file.")
 def validate(configuration_path: Path = OPTION_CONFIGURATION) -> None:
     try:
-        parser.validate(parser.load(configuration_path))
+        parser.parse(configuration_path)
+    except Ops2debError as e:
+        error(e)
+
+
+@app.command(help="Format configuration file.")
+def format(configuration_path: Path = OPTION_CONFIGURATION) -> None:
+    try:
+        formatter.format(configuration_path)
     except Ops2debError as e:
         error(e)
 
