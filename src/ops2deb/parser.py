@@ -98,5 +98,4 @@ def validate(configuration_dict: List[Dict[str, Any]]) -> List[Blueprint]:
 
 
 def parse(configuration_path: Path) -> List[Blueprint]:
-    yaml = YAML(typ="safe")
-    return validate(load(configuration_path, yaml))
+    return validate(load(configuration_path))

@@ -1,98 +1,102 @@
-- name: kubectl
-  version: 1.22.4
-  homepage: https://github.com/kubernetes/kubectl
-  summary: Command line client for controlling a Kubernetes cluster
-  description: |
-    kubectl is a command line client for running commands against Kubernetes clusters.
-  fetch:
-    url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
-    sha256: 21f24aa723002353eba1cc2668d0be22651f9063f444fd01626dce2b6e1c568c
-  script:
-  - mv kubectl {{src}}/usr/bin/
-
-- name: kustomize
-  version: 3.8.10
-  homepage: https://kustomize.io/
-  depends:
-  - kubectl
-  summary: Kubernetes native configuration management
-  description: |
-    kustomize lets you customize raw, template-free YAML files for multiple purposes,
-    leaving the original YAML untouched and usable as is.
-    kustomize targets kubernetes; it understands and can patch kubernetes style API objects.
-    It's like make, in that what it does is declared in a file,
-    and it's like sed, in that it emits edited text.
-  fetch:
-    url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
-    sha256: 10281b6cd16a50fcbb4a762652bf5ab333633d37035fc7f76ee7b941b50b511d
-  script:
-  - mv kustomize {{src}}/usr/bin/
-
 - name: helm
   version: 3.7.1
   homepage: https://helm.sh/
-  depends:
-  - kubectl
   summary: The Kubernetes package manager
-  description: |
+  description: |-
     Tool for managing Kubernetes charts.
     Charts are packages of pre-configured Kubernetes resources.
+  depends:
+    - kubectl
   fetch:
     url: https://get.helm.sh/helm-v{{version}}-linux-amd64.tar.gz
     sha256: 6cd6cad4b97e10c33c978ff3ac97bb42b68f79766f1d2284cfd62ec04cd177f4
   script:
-  - mv linux-amd64/helm {{src}}/usr/bin/
-
-- name: istioctl
-  version: 1.12.0
-  homepage: https://istio.io/
-  depends:
-  - kubectl
-  summary: Istio service mesh CLI
-  description: Istio is an open platform to connect, manage, and secure microservices.
-  fetch:
-    url: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
-    sha256: 7b219d9d0f48bd92901ef4cacb048c10c9f812dd4af120b0e3b353c006b3226e
-  script:
-  - install -d {{src}}/opt/istio
-  - mv * {{src}}/opt/istio/
-  - ln -s /opt/istio/istio-{{version}}/bin/istioctl {{src}}/usr/bin/istioctl
-
-- name: kubeseal
-  homepage: https://github.com/bitnami-labs/sealed-secrets
-  version: 0.16.0
-  summary: Secret management solution for k8s
-  description: Encrypt your Secret into a SealedSecret, which is safe to store - even
-    to a public repository.
-  fetch:
-    url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-linux-amd64
-    sha256: 0899c583053a7c242359985545d9c5c76899fb965dd9d1c46cbcc8b4dd2071ed
-  script:
-  - install -m 755 kubeseal-linux-amd64 {{src}}/usr/bin/kubeseal
+    - mv linux-amd64/helm {{src}}/usr/bin/
 
 - name: helmfile
   version: 0.142.0
   homepage: https://github.com/roboll/helmfile
-  depends:
-  - kubectl
-  - helm
   summary: Deploy Kubernetes Helm Charts
-  description: |
+  description: |-
     Helmfile is a declarative spec for deploying helm charts. It lets you...
-    - Keep a directory of chart value files and maintain changes in version control.
+
+    - Keep a directory of chart value files and maintain changes in version
+    control.
     - Apply CI/CD to configuration changes.
     - Periodically sync to avoid skew in environments.
+  depends:
+    - kubectl
+    - helm
   fetch:
     url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_amd64
     sha256: ec01b884cbb9d072f4a6784b33a29f3311248e85e714ebacabba85a79a3ba3db
   script:
-  - install -m 755 helmfile_linux_amd64 {{src}}/usr/bin/helmfile
+    - install -m 755 helmfile_linux_amd64 {{src}}/usr/bin/helmfile
+
+- name: istioctl
+  version: 1.12.0
+  homepage: https://istio.io/
+  summary: Istio service mesh CLI
+  description: Istio is an open platform to connect, manage, and secure microservices.
+  depends:
+    - kubectl
+  fetch:
+    url: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
+    sha256: 7b219d9d0f48bd92901ef4cacb048c10c9f812dd4af120b0e3b353c006b3226e
+  script:
+    - install -d {{src}}/opt/istio
+    - mv * {{src}}/opt/istio/
+    - ln -s /opt/istio/istio-{{version}}/bin/istioctl {{src}}/usr/bin/istioctl
+
+- name: kubectl
+  version: 1.22.4
+  homepage: https://github.com/kubernetes/kubectl
+  summary: Command line client for controlling a Kubernetes cluster
+  description: |-
+    kubectl is a command line client for running commands against Kubernetes
+    clusters.
+  fetch:
+    url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
+    sha256: 21f24aa723002353eba1cc2668d0be22651f9063f444fd01626dce2b6e1c568c
+  script:
+    - mv kubectl {{src}}/usr/bin/
+
+- name: kubeseal
+  version: 0.16.0
+  homepage: https://github.com/bitnami-labs/sealed-secrets
+  summary: Secret management solution for k8s
+  description: |-
+    Encrypt your Secret into a SealedSecret, which is safe to store - even to a
+    public repository.
+  fetch:
+    url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-linux-amd64
+    sha256: 0899c583053a7c242359985545d9c5c76899fb965dd9d1c46cbcc8b4dd2071ed
+  script:
+    - install -m 755 kubeseal-linux-amd64 {{src}}/usr/bin/kubeseal
+
+- name: kustomize
+  version: 3.8.10
+  homepage: https://kustomize.io/
+  summary: Kubernetes native configuration management
+  description: |-
+    kustomize lets you customize raw, template-free YAML files for multiple
+    purposes, leaving the original YAML untouched and usable as is. kustomize
+    targets kubernetes; it understands and can patch kubernetes style API objects.
+    It's like make, in that what it does is declared in a file, and it's like sed,
+    in that it emits edited text.
+  depends:
+    - kubectl
+  fetch:
+    url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
+    sha256: 10281b6cd16a50fcbb4a762652bf5ab333633d37035fc7f76ee7b941b50b511d
+  script:
+    - mv kustomize {{src}}/usr/bin/
 
 - name: minikube
   version: 1.24.0
   homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
-  description: |
+  description: |-
     Focus on helping application developers and new Kubernetes users.
     Supports the latest Kubernetes release (+6 previous minor versions)
     Cross-platform (Linux, macOS, Windows)
@@ -105,4 +109,4 @@
     url: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
     sha256: 3bc218476cf205acf11b078d45210a4882e136d24a3cbb7d8d645408e423b8fe
   script:
-  - install -m 755 minikube-linux-amd64 {{src}}/usr/bin/minikube
+    - install -m 755 minikube-linux-amd64 {{src}}/usr/bin/minikube
