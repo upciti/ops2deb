@@ -47,7 +47,7 @@ mock_configuration_with_invalid_archive_checksum = """\
   description: |
     A detailed description of the bad package
   fetch:
-    url: http://testserver/{{version}}/super-app.zip
+    url: http://testserver/{{version}}/great-app.tar.gz
     sha256: deadbeef
   script:
     - mv great-app {{src}}/usr/bin/great-app
@@ -138,6 +138,21 @@ mock_configuration_not_properly_formatted = """\
 """
 
 
+mock_configuration_with_multi_arch_remote_file = """\
+- name: great-app
+  summary: Great package
+  version: 1.0.0
+  description: A detailed description of the great package.
+  fetch:
+    url: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
+    sha256:
+      amd64: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+      armhf: abb864290dedcd1e06857f33bf03b0875d485c06fce80f86944e6565080b8fb5
+  script:
+  - mv great-app {{src}}/usr/bin/great-app
+"""
+
+
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path, mock_httpx_client):
     def _invoke(*args, configuration: Optional[str] = None, write: bool = True):
@@ -176,6 +191,18 @@ def test_ops2deb_generate_should_succeed_with_valid_configuration(tmp_path, call
     assert result.exit_code == 0
 
 
+def test_ops2deb_generate_should_succeed_with_valid_multi_arch_fetch_configuration(
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb(
+        "generate", configuration=mock_configuration_with_multi_arch_remote_file
+    )
+    print(result.stdout)
+    assert (tmp_path / "great-app_1.0.0_amd64/src/usr/bin/great-app").is_file()
+    assert (tmp_path / "great-app_1.0.0_armhf/src/usr/bin/great-app").is_file()
+    assert result.exit_code == 0
+
+
 def test_ops2deb_generate_should_not_download_already_cached_archives(call_ops2deb):
     result = call_ops2deb("generate")
     assert "Downloading" in result.stdout
@@ -187,7 +214,7 @@ def test_ops2deb_generate_should_fail_with_invalid_checksum(call_ops2deb):
     result = call_ops2deb(
         "generate", configuration=mock_configuration_with_invalid_archive_checksum
     )
-    assert "Wrong checksum for file super-app.zip" in result.stdout
+    assert "Wrong checksum for file great-app.tar.gz" in result.stdout
     assert result.exit_code == 77
 
 
@@ -237,12 +264,16 @@ def test_ops2deb_build_should_exit_with_error_when_build_fails(tmp_path, call_op
 
 
 def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
-    result = call_ops2deb("update")
+    result = call_ops2deb(
+        "update", configuration=mock_configuration_with_invalid_archive_checksum
+    )
     print(result.stdout)
     configuration = parse(tmp_path / "ops2deb.yml")
-    assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
+    assert "bad-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
     assert configuration[0].version == "1.1.1"
+    sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
+    assert configuration[0].fetch.sha256 == sha256
 
 
 def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
@@ -254,6 +285,19 @@ def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
     configuration = parse(tmp_path / "ops2deb.yml")
     assert result.exit_code == 0
     assert configuration[0].version == "1.1.1"
+
+
+def test_ops2deb_update_should_succeed_with_multi_arch_fetch(tmp_path, call_ops2deb):
+    result = call_ops2deb(
+        "update", configuration=mock_configuration_with_multi_arch_remote_file
+    )
+    configuration = parse(tmp_path / "ops2deb.yml")
+    assert result.exit_code == 0
+    assert configuration[0].version == "1.1.1"
+    sha256_armhf = "cf9a3f702d3532d50c5a864285ba60b2d067aea427a770f7267761f69657d746"
+    assert configuration[0].fetch.sha256.armhf == sha256_armhf
+    sha256_amd64 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
+    assert configuration[0].fetch.sha256.amd64 == sha256_amd64
 
 
 def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_ops2deb):

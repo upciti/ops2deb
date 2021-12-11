@@ -1,14 +1,26 @@
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from jinja2 import Environment
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
 from ruamel.yaml import YAML, YAMLError
 
 from .exceptions import Ops2debParserError
+from .jinja import environment
 
-environment = Environment()
-Architecture = Literal["all", "amd64", "armhf"]
+Architecture = Literal["all", "amd64", "arm64", "armhf"]
+
+
+DEFAULT_GOARCH_MAP = {
+    "amd64": "amd64",
+    "arm64": "arm64",
+    "armhf": "arm",
+}
+
+DEFAULT_RUST_TARGET_MAP = {
+    "amd64": "x86_64-unknown-linux-gnu",
+    "arm64": "aarch64-unknown-linux-gnu",
+    "armhf": "arm-unknown-linux-gnueabihf",
+}
 
 
 class Base(BaseModel):
@@ -17,9 +29,25 @@ class Base(BaseModel):
         allow_mutation = False
 
 
+class ArchitectureMap(Base):
+    amd64: Optional[str] = None
+    armhf: Optional[str] = None
+    arm64: Optional[str] = None
+
+
 class RemoteFile(Base):
-    url: AnyHttpUrl = Field(..., description="File URL")
-    sha256: str = Field(..., description="File SHA256 checksum")
+    url: AnyHttpUrl = Field(..., description="URL template of the file")
+    sha256: str = Field(..., description="SHA256 checksum of the file")
+
+
+class MultiArchitectureRemoteFile(Base):
+    url: AnyHttpUrl = Field(..., description="URL template of the file")
+    sha256: ArchitectureMap = Field(..., description="SHA256 checksum of each file")
+    targets: Optional[ArchitectureMap] = Field(
+        None,
+        description="Architecture to target name map. The URL can be templated with "
+        "the target name to download the right file/archive for each architecture.",
+    )
 
 
 class Blueprint(Base):
@@ -39,13 +67,23 @@ class Blueprint(Base):
         description="Conflicting packages, for more information read "
         "https://www.debian.org/doc/debian-policy/ch-relationships.html",
     )
-    fetch: Optional[RemoteFile] = Field(None, description="File to download")
+    fetch: Optional[Union[RemoteFile, MultiArchitectureRemoteFile]] = Field(
+        None,
+        description="Describe a file (or a file per architecture) to download before "
+        "running the build script",
+    )
     script: List[str] = Field(default_factory=list, description="Build instructions")
 
     class Config:
         anystr_strip_whitespace = True
 
-    def _render_str(self, string: str, **kwargs: Optional[str]) -> str:
+    def supported_architectures(self) -> List[str]:
+        if isinstance(self.fetch, MultiArchitectureRemoteFile):
+            return list(self.fetch.sha256.dict(exclude_none=True).keys())
+        else:
+            return [self.arch]
+
+    def render_string(self, string: str, **kwargs: Optional[str]) -> str:
         version = kwargs.pop("version", None)
         version = version or self.version
         return environment.from_string(string).render(
@@ -55,27 +93,41 @@ class Blueprint(Base):
             **kwargs,
         )
 
-    def render(
-        self, src: Optional[Path] = None, version: Optional[str] = None
-    ) -> "Blueprint":
-        update: Dict[str, Any] = {}
+    def render_fetch(self, version: Optional[str] = None) -> Optional[RemoteFile]:
+        if self.fetch is None:
+            return None
+        if isinstance(self.fetch, MultiArchitectureRemoteFile):
+            sha256 = getattr(self.fetch.sha256, self.arch, None)
+            target = getattr(self.fetch.targets, self.arch, self.arch)
+        else:
+            sha256 = self.fetch.sha256
+            target = self.arch
+        if sha256 is None:
+            return None
+        url = self.render_string(
+            self.fetch.url,
+            version=version,
+            sha256=sha256,
+            target=target,
+            goarch=DEFAULT_GOARCH_MAP.get(self.arch, None),
+            rust_target=DEFAULT_RUST_TARGET_MAP.get(self.arch, None),
+        )
+        return RemoteFile(url=url, sha256=sha256)
 
-        if src is not None:
-            update["script"] = [
-                self._render_str(line, src=str(src)) for line in self.script
-            ]
-
-        if self.fetch is not None:
-            update["fetch"] = RemoteFile(
-                url=self._render_str(self.fetch.url, version=version),
-                sha256=self.fetch.sha256,
-            )
-
-        return self.copy(update=update)
+    def render_script(self, src: Path = None) -> List[str]:
+        return [self.render_string(line, src=str(src)) for line in self.script]
 
 
 class Configuration(Base):
     __root__: Union[List[Blueprint], Blueprint]
+
+
+def extend(blueprints: List[Blueprint]) -> List[Blueprint]:
+    extended_list: List[Blueprint] = []
+    for blueprint in blueprints:
+        for arch in blueprint.supported_architectures():
+            extended_list.append(blueprint.copy(update={"arch": arch}))
+    return extended_list
 
 
 def load(

@@ -1,19 +1,15 @@
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List, Optional
-
-from jinja2 import Environment, FunctionLoader
+from typing import Dict, List, Optional
 
 from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from .fetcher import Fetcher, FetchResult, FetchResultOrError
-from .parser import Blueprint
-from .templates import template_loader
-from .utils import split_successes_from_errors
-
-_environment = Environment(loader=FunctionLoader(template_loader))
+from .jinja import environment
+from .parser import Blueprint, extend
+from .utils import separate_successes_from_errors
 
 
 def _format_command_output(output: str) -> str:
@@ -30,10 +26,11 @@ class SourcePackage:
         self.debian_directory = self.package_directory / "debian"
         self.source_directory = self.package_directory / "src"
         self.fetch_directory = self.package_directory / "fetched"
-        self.blueprint = blueprint.render(self.source_directory)
+        self.blueprint = blueprint
+        self.remote_file = self.blueprint.render_fetch()
 
     def _render_template(self, template_name: str) -> None:
-        template = _environment.get_template(f"{template_name}")
+        template = environment.get_template(f"{template_name}")
         package = self.blueprint.dict(exclude={"fetch", "script"})
         package.update({"version": self.debian_version})
         template.stream(package=package).dump(str(self.debian_directory / template_name))
@@ -60,7 +57,7 @@ class SourcePackage:
         cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
 
         # run script
-        for line in self.blueprint.script:
+        for line in self.blueprint.render_script(src=self.source_directory):
             logger.info(f"$ {line}")
             result = subprocess.run(line, shell=True, cwd=cwd, capture_output=True)
             if stdout := result.stdout.decode():
@@ -70,10 +67,10 @@ class SourcePackage:
             if result.returncode:
                 raise Ops2debGeneratorScriptError
 
-    def generate(self, fetcher: Fetcher) -> None:
+    def generate(self, fetch_results: Dict[str, FetchResultOrError]) -> None:
         fetch_result: Optional[FetchResultOrError] = None
-        if self.blueprint.fetch is not None:
-            fetch_result = fetcher.results[self.blueprint.fetch.url]
+        if self.remote_file is not None:
+            fetch_result = fetch_results[self.remote_file.url]
             if not isinstance(fetch_result, FetchResult):
                 # fetch failed, we cannot generate source package
                 return
@@ -124,20 +121,20 @@ def generate(
     output_directory: Path,
     debian_repository: Optional[str] = None,
 ) -> None:
-    packages = [SourcePackage(blueprint, output_directory) for blueprint in blueprints]
+    # each blueprint can yield multiple source packages, one per supported arch
+    packages = [SourcePackage(b, output_directory) for b in extend(blueprints)]
 
-    # filter out blueprints that build packages already available in the debian repository
+    # filter out packages already available in the debian repository
     if debian_repository is not None:
         packages = filter_already_published_packages(packages, debian_repository)
 
     # run fetch instructions (download, verify, extract) in parallel
-    files = [p.blueprint.fetch for p in packages if p.blueprint.fetch is not None]
-    fetcher = Fetcher(files)
-    fetcher.sync_fetch()
+    files = [p.remote_file for p in packages if p.remote_file is not None]
+    fetch_results = Fetcher(files).sync_fetch()
 
     for package in packages:
-        package.generate(fetcher)
+        package.generate(fetch_results)
 
-    _, errors = split_successes_from_errors(fetcher.results.values())
+    _, errors = separate_successes_from_errors(fetch_results.values())
     if errors:
         raise Ops2debGeneratorError(f"{len(errors)} failures occurred")

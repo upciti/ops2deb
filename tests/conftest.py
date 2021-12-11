@@ -86,35 +86,55 @@ async def serve_snapshot_apt_secops_binary_amd64_packages(request: Request):
     return PlainTextResponse(content=snapshot_apt_secops_binary_amd64_Packages)
 
 
+def build_server_response(content: bytes, content_type: str = "application/x-gzip"):
+    return Response(
+        base64.b64decode(content),
+        status_code=200,
+        media_type=content_type,
+    )
+
+
+@starlette_app.route("/1.0.0/great-app-armhf.tar.gz")
+@starlette_app.route("/1.1.0/great-app-armhf.tar.gz")
+async def server_great_app_armhf_tar_gz(request: Request):
+    return build_server_response(
+        b"""H4sIAAAAAAAAA+3SPQrCQBDF8a09xVxA2Ml+5CJeYEFNgpiE3aTw9iYIYhWrIML/17xiXvGKafI
+        lTcc0jmY/dhGjX1PrYD/zxTmjXqNXX1UuGKtaazBid9z0NpcpZRFTuvvQb/S+3f/UqU39TR7DLN"
+        chy/IM565vZGq7cvj1NAAAAAAAAAAAAAAAAADAhie01A/zACgAAA=="""
+    )
+
+
+@starlette_app.route("/1.1.1/great-app-armhf.tar.gz")
+async def server_great_app_armhf_1_1_1_tar_gz(request: Request):
+    return build_server_response(
+        b"""H4sIAAAAAAAAA+3SPQqEQAyG4ak9RS4gTCSOZ7GcQmQLfxj1/irCspXayCK8T/NBkuIr0qYmznk
+        cR/ccvwnB9tSq9L950ODUNJialYU6r1ptI/EPdvpapjkmETd9uqE/ubvav1Q9LBJTI+3+B9m/2w
+        AAAAAAAAAAAAAAAAAA7loBhmMfoQAoAAA="""
+    )
+
+
 @starlette_app.route("/1.0.0/great-app.tar.gz")
 @starlette_app.route("/1.1.0/great-app.tar.gz")
 @starlette_app.route("/1.1.1/great-app.tar.gz")
-async def server_great_app__tar_gz(request: Request):
-    # b64 encoded tar.gz with an empty "great-app" file
-    dummy_tar_gz_file = (
-        b"H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF"
-        b"fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf"
-        b"u1BwAAAAAAAAAAgD96AGPmdYsAKAAA"
-    )
-    return Response(
-        base64.b64decode(dummy_tar_gz_file),
-        status_code=200,
-        media_type="application/x-gzip",
+@starlette_app.route("/1.0.0/great-app-amd64.tar.gz")
+@starlette_app.route("/1.1.0/great-app-amd64.tar.gz")
+@starlette_app.route("/1.1.1/great-app-amd64.tar.gz")
+async def server_great_app_tar_gz(request: Request):
+    return build_server_response(
+        b"""H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF
+        fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf
+        u1BwAAAAAAAAAAgD96AGPmdYsAKAAA"""
     )
 
 
 @starlette_app.route("/1.0.0/super-app.zip")
 async def serve_super_app_zip(request: Request):
-    dummy_zip_file = (
-        b"UEsDBBQACAAIAFVdkFIAAAAAAAAAAAAAAAAJACAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1"
-        b"eAsAAQToAwAABOgDAAADAFBLBwgAAAAAAgAAAAAAAABQSwECFAMUAAgACABVXZBSAAAAAAIAAAAA"
-        b"AAAACQAgAAAAAAAAAAAAtIEAAAAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1eAsAAQToAwAA"
-        b"BOgDAABQSwUGAAAAAAEAAQBXAAAAWQAAAAAA"
-    )
-    return Response(
-        base64.b64decode(dummy_zip_file),
-        status_code=200,
-        media_type="application/zip",
+    return build_server_response(
+        b"""UEsDBBQACAAIAFVdkFIAAAAAAAAAAAAAAAAJACAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1
+        eAsAAQToAwAABOgDAAADAFBLBwgAAAAAAgAAAAAAAABQSwECFAMUAAgACABVXZBSAAAAAAIAAAAA
+        AAAACQAgAAAAAAAAAAAAtIEAAAAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1eAsAAQToAwAA
+        BOgDAABQSwUGAAAAAAEAAQBXAAAAWQAAAAAA""",
+        content_type="application/zip",
     )
 
 

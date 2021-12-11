@@ -11,9 +11,9 @@ from semver.version import Version
 from . import logger
 from .client import client_factory
 from .exceptions import Ops2debUpdaterError
-from .fetcher import Fetcher, FetchTask
-from .parser import Blueprint, RemoteFile, load, validate
-from .utils import log_and_raise, split_successes_from_errors
+from .fetcher import Fetcher, FetchResult, FetchResultOrError
+from .parser import Blueprint, RemoteFile, extend, load, validate
+from .utils import log_and_raise, separate_successes_from_errors
 
 
 # fixme: move this somewhere else, this code is also duplicated in formatter.py
@@ -25,8 +25,7 @@ class FixIndentEmitter(Emitter):
 
 @dataclass(frozen=True)
 class NewRelease:
-    name: str
-    sha256: str
+    blueprint: Blueprint
     old_version: str
     new_version: str
 
@@ -40,7 +39,7 @@ async def _bump_and_poll(
     new_version = version
     while True:
         version = version.bump_patch() if bump_patch else version.bump_minor()
-        if (remote_file := blueprint.render(version=str(version)).fetch) is None:
+        if not (remote_file := blueprint.render_fetch(version=str(version))):
             break
         url = remote_file.url
         logger.debug(f"Trying {url}")
@@ -61,6 +60,8 @@ async def _bump_and_poll(
 async def _find_latest_release(
     blueprint: Blueprint,
 ) -> Optional[NewRelease]:
+    if blueprint.fetch is None:
+        return None
 
     if not Version.isvalid(blueprint.version):
         logger.warning(f"{blueprint.name} is not using semantic versioning")
@@ -74,11 +75,8 @@ async def _find_latest_release(
     if version != old_version:
         logger.info(f"{blueprint.name} can be bumped from {old_version} to {version}")
 
-        file = cast(RemoteFile, blueprint.render(version=str(version)).fetch)
-        result = await FetchTask(Fetcher.cache_directory_path, file).fetch(extract=False)
         return NewRelease(
-            name=blueprint.name,
-            sha256=result.sha256_sum,
+            blueprint=blueprint,
             old_version=blueprint.version,
             new_version=str(version),
         )
@@ -86,19 +84,55 @@ async def _find_latest_release(
     return None
 
 
-async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> Optional[NewRelease]:
-    blueprint = Blueprint.parse_obj(blueprint_dict)
-    if blueprint.fetch is None:
-        return None
+def _find_latest_releases(
+    blueprints: List[Blueprint],
+) -> List[Union[NewRelease, Exception]]:
+    async def run_tasks() -> Any:
+        return await asyncio.gather(
+            *[_find_latest_release(b) for b in blueprints],
+            return_exceptions=True,
+        )
 
-    release = await _find_latest_release(blueprint)
-    if release is None:
-        return None
+    return asyncio.run(run_tasks())
 
+
+def _fetch_new_files(
+    new_releases: List[Union[NewRelease, Exception]]
+) -> Dict[str, FetchResultOrError]:
+    blueprints = [
+        r.blueprint.copy(update={"version": r.new_version})
+        for r in new_releases
+        if isinstance(r, NewRelease)
+    ]
+    remote_files = [cast(RemoteFile, b.render_fetch()) for b in extend(blueprints)]
+    fetcher = Fetcher(remote_files)
+    return fetcher.sync_fetch(extract=False)
+
+
+def _update_blueprint_dict(
+    blueprint_dict: Dict[str, Any],
+    release: Union[NewRelease, Exception],
+    fetch_results: Dict[str, FetchResultOrError],
+) -> None:
+    if not isinstance(release, NewRelease):
+        return
+
+    new_sha256_object: Any = {}
+
+    for arch in release.blueprint.supported_architectures():
+        blueprint = release.blueprint.copy(update={"arch": arch})
+        remote_file = cast(RemoteFile, blueprint.render_fetch(release.new_version))
+        fetch_result = fetch_results[remote_file.url]
+        if not isinstance(fetch_result, FetchResult):
+            return
+        if isinstance(release.blueprint.fetch, RemoteFile):
+            new_sha256_object = fetch_result.sha256_sum
+        else:
+            new_sha256_object[arch] = fetch_result.sha256_sum
+
+    blueprint_dict["fetch"]["sha256"] = new_sha256_object
     blueprint_dict["version"] = release.new_version
-    blueprint_dict["fetch"]["sha256"] = release.sha256
     blueprint_dict.pop("revision", None)
-    return release
 
 
 def update(
@@ -108,7 +142,7 @@ def update(
     yaml.Emitter = FixIndentEmitter
 
     configuration_dict = load(configuration_path, yaml)
-    validate(configuration_dict)
+    blueprints = validate(configuration_dict)
 
     logger.title("Looking for new releases...")
 
@@ -119,29 +153,31 @@ def update(
         else [configuration_dict]
     )
 
-    async def run_tasks() -> Any:
-        return await asyncio.gather(
-            *[_update_blueprint_dict(b) for b in blueprints_dict],
-            return_exceptions=True,
-        )
+    new_releases = _find_latest_releases(blueprints)
+    fetch_results = _fetch_new_files(new_releases)
 
-    results: List[Union[NewRelease, Exception]] = asyncio.run(run_tasks())
-    new_releases, errors = split_successes_from_errors(results)
+    if not new_releases:
+        logger.info("Did not found any updates")
 
     if dry_run is False and new_releases:
+        for blueprint_dict, release in zip(blueprints_dict, new_releases):
+            _update_blueprint_dict(blueprint_dict, release, fetch_results)
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
         logger.info("Configuration file updated")
 
         if output_path is not None:
             lines = [
-                f"Updated {r.name} from {r.old_version} to {r.new_version}"
+                f"Updated {r.blueprint.name} from {r.old_version} to {r.new_version}"
                 for r in new_releases
+                if isinstance(r, NewRelease)
             ]
             output_path.write_text("\n".join(lines) + "\n")
 
-    if not new_releases:
-        logger.info("Did not found any updates")
+    _, fetcher_errors = separate_successes_from_errors(fetch_results.values())
+    _, bump_errors = separate_successes_from_errors(new_releases)
 
-    if errors:
-        raise Ops2debUpdaterError(f"{len(errors)} failures occurred")
+    if fetcher_errors or bump_errors:
+        raise Ops2debUpdaterError(
+            f"{len(fetcher_errors)+len(bump_errors)} failures occurred"
+        )

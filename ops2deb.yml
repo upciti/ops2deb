@@ -8,10 +8,13 @@
   depends:
     - kubectl
   fetch:
-    url: https://get.helm.sh/helm-v{{version}}-linux-amd64.tar.gz
-    sha256: 6cd6cad4b97e10c33c978ff3ac97bb42b68f79766f1d2284cfd62ec04cd177f4
+    url: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
+    sha256:
+      amd64: 6cd6cad4b97e10c33c978ff3ac97bb42b68f79766f1d2284cfd62ec04cd177f4
+      armhf: e035e0022cf5c49d08c08371364aae9eebe614a20035856e7370a85ded8db790
+      arm64: 57875be56f981d11957205986a57c07432e54d0b282624d68b1aeac16be70704
   script:
-    - mv linux-amd64/helm {{src}}/usr/bin/
+    - mv linux-*/helm {{src}}/usr/bin/
 
 - name: helmfile
   version: 0.142.0
@@ -27,10 +30,12 @@
     - kubectl
     - helm
   fetch:
-    url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_amd64
-    sha256: ec01b884cbb9d072f4a6784b33a29f3311248e85e714ebacabba85a79a3ba3db
+    url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_{{goarch}}
+    sha256:
+      amd64: ec01b884cbb9d072f4a6784b33a29f3311248e85e714ebacabba85a79a3ba3db
+      arm64: 92e1da5dc8628830c725c39a2e991b7c1bf957396b7dd8127ceb34ec6607324e
   script:
-    - install -m 755 helmfile_linux_amd64 {{src}}/usr/bin/helmfile
+    - install -m 755 helmfile_linux_* {{src}}/usr/bin/helmfile
 
 - name: istioctl
   version: 1.12.0
