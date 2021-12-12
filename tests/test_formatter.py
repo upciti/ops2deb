@@ -12,9 +12,9 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 """
 
 
-def test_format_description_should_preserve_empty_lines():
+def test_format_description_should_remove_empty_lines():
     result = format_description(description_with_empty_line)
-    assert result.split("\n")[1] == ""
+    assert "" not in result.split("\n")
 
 
 def test_format_description_should_be_idempotent():
@@ -24,4 +24,4 @@ def test_format_description_should_be_idempotent():
 
 def test_format_description_should_wrap_long_lines():
     result = format_description(description_with_long_line)
-    assert len(result.split("\n")) == 3
+    assert len(result.split("\n")) == 2

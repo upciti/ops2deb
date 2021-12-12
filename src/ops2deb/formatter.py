@@ -28,7 +28,7 @@ def sort_blueprints(blueprints: List[Blueprint]) -> List[Blueprint]:
 def format_description(description: str) -> str:
     lines: List[str] = []
     for line in description.split("\n"):
-        lines.extend(wrap(line, width=79)) if line else lines.append("")
+        lines.extend(wrap(line, width=79))
     return "\n".join(lines)
 
 
