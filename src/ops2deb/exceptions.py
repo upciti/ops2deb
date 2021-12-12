@@ -6,6 +6,10 @@ class GenerateError(Ops2debError):
     pass
 
 
+class BuildError(GenerateError):
+    pass
+
+
 class GenerateScriptError(GenerateError):
     pass
 

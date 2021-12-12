@@ -198,6 +198,13 @@ def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_op
     assert (tmp_path / "great-app_1.0.0-2~ops2deb_all.deb").is_file()
 
 
+def test_ops2deb_build_should_exit_with_error_when_build_fails(tmp_path, call_ops2deb):
+    call_ops2deb("generate")
+    (tmp_path / "great-app_1.0.0_all/debian/control").write_text("INVALID_CONTROL")
+    result = call_ops2deb("build")
+    assert result.exit_code == 77
+
+
 def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     result = call_ops2deb("update")
     print(result.stdout)

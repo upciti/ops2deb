@@ -1,9 +1,10 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from . import logger
+from .exceptions import BuildError
 
 
 def parse_debian_control(cwd: Path) -> Dict[str, str]:
@@ -25,7 +26,7 @@ def parse_debian_control(cwd: Path) -> Dict[str, str]:
     return control
 
 
-async def build_package(cwd: Path) -> Optional[int]:
+async def build_package(cwd: Path) -> None:
     """Run dpkg-buildpackage in specified path."""
     args = ["-us", "-uc"]
     arch = parse_debian_control(cwd)["Architecture"]
@@ -44,15 +45,15 @@ async def build_package(cwd: Path) -> Optional[int]:
     stdout, stderr = await proc.communicate()
 
     if proc.returncode:
-        logger.error(f"Failed to build package in {str(cwd)}")
+        error = f"Failed to build package in {str(cwd)}"
+        logger.error(error)
+        raise BuildError(error)
     else:
         logger.info(f"Successfully built {str(cwd)}")
         if stdout:
             logger.debug(stdout.decode())
         if stderr:
             logger.debug(stderr.decode())
-
-    return proc.returncode
 
 
 def build(output_directory: Path, workers: int = 4) -> None:
@@ -73,8 +74,13 @@ def build(output_directory: Path, workers: int = 4) -> None:
         async with sem:  # semaphore limits num of simultaneous builds
             return await build_package(_path)
 
-    async def _build_all() -> None:
+    async def _build_all() -> Any:
         sem = asyncio.Semaphore(workers)
-        await asyncio.gather(*[_build_package(sem, p) for p in paths])
+        return await asyncio.gather(
+            *[_build_package(sem, p) for p in paths], return_exceptions=True
+        )
 
-    asyncio.run(_build_all())
+    results = asyncio.run(_build_all())
+
+    if errors := [e for e in results if isinstance(e, Exception)]:
+        raise BuildError(f"{len(errors)} failures occurred")
