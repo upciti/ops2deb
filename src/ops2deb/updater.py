@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 import ruamel.yaml
+from ruamel.yaml.emitter import Emitter
 from semver.version import Version
 
 from . import logger
@@ -12,6 +13,13 @@ from .client import client_factory
 from .exceptions import Ops2debError, UpdaterError
 from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
+
+
+# fixme: move this somewhere else, this code is also duplicated in formatter.py
+class FixIndentEmitter(Emitter):
+    def expect_block_sequence(self) -> None:
+        self.increase_indent(flow=False, indentless=False)
+        self.state = self.expect_first_block_sequence_item
 
 
 @dataclass(frozen=True)
@@ -104,7 +112,9 @@ async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> Optional[New
 def update(
     configuration_path: Path, dry_run: bool = False, output_path: Optional[Path] = None
 ) -> None:
-    yaml = ruamel.yaml.YAML()
+    yaml = ruamel.yaml.YAML(typ="rt")
+    yaml.Emitter = FixIndentEmitter
+
     configuration_dict = load(configuration_path, yaml)
     validate(configuration_dict)
 
