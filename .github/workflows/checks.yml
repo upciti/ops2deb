@@ -1,0 +1,59 @@
+name: Run Checks
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        python: [ "3.9" ]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Cache dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: ${{ matrix.python }}-dependencies-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ matrix.python }}-dependencies
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -yq && sudo apt-get install -y --no-install-recommends debhelper fakeroot
+        pip install poetry
+        python -m venv .venv
+        poetry run python -m pip install --upgrade pip
+        poetry install
+    - name: Run black
+      run: poetry run black src tests --check
+
+    - name: Run isort
+      run: poetry run isort src tests --check
+
+    - name: Run flake8
+      run: poetry run flake8 src tests
+
+    - name: Run safety
+      run: poetry export -f requirements.txt | poetry run safety check --bare --stdin
+
+    - name: Run mypy
+      run: poetry run mypy --show-error-codes src
+
+    - name: Run pytest
+      run: poetry run pytest --cov=src --cov-report=term-missing tests
+
+    - name: Generate coverage report
+      shell: bash
+      run: poetry run coverage xml
+
+    - uses: codecov/codecov-action@v2
+      with:
+        files: ./coverage.xml
