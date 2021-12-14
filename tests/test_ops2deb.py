@@ -122,6 +122,22 @@ script:
 """
 
 
+mock_configuration_not_properly_formatted = """\
+- name: great-app
+  summary: Great package
+  revision: 2
+  version: 1.0.0
+  arch: all
+  description: |
+    A detailed description of the great package.
+  fetch:
+    url: http://testserver/{{version}}/great-app.tar.gz
+    sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+  script:
+  - mv great-app {{src}}/usr/bin/great-app
+"""
+
+
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path, mock_httpx_client):
     def _invoke(*args, configuration: Optional[str] = None, write: bool = True):
@@ -254,14 +270,24 @@ def test_ops2deb_update_should_fail_when_server_error(tmp_path, call_ops2deb):
 
 
 def test_ops2deb_format_should_be_idempotent(tmp_path, call_ops2deb):
-    call_ops2deb("format")
-    result = (tmp_path / "ops2deb.yml").read_text()
+    call_ops2deb("format", configuration=mock_configuration_not_properly_formatted)
+    formatted_configuration = (tmp_path / "ops2deb.yml").read_text()
     call_ops2deb("format", write=False)
-    assert result == (tmp_path / "ops2deb.yml").read_text()
+    assert formatted_configuration == (tmp_path / "ops2deb.yml").read_text()
 
 
 def test_ops2deb_format_should_not_modify_already_formatted_configuration(
     tmp_path, call_ops2deb
 ):
-    call_ops2deb("format")
+    result = call_ops2deb("format")
+    assert result.exit_code == 0
     assert (tmp_path / "ops2deb.yml").read_text() == mock_valid_configuration
+
+
+def test_ops2deb_format_should_exit_with_error_code_when_file_gets_reformatted(
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb(
+        "format", configuration=mock_configuration_not_properly_formatted
+    )
+    assert result.exit_code == 77

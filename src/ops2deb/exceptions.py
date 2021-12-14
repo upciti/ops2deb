@@ -28,3 +28,7 @@ class ParseError(Ops2debError):
 
 class AptError(Ops2debError):
     pass
+
+
+class FormatError(Ops2debError):
+    pass

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Set
 
 import yaml
 
+from .exceptions import FormatError
 from .parser import Blueprint, parse
 
 
@@ -42,6 +43,8 @@ def format_blueprint(blueprint: Blueprint) -> Dict[str, Any]:
 
 
 def format(configuration_path: Path) -> None:
+    original_configuration_content = configuration_path.read_bytes()
+
     # sort blueprints by name, version and revision
     blueprints = sort_blueprints(parse(configuration_path))
 
@@ -66,4 +69,8 @@ def format(configuration_path: Path) -> None:
         new_yaml_dump_lines.append(line)
 
     # save formatted configuration file
-    configuration_path.write_bytes(b"\n".join(new_yaml_dump_lines))
+    formatted_configuration_content = b"\n".join(new_yaml_dump_lines)
+    configuration_path.write_bytes(formatted_configuration_content)
+
+    if formatted_configuration_content != original_configuration_content:
+        raise FormatError(f"Reformatted {configuration_path}")
