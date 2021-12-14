@@ -1,0 +1,141 @@
+name: 🚀 CI/CD
+
+on:
+  push:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Load Cached Poetry
+        uses: actions/cache@v2
+        with:
+          path: ~/.local
+          key: poetry-dependencies
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-in-project: true
+
+      - name: Load Cached Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: python-dependencies-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Python Dependencies
+        run: poetry install
+
+      - name: Fix APT Cache Permission
+        run: sudo chown -R "$(id -u)" /var/cache/apt
+
+      - name: Load Cached APT Dependencies
+        uses: actions/cache@v1
+        with:
+          path: /var/cache/apt/archives
+          key: apt-dependencies
+
+      - name: Install APT Dependencies
+        run: |
+          sudo apt-get update -yq
+          sudo apt-get install -y --no-install-recommends debhelper fakeroot
+
+      - name: Fix APT Cache Permission
+        run: sudo chown -R "$(id -u)" /var/cache/apt/archives
+
+      - name: Run black
+        run: poetry run black src tests --check
+
+      - name: Run isort
+        run: poetry run isort src tests --check
+
+      - name: Run flake8
+        run: poetry run flake8 src tests
+
+      - name: Run safety
+        run: poetry export -f requirements.txt | poetry run safety check --bare --stdin
+
+      - name: Run mypy
+        run: poetry run mypy --show-error-codes src
+
+      - name: Run pytest
+        run: poetry run pytest --cov=src --cov-report=term-missing tests
+
+      - name: Generate coverage report
+        shell: bash
+        run: poetry run coverage xml
+
+      - uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.xml
+
+  release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install clog-cli
+        run: |
+          curl -sSL https://gitlab.com/upciti/wakemeops/-/snippets/2223142/raw/main/install.sh | sudo bash -s dev
+          sudo apt-get install -y clog-cli
+
+      - name: Build Release Changelog
+        run: |
+          clog --setversion $(git tag | tail -n1) \
+               --from $(git tag | tail -n2 | head -n1) \
+               -o changelog.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: changelog.md
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: startsWith(github.ref, 'refs/tags')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Load Cached Poetry
+        uses: actions/cache@v2
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Get Release Version
+        if: "startsWith(github.ref, 'refs/tags')"
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Build Distribution
+        run: |
+          poetry version "$RELEASE_VERSION";
+          poetry build
+
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
