@@ -78,7 +78,9 @@ class Configuration(Base):
     __root__: Union[List[Blueprint], Blueprint]
 
 
-def load(configuration_path: Path, yaml: YAML = YAML()) -> List[Dict[str, Any]]:
+def load(
+    configuration_path: Path, yaml: YAML = YAML()
+) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
     try:
         return yaml.load(configuration_path.open("r"))
     except YAMLError as e:
@@ -87,7 +89,9 @@ def load(configuration_path: Path, yaml: YAML = YAML()) -> List[Dict[str, Any]]:
         raise ParseError(f"File not found: {configuration_path.absolute()}")
 
 
-def validate(configuration_dict: List[Dict[str, Any]]) -> List[Blueprint]:
+def validate(
+    configuration_dict: Union[List[Dict[str, Any]], Dict[str, Any]]
+) -> List[Blueprint]:
     try:
         blueprints = Configuration.parse_obj(configuration_dict).__root__
     except ValidationError as e:

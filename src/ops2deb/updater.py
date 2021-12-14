@@ -120,9 +120,16 @@ def update(
 
     logger.title("Looking for new releases...")
 
+    # configuration file can be a list of blueprints or a single blueprint
+    blueprints_dict = (
+        configuration_dict
+        if isinstance(configuration_dict, list)
+        else [configuration_dict]
+    )
+
     async def run_tasks() -> Any:
         return await asyncio.gather(
-            *[_update_blueprint_dict(b) for b in configuration_dict],
+            *[_update_blueprint_dict(b) for b in blueprints_dict],
             return_exceptions=True,
         )
 

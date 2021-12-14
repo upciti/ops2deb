@@ -107,6 +107,21 @@ script:
 """
 
 
+mock_configuration_single_blueprint_with_fetch = """\
+name: great-app
+version: 1.0.0
+revision: 2
+arch: all
+summary: Great package
+description: A detailed description of the great package.
+fetch:
+  url: http://testserver/{{version}}/great-app.tar.gz
+  sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+script:
+  - mv great-app {{src}}/usr/bin/great-app
+"""
+
+
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path, mock_httpx_client):
     def _invoke(*args, configuration: Optional[str] = None, write: bool = True):
@@ -210,6 +225,17 @@ def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_o
     print(result.stdout)
     configuration = parse(tmp_path / "ops2deb.yml")
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
+    assert result.exit_code == 0
+    assert configuration[0].version == "1.1.1"
+
+
+def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb(
+        "update", configuration=mock_configuration_single_blueprint_with_fetch
+    )
+    configuration = parse(tmp_path / "ops2deb.yml")
     assert result.exit_code == 0
     assert configuration[0].version == "1.1.1"
 
