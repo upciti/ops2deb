@@ -9,7 +9,7 @@ import httpx
 
 from . import logger
 from .client import client_factory
-from .exceptions import FetchError
+from .exceptions import Ops2debFetcherError
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
 _cache_directory = DEFAULT_CACHE_DIRECTORY
@@ -23,7 +23,7 @@ def set_cache_directory(path: Path) -> None:
 
 def _error(msg: str) -> None:
     logger.error(msg)
-    raise FetchError(msg)
+    raise Ops2debFetcherError(msg)
 
 
 async def _run(program: str, *args: str, cwd: Path) -> asyncio.subprocess.Process:

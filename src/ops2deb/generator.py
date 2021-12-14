@@ -8,7 +8,11 @@ from jinja2 import Environment, PackageLoader
 
 from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
-from .exceptions import FetchError, GenerateError, GenerateScriptError
+from .exceptions import (
+    Ops2debFetcherError,
+    Ops2debGeneratorError,
+    Ops2debGeneratorScriptError,
+)
 from .fetcher import fetch
 from .parser import Blueprint
 
@@ -74,7 +78,7 @@ class SourcePackage:
             if stderr := result.stderr.decode():
                 logger.error(_format_command_output(stderr))
             if result.returncode:
-                raise GenerateScriptError
+                raise Ops2debGeneratorScriptError
 
         # render debian/* files
         for template in [
@@ -134,7 +138,7 @@ def generate(
 
     errors = [e for e in results if isinstance(e, Exception)]
     for error in errors:
-        if not isinstance(error, FetchError):
+        if not isinstance(error, Ops2debFetcherError):
             raise error
 
     # run scripts, build debian/* files
@@ -143,4 +147,4 @@ def generate(
         package.generate()
 
     if errors:
-        raise GenerateError(f"{len(errors)} failures occurred")
+        raise Ops2debGeneratorError(f"{len(errors)} failures occurred")

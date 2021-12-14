@@ -10,7 +10,7 @@ from semver.version import Version
 
 from . import logger
 from .client import client_factory
-from .exceptions import Ops2debError, UpdaterError
+from .exceptions import Ops2debError, Ops2debUpdaterError
 from .fetcher import download_file_to_cache
 from .parser import Blueprint, load, validate
 
@@ -33,7 +33,7 @@ class NewRelease:
 
 def _error(msg: str) -> None:
     logger.error(msg)
-    raise UpdaterError(msg)
+    raise Ops2debUpdaterError(msg)
 
 
 async def _bump_and_poll(
@@ -157,4 +157,4 @@ def update(
         logger.info("Did not found any updates")
 
     if errors:
-        raise UpdaterError(f"{len(errors)} failures occurred")
+        raise Ops2debUpdaterError(f"{len(errors)} failures occurred")

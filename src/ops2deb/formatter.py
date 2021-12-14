@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Set
 
 import yaml
 
-from .exceptions import FormatError
+from .exceptions import Ops2debFormatterError
 from .parser import Blueprint, parse
 
 
@@ -73,4 +73,4 @@ def format(configuration_path: Path) -> None:
     configuration_path.write_bytes(formatted_configuration_content)
 
     if formatted_configuration_content != original_configuration_content:
-        raise FormatError(f"Reformatted {configuration_path}")
+        raise Ops2debFormatterError(f"Reformatted {configuration_path}")

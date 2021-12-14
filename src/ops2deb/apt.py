@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
 from . import logger
 from .client import client_factory
-from .exceptions import AptError
+from .exceptions import Ops2debAptError
 
 
 class DebianRepository(BaseModel):
@@ -53,14 +53,14 @@ def _parse_debian_repository_option(debian_repository: str) -> DebianRepository:
     try:
         url, distribution = debian_repository.split(" ")
     except ValueError:
-        raise AptError(
+        raise Ops2debAptError(
             "The expected format for the --repository option is "
             '"{repository_url} {distribution}"'
         )
     try:
         return DebianRepository(url=url, distribution=distribution)
     except ValidationError as e:
-        raise AptError(str(e))
+        raise Ops2debAptError(str(e))
 
 
 async def list_repository_packages(
@@ -72,7 +72,7 @@ async def list_repository_packages(
         architectures = release["Architectures"].split(" ")
         components = release["Components"].split(" ")
         logger.info(
-            f"Repository {repository.url} has architectures "
+            f"Repository {repository.url} {repository.distribution} has architectures "
             f"{architectures} and components {components}"
         )
         tasks = [

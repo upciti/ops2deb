@@ -5,7 +5,7 @@ from jinja2 import Environment, PackageLoader
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
 from ruamel.yaml import YAML, YAMLError
 
-from .exceptions import ParseError
+from .exceptions import Ops2debParserError
 
 environment = Environment(loader=PackageLoader("ops2deb", "templates"))
 Architecture = Literal["all", "amd64", "armhf"]
@@ -84,9 +84,9 @@ def load(
     try:
         return yaml.load(configuration_path.open("r"))
     except YAMLError as e:
-        raise ParseError(f"Invalid YAML file.\n{e}")
+        raise Ops2debParserError(f"Invalid YAML file.\n{e}")
     except FileNotFoundError:
-        raise ParseError(f"File not found: {configuration_path.absolute()}")
+        raise Ops2debParserError(f"File not found: {configuration_path.absolute()}")
 
 
 def validate(
@@ -95,7 +95,7 @@ def validate(
     try:
         blueprints = Configuration.parse_obj(configuration_dict).__root__
     except ValidationError as e:
-        raise ParseError(f"Invalid configuration file.\n{e}")
+        raise Ops2debParserError(f"Invalid configuration file.\n{e}")
     if isinstance(blueprints, Blueprint):
         blueprints = [blueprints]
     return blueprints

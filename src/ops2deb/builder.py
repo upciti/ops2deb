@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from . import logger
-from .exceptions import BuildError
+from .exceptions import Ops2debBuilderError
 
 
 def parse_debian_control(cwd: Path) -> Dict[str, str]:
@@ -47,7 +47,7 @@ async def build_package(cwd: Path) -> None:
     if proc.returncode:
         error = f"Failed to build package in {str(cwd)}"
         logger.error(error)
-        raise BuildError(error)
+        raise Ops2debBuilderError(error)
     else:
         logger.info(f"Successfully built {str(cwd)}")
         if stdout:
@@ -83,4 +83,4 @@ def build(output_directory: Path, workers: int = 4) -> None:
     results = asyncio.run(_build_all())
 
     if errors := [e for e in results if isinstance(e, Exception)]:
-        raise BuildError(f"{len(errors)} failures occurred")
+        raise Ops2debBuilderError(f"{len(errors)} failures occurred")

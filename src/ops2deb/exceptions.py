@@ -2,33 +2,33 @@ class Ops2debError(Exception):
     pass
 
 
-class GenerateError(Ops2debError):
+class Ops2debGeneratorError(Ops2debError):
     pass
 
 
-class BuildError(GenerateError):
+class Ops2debGeneratorScriptError(Ops2debGeneratorError):
     pass
 
 
-class GenerateScriptError(GenerateError):
+class Ops2debBuilderError(Ops2debGeneratorError):
     pass
 
 
-class FetchError(Ops2debError):
+class Ops2debFetcherError(Ops2debError):
     pass
 
 
-class UpdaterError(Ops2debError):
+class Ops2debUpdaterError(Ops2debError):
     pass
 
 
-class ParseError(Ops2debError):
+class Ops2debParserError(Ops2debError):
     pass
 
 
-class AptError(Ops2debError):
+class Ops2debAptError(Ops2debError):
     pass
 
 
-class FormatError(Ops2debError):
+class Ops2debFormatterError(Ops2debError):
     pass
