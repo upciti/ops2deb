@@ -104,8 +104,7 @@ async def _update_blueprint_dict(blueprint_dict: Dict[str, Any]) -> Optional[New
 
     blueprint_dict["version"] = release.new_version
     blueprint_dict["fetch"]["sha256"] = release.sha256
-    if "revision" in blueprint_dict.keys():
-        blueprint_dict["revision"] = 1
+    blueprint_dict.pop("revision", None)
     return release
 
 

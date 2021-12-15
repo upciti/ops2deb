@@ -259,7 +259,7 @@ def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
 def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_ops2deb):
     call_ops2deb("update")
     configuration = load(tmp_path / "ops2deb.yml", yaml)
-    assert configuration[0]["revision"] == 1
+    assert "revision" not in configuration[0]
     assert "revision" not in configuration[1]
 
 
