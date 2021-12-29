@@ -1,19 +1,14 @@
-import asyncio
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from jinja2 import Environment, PackageLoader
 
 from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
-from .exceptions import (
-    Ops2debFetcherError,
-    Ops2debGeneratorError,
-    Ops2debGeneratorScriptError,
-)
-from .fetcher import fetch
+from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
+from .fetcher import Fetcher, FetchResult
 from .parser import Blueprint
 
 _environment = Environment(loader=PackageLoader("ops2deb", "templates"))
@@ -31,40 +26,38 @@ class SourcePackage:
         self.package_directory = (output_directory / self.directory_name).absolute()
         self.debian_directory = self.package_directory / "debian"
         self.src_directory = self.package_directory / "src"
-        self.fetch_directory = Path(f"/tmp/ops2deb_{self.directory_name}")
+        self.fetch_directory = self.package_directory / "fetched"
         self.blueprint = blueprint.render(self.src_directory)
         self.debian_version = (
             f"{self.blueprint.version}-{self.blueprint.revision}~ops2deb"
         )
 
-    def render_tpl(self, template_name: str) -> None:
+    def _render_tpl(self, template_name: str) -> None:
         template = _environment.get_template(f"{template_name}.j2")
         package = self.blueprint.dict(exclude={"fetch", "script"})
         package.update({"version": self.debian_version})
         template.stream(package=package).dump(str(self.debian_directory / template_name))
 
-    def init(self) -> None:
+    def _init(self) -> None:
+        """Reset source package directory"""
+        # without artifacts from previous builds
         shutil.rmtree(self.debian_directory, ignore_errors=True)
         self.debian_directory.mkdir(parents=True)
         shutil.rmtree(self.fetch_directory, ignore_errors=True)
-        self.fetch_directory.mkdir()
         shutil.rmtree(self.src_directory, ignore_errors=True)
         self.src_directory.mkdir(parents=True)
         for path in ["usr/bin", "usr/share", "usr/lib"]:
             (self.src_directory / path).mkdir(parents=True)
 
-    async def fetch(self) -> "SourcePackage":
-        if (remote_file := self.blueprint.fetch) is not None:
-            await fetch(
-                url=remote_file.url,
-                expected_hash=remote_file.sha256,
-                save_path=self.fetch_directory,
-            )
-        return self
+    def _populate_with_fetch_result(self, fetch_result: FetchResult) -> None:
 
-    def generate(self) -> None:
-        logger.title(f"Generating source package {self.directory_name}...")
+        if fetch_result.storage_path.is_file():
+            self.fetch_directory.mkdir(exist_ok=True)
+            shutil.copy2(fetch_result.storage_path, self.fetch_directory)
+        else:
+            shutil.copytree(fetch_result.storage_path, self.fetch_directory)
 
+    def _run_script(self) -> None:
         # if blueprint has no fetch instruction, we stay in the directory from which
         # ops2deb was called
         cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
@@ -80,6 +73,21 @@ class SourcePackage:
             if result.returncode:
                 raise Ops2debGeneratorScriptError
 
+    def generate(self, fetch_result: Optional[FetchResult] = None) -> None:
+        logger.title(f"Generating source package {self.directory_name}...")
+
+        # fetch failed, we cannot generate source package
+        if self.blueprint.fetch is not None and fetch_result is None:
+            return
+
+        # make sure we generate source packages in a clean environment
+        # without artifacts from previous builds
+        self._init()
+
+        # copy downloaded/extracted archive to package fetch directory
+        if fetch_result is not None:
+            self._populate_with_fetch_result(fetch_result)
+
         # render debian/* files
         for template in [
             "changelog",
@@ -89,7 +97,10 @@ class SourcePackage:
             "install",
             "lintian-overrides",
         ]:
-            self.render_tpl(template)
+            self._render_tpl(template)
+
+        # run blueprint script
+        self._run_script()
 
 
 def filter_already_published_packages(
@@ -120,31 +131,15 @@ def generate(
     if debian_repository is not None:
         packages = filter_already_published_packages(packages, debian_repository)
 
-    # make sure we generate source packages in a clean environment
-    # without artifacts from previous builds
-    for package in packages:
-        package.init()
-
     # run fetch instructions (download, verify, extract) in parallel
-    file_count = sum([1 for b in blueprints if b.fetch is not None])
-    logger.title(f"Fetching {file_count} files...")
+    files = [p.blueprint.fetch for p in packages if p.blueprint.fetch is not None]
+    results = Fetcher(files).sync_fetch()
 
-    async def fetch_all() -> Any:
-        return await asyncio.gather(
-            *[p.fetch() for p in packages], return_exceptions=True
-        )
-
-    results = asyncio.run(fetch_all())
-
-    errors = [e for e in results if isinstance(e, Exception)]
-    for error in errors:
-        if not isinstance(error, Ops2debFetcherError):
-            raise error
-
-    # run scripts, build debian/* files
-    packages = [p for p in results if isinstance(p, SourcePackage)]
     for package in packages:
-        package.generate()
+        if package.blueprint.fetch is not None:
+            package.generate(results.successes.get(package.blueprint.fetch.url))
+        else:
+            package.generate()
 
-    if errors:
-        raise Ops2debGeneratorError(f"{len(errors)} failures occurred")
+    if results.errors:
+        raise Ops2debGeneratorError(f"{len(results.errors)} failures occurred")
