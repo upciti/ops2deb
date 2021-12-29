@@ -6,8 +6,9 @@ from typing import NoReturn, Optional
 
 import typer
 
-from . import builder, fetcher, formatter, generator, logger, parser, updater
+from . import builder, formatter, generator, logger, parser, updater
 from .exceptions import Ops2debError
+from .fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
 
 # Options below are used by multiple subcommands
 OPTION_CONFIGURATION = typer.Option(
@@ -18,7 +19,7 @@ OPTION_CONFIGURATION = typer.Option(
     help="Path to configuration file.",
 )
 OPTION_CACHE_DIRECTORY: Path = typer.Option(
-    fetcher.DEFAULT_CACHE_DIRECTORY,
+    DEFAULT_CACHE_DIRECTORY,
     "--cache-dir",
     envvar="OPS2DEB_CACHE_DIR",
     help="Directory where files specified in fetch instructions are downloaded.",
@@ -58,7 +59,7 @@ def generate(
         "Packages already published in the repo won't be generated.",
     ),
 ) -> None:
-    fetcher.set_cache_directory(cache_directory)
+    Fetcher.set_cache_directory(cache_directory)
     try:
         generator.generate(
             parser.parse(configuration_path), output_directory, debian_repository
@@ -94,7 +95,7 @@ def update(
         help="Path to file where to save a summary of updated files.",
     ),
 ) -> None:
-    fetcher.set_cache_directory(cache_directory)
+    Fetcher.set_cache_directory(cache_directory)
     try:
         updater.update(config, dry_run, output_path)
     except Ops2debError as e:

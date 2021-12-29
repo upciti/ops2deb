@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
 import httpx
 import ruamel.yaml
@@ -10,9 +10,10 @@ from semver.version import Version
 
 from . import logger
 from .client import client_factory
-from .exceptions import Ops2debError, Ops2debUpdaterError
-from .fetcher import download_file_to_cache
-from .parser import Blueprint, load, validate
+from .exceptions import Ops2debUpdaterError
+from .fetcher import Fetcher, FetchTask
+from .parser import Blueprint, RemoteFile, load, validate
+from .utils import log_and_raise, split_successes_from_errors
 
 
 # fixme: move this somewhere else, this code is also duplicated in formatter.py
@@ -25,15 +26,9 @@ class FixIndentEmitter(Emitter):
 @dataclass(frozen=True)
 class NewRelease:
     name: str
-    file_path: Path
     sha256: str
     old_version: str
     new_version: str
-
-
-def _error(msg: str) -> None:
-    logger.error(msg)
-    raise Ops2debUpdaterError(msg)
 
 
 async def _bump_and_poll(
@@ -52,10 +47,10 @@ async def _bump_and_poll(
         try:
             response = await client.head(url)
         except httpx.HTTPError as e:
-            _error(f"Failed HEAD request to {url}. {str(e)}")
+            log_and_raise(Ops2debUpdaterError(f"Failed HEAD request to {url}. {str(e)}"))
         status = response.status_code
         if status >= 500:
-            _error(f"Server error when requesting {url}")
+            log_and_raise(Ops2debUpdaterError(f"Server error when requesting {url}"))
         if status >= 400:
             break
         else:
@@ -79,13 +74,11 @@ async def _find_latest_release(
     if version != old_version:
         logger.info(f"{blueprint.name} can be bumped from {old_version} to {version}")
 
-        file_path, sha256 = await download_file_to_cache(
-            blueprint.render(version=str(version)).fetch.url  # type: ignore
-        )
+        file = cast(RemoteFile, blueprint.render(version=str(version)).fetch)
+        result = await FetchTask(Fetcher.cache_directory_path, file).fetch(extract=False)
         return NewRelease(
             name=blueprint.name,
-            file_path=file_path,
-            sha256=sha256,
+            sha256=result.sha256_sum,
             old_version=blueprint.version,
             new_version=str(version),
         )
@@ -132,13 +125,8 @@ def update(
             return_exceptions=True,
         )
 
-    results = asyncio.run(run_tasks())
-    new_releases = [r for r in results if isinstance(r, NewRelease)]
-    errors = [e for e in results if isinstance(e, Exception)]
-
-    for error in errors:
-        if not isinstance(error, Ops2debError):
-            raise error
+    results: List[Union[NewRelease, Exception]] = asyncio.run(run_tasks())
+    new_releases, errors = split_successes_from_errors(results)
 
     if dry_run is False and new_releases:
         with configuration_path.open("w") as output:

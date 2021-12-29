@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 from . import logger
 from .exceptions import Ops2debBuilderError
+from .utils import log_and_raise
 
 
 def parse_debian_control(cwd: Path) -> Dict[str, str]:
@@ -45,15 +46,13 @@ async def build_package(cwd: Path) -> None:
     stdout, stderr = await proc.communicate()
 
     if proc.returncode:
-        error = f"Failed to build package in {str(cwd)}"
-        logger.error(error)
-        raise Ops2debBuilderError(error)
+        log_and_raise(Ops2debBuilderError(f"Failed to build package in {str(cwd)}"))
     else:
         logger.info(f"Successfully built {str(cwd)}")
-        if stdout:
-            logger.debug(stdout.decode())
-        if stderr:
-            logger.debug(stderr.decode())
+    if stdout:
+        logger.debug(stdout.decode())
+    if stderr:
+        logger.debug(stderr.decode())
 
 
 def build(output_directory: Path, workers: int = 4) -> None:
