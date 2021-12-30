@@ -14,7 +14,7 @@ but it could be used to package any statically linked application. In short, it 
 
 ## Configuration file
 
-Written in YAML and composed of a list of package blueprints. A blueprint is defined by the following:
+Written in YAML and composed of a single blueprint object or a list of blueprints objects. A blueprint is defined by the following:
 
 | Field         | Meaning                                                                                                                                     | Default |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -31,19 +31,19 @@ Written in YAML and composed of a list of package blueprints. A blueprint is def
 | `recommends`  | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`    |
 | `conflicts`   | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`    |
 
-Example:
+Example of a configuration file a single blueprint:
 
 ```yaml
-- name: kubectl
-  version: 1.20.1
-  summary: Command line client for controlling a Kubernetes cluster
-  description: |
-    kubectl is a command line client for running commands against Kubernetes clusters.
-  fetch:
-    url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
-    sha256: 3f4b52a8072013e4cd34c9ea07e3c0c4e0350b227e00507fb1ae44a9adbf6785
-  script:
-    - mv kubectl {{src}}/usr/bin/
+name: kubectl
+version: 1.20.1
+summary: Command line client for controlling a Kubernetes cluster
+description: |
+  kubectl is a command line client for running commands against Kubernetes clusters.
+fetch:
+  url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
+  sha256: 3f4b52a8072013e4cd34c9ea07e3c0c4e0350b227e00507fb1ae44a9adbf6785
+script:
+  - mv kubectl {{src}}/usr/bin/
 ```
 
 ## Dependencies
@@ -55,7 +55,7 @@ Example:
 sudo apt install build-essential fakeroot debhelper
 ```
 
-## Usage example
+## Installation
 
 Install `ops2deb` in a virtualenv or with [pipx](https://github.com/pipxproject/pipx)
 
@@ -63,7 +63,9 @@ Install `ops2deb` in a virtualenv or with [pipx](https://github.com/pipxproject/
 pipx install ops2deb
 ```
 
-Then, in a test directory run:
+## Getting started
+
+In a test directory run:
 
 ```shell
 curl https://raw.githubusercontent.com/upciti/ops2deb/main/ops2deb.yml
@@ -77,10 +79,13 @@ To check for new releases run:
 ops2deb update
 ```
 
-`ops2deb` uses temp directories to cache downloaded binaries and to run build instructions:
+This command updates each blueprint in the `ops2deb.yml` configuration file with the latest version of
+the upstream application (currently only works for applications using semantic versioning).
+
+By default `ops2deb` caches downloaded content in `/tmp/ops2deb_cache`:
 
 ```shell
-tree /tmp/ops2deb_*
+tree /tmp/ops2deb_cache
 ```
 
 The cache can be flushed with:
@@ -89,12 +94,59 @@ The cache can be flushed with:
 ops2deb purge
 ```
 
+For more information about existing subcommands and options run `ops2deb --help`.
+
+## Usage examples
+
+### Creating a metapackage
+
+Ops2deb can be used to create [metapackages](https://www.debian.org/blends/hamradio/get/metapackages):
+
+```yaml
+name: allthethings
+version: 0.1.9
+summary: Install various devops tools
+description: Some great description.
+depends:
+  - kubectl
+  - kustomize
+  - helm
+  - helmfile
+  - devspace
+```
+
+### Packaging ops2deb with ops2deb
+
+Note that when the fetch key is not used, ops2deb will run the build script from the directory where it was called.
+Hence for the following blueprint to succeed, you have to run ops2deb from the root directory of this github project.
+
+```yaml
+name: ops2deb
+version: 0.15.0
+homepage: https://github.com/upciti/ops2deb
+summary: Debian packaging tool for portable applications
+description: |-
+  Ops2deb is primarily designed to easily generate Debian packages for portable
+  applications such as single binary applications and scripts. Packages are
+  described using a simple configuration file format. Ops2deb can track new
+  releases of upstream applications and automatically bump application versions
+  in its configuration file.
+script:
+  - ./build-single-binary-application.sh
+  - install -m 755 build/x86_64-unknown-linux-gnu/release/install/ops2deb {{src}}/usr/bin/
+```
+
 ## Development
 
-You will need [poetry](https://python-poetry.org/)
+You will need [poetry](https://python-poetry.org/), and probably [pyenv](https://github.com/pyenv/pyenv) if you don't have python 3.9 on your host.
 
 ```shell
 poetry install
+```
+
+To run ops2deb test suite run:
+
+```shell
 poetry run task check
 ```
 
