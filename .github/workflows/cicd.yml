@@ -113,6 +113,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    container: wakemeops/debian:bullseye-slim
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build]
     steps:
@@ -123,8 +124,7 @@ jobs:
 
       - name: Install clog-cli
         run: |
-          curl -sSL https://gitlab.com/upciti/wakemeops/-/snippets/2223142/raw/main/install.sh | sudo bash -s dev
-          sudo apt-get install -y clog-cli
+          install_packages clog-cli
 
       - name: Build Release Changelog
         run: |
