@@ -2,7 +2,7 @@ import json
 from operator import attrgetter
 from pathlib import Path
 from textwrap import wrap
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 import yaml
 
@@ -36,9 +36,8 @@ def format_description(description: str) -> str:
 def format_blueprint(blueprint: Blueprint) -> Dict[str, Any]:
     update: Dict[str, str] = {"description": format_description(blueprint.description)}
     blueprint = blueprint.copy(update=update)
-    exclude: Set[str] = {
-        k for k in {"recommends", "conflicts", "depends"} if not getattr(blueprint, k)
-    }
+    keys_with_list = {"recommends", "conflicts", "depends", "script"}
+    exclude = {k for k in keys_with_list if not getattr(blueprint, k)}
     return json.loads(blueprint.json(exclude_defaults=True, exclude=exclude))
 
 
