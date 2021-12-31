@@ -75,11 +75,11 @@ class SourcePackage:
                 raise Ops2debGeneratorScriptError
 
     def generate(self, fetch_result: Optional[FetchResult] = None) -> None:
-        logger.title(f"Generating source package {self.directory_name}...")
-
         # fetch failed, we cannot generate source package
         if self.blueprint.fetch is not None and fetch_result is None:
             return
+
+        logger.title(f"Generating source package {self.directory_name}...")
 
         # make sure we generate source packages in a clean environment
         # without artifacts from previous builds
