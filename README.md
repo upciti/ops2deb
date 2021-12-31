@@ -57,7 +57,13 @@ sudo apt install build-essential fakeroot debhelper
 
 ## Installation
 
-Install `ops2deb` in a virtualenv or with [pipx](https://github.com/pipxproject/pipx)
+### With [wakemeops](https://docs.wakemeops.com)
+
+```shell
+sudo apt-get install ops2deb
+```
+
+### With [pipx](https://github.com/pipxproject/pipx)
 
 ```shell
 pipx install ops2deb
@@ -105,6 +111,7 @@ Ops2deb can be used to create [metapackages](https://www.debian.org/blends/hamra
 ```yaml
 name: allthethings
 version: 0.1.9
+arch: all
 summary: Install various devops tools
 description: Some great description.
 depends:
