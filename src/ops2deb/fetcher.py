@@ -1,9 +1,9 @@
 import asyncio
 import hashlib
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Union
 
 import aiofiles
 import httpx
@@ -95,10 +95,7 @@ class FetchResult:
     storage_path: Path
 
 
-@dataclass(frozen=True)
-class FetchResults:
-    successes: Dict[str, FetchResult] = field(default_factory=dict)
-    errors: Dict[str, Ops2debFetcherError] = field(default_factory=dict)
+FetchResultOrError = Union[FetchResult, Ops2debFetcherError]
 
 
 class FetchTask:
@@ -149,28 +146,27 @@ class Fetcher:
         cls.cache_directory_path = path
 
     def __init__(self, remote_files: Iterable[RemoteFile]) -> None:
-        self.fetch_tasks: Dict[str, FetchTask] = {}
+        self.tasks: Dict[str, FetchTask] = {}
+        self.results: Dict[str, FetchResultOrError] = {}
         for remote_file in remote_files:
-            self.fetch_tasks[remote_file.url] = FetchTask(
+            self.tasks[remote_file.url] = FetchTask(
                 self.cache_directory_path, remote_file
             )
 
-    async def fetch(self, extract: bool = True) -> FetchResults:
-        logger.title(f"Fetching {len(self.fetch_tasks.keys())} files...")
-        task_results = await asyncio.gather(
-            *[task.fetch(extract) for task in self.fetch_tasks.values()],
-            return_exceptions=True,
+    async def fetch(self, extract: bool = True) -> Dict[str, FetchResultOrError]:
+        logger.title(f"Fetching {len(self.tasks.keys())} files...")
+        results = list(
+            await asyncio.gather(
+                *[task.fetch(extract) for task in self.tasks.values()],
+                return_exceptions=True,
+            )
         )
-        results = FetchResults()
-        for url, task_result in zip(self.fetch_tasks.keys(), task_results):
-            if isinstance(task_result, FetchResult):
-                results.successes[url] = task_result
-            elif isinstance(task_result, Ops2debFetcherError):
-                results.errors[url] = task_result
-            else:
-                raise task_result
-        return results
+        for url, result in zip(self.tasks.keys(), results):
+            if isinstance(result, Exception):
+                if not isinstance(result, Ops2debFetcherError):
+                    raise result
+            self.results[url] = result
+        return self.results
 
-    def sync_fetch(self, extract: bool = True) -> FetchResults:
-        results = asyncio.run(self.fetch(extract))
-        return results
+    def sync_fetch(self, extract: bool = True) -> Dict[str, FetchResultOrError]:
+        return asyncio.run(self.fetch(extract))
