@@ -80,7 +80,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    container: wakemeops/debian:bullseye-slim
+    container: wakemeops/debian:buster-slim
     needs: [tests]
     env:
       LC_ALL: C.UTF-8
