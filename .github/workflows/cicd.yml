@@ -140,7 +140,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           body_path: changelog.md
-          files: ops2deb_linux_amd64.tar.gz
+          files: ops2deb_linux_amd64
 
   publish:
     runs-on: ubuntu-latest
