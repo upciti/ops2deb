@@ -82,9 +82,6 @@ jobs:
     runs-on: ubuntu-latest
     container: wakemeops/debian:bullseye-slim
     needs: [tests]
-    env:
-      LC_ALL: C.UTF-8
-      LANG: C.UTF-8
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -92,24 +89,23 @@ jobs:
       - name: Install dependencies
         run: |
           install_packages \
-            pyoxidizer \
             poetry \
-            gcc \
             python3-dev \
             ca-certificates \
-            make
+            binutils
 
-      - name: Build ops2deb single binary application
+      - name: Build single binary application
         run: |
-          ./build-single-binary-application.sh
-          tar -C build/x86_64-unknown-linux-gnu/release/install \
-              -czvf ops2deb_linux_amd64.tar.gz ops2deb
+          poetry install --no-dev --extras pyinstaller
+          poetry run pyinstaller --onefile src/ops2deb/__main__.py --name ops2deb -s
+          dist/ops2deb --help
+          mv dist/ops2deb ops2deb_linux_amd64
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v2
         with:
           name: ops2deb_linux_amd64
-          path: ops2deb_linux_amd64.tar.gz
+          path: ops2deb_linux_amd64
           retention-days: 2
 
   release:
