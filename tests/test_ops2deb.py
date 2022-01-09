@@ -303,8 +303,8 @@ def test_ops2deb_update_should_succeed_with_multi_arch_fetch(tmp_path, call_ops2
 def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_ops2deb):
     call_ops2deb("update")
     configuration = load(tmp_path / "ops2deb.yml", yaml)
-    assert "revision" not in configuration[0]
-    assert "revision" not in configuration[1]
+    assert "revision" not in configuration[0].keys()
+    assert "revision" not in configuration[1].keys()
 
 
 def test_ops2deb_update_should_fail_when_server_error(tmp_path, call_ops2deb):
