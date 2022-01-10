@@ -48,6 +48,7 @@ isort = "*"
 safety = "*"
 types-aiofiles = "*"
 types-PyYAML = "*"
+pytest-asyncio = "^0.16.0"
 
 [tool.taskipy.tasks]
 check = """

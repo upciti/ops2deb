@@ -5,7 +5,7 @@ from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
 from ruamel.yaml import YAML, YAMLError
 
 from .exceptions import Ops2debParserError
-from .jinja import environment
+from .templates import environment
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
 
