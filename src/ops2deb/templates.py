@@ -1,5 +1,7 @@
 from typing import Optional
 
+from jinja2 import Environment, FunctionLoader
+
 DEBIAN_CHANGELOG = """\
 {{ package.name }} ({{ package.version }}) stable; urgency=medium
 
@@ -61,3 +63,6 @@ def template_loader(name: str) -> Optional[str]:
     if variable_name in globals():
         return template_content
     return None
+
+
+environment = Environment(loader=FunctionLoader(template_loader))

@@ -33,7 +33,7 @@ class LatestRelease:
         return self.blueprint.version != self.version
 
 
-class BaseUpdater:
+class BaseUpdateStrategy:
     def __init__(self, client: httpx.AsyncClient):
         self.client = client
 
@@ -45,32 +45,58 @@ class BaseUpdater:
         raise NotImplementedError
 
 
-class GenericUpdater(BaseUpdater):
-    async def _bump_and_poll(
+class GenericUpdateStrategy(BaseUpdateStrategy):
+    """
+    Tries a few blueprint fetch URLs with bumped versions to see if servers
+    replies with something else than a 404. More or less a brute force approach.
+    """
+
+    async def _try_version(
+        self, blueprint: Blueprint, version: Version
+    ) -> Optional[Version]:
+        if not (remote_file := blueprint.render_fetch(version=str(version))):
+            return None
+        url = remote_file.url
+        logger.debug(f"Trying {url}")
+        try:
+            response = await self.client.head(url)
+        except httpx.HTTPError as e:
+            raise Ops2debUpdaterError(f"Failed HEAD request to {url}. {str(e)}")
+        status = response.status_code
+        if status >= 500:
+            raise Ops2debUpdaterError(f"Server error when requesting {url}")
+        elif status >= 400:
+            return None
+        return version
+
+    async def _try_a_few_patches(
+        self, blueprint: Blueprint, version: Version
+    ) -> Optional[Version]:
+        for i in range(0, 3):
+            version = version.bump_patch()
+            if await self._try_version(blueprint, version) is not None:
+                return version
+        return None
+
+    async def _try_versions(
         self,
         blueprint: Blueprint,
         version: Version,
-        bump_patch: bool = False,
+        version_part: str,
     ) -> Version:
-        new_version = version
-        while True:
-            version = version.bump_patch() if bump_patch else version.bump_minor()
-            if not (remote_file := blueprint.render_fetch(version=str(version))):
-                break
-            url = remote_file.url
-            logger.debug(f"Trying {url}")
-            try:
-                response = await self.client.head(url)
-            except httpx.HTTPError as e:
-                raise Ops2debUpdaterError(f"Failed HEAD request to {url}. {str(e)}")
-            status = response.status_code
-            if status >= 500:
-                raise Ops2debUpdaterError(f"Server error when requesting {url}")
-            if status >= 400:
-                break
+        bumped_version = getattr(version, f"bump_{version_part}")()
+        if (result := await self._try_version(blueprint, bumped_version)) is None:
+            if version_part != "patch":
+                if (
+                    result := await self._try_a_few_patches(blueprint, bumped_version)
+                ) is not None:
+                    return await self._try_versions(blueprint, result, version_part)
+                else:
+                    return version
             else:
-                new_version = version
-        return new_version
+                return version
+        else:
+            return await self._try_versions(blueprint, result, version_part)
 
     @classmethod
     def is_blueprint_supported(cls, blueprint: Blueprint) -> bool:
@@ -80,18 +106,22 @@ class GenericUpdater(BaseUpdater):
         return True
 
     async def __call__(self, blueprint: Blueprint) -> str:
-        version = Version.parse(blueprint.version)
-        version = await self._bump_and_poll(blueprint, version, False)
-        version = await self._bump_and_poll(blueprint, version, True)
+        current_version = version = Version.parse(blueprint.version)
+        for version_part in ["minor", "patch"]:
+            version = await self._try_versions(blueprint, version, version_part)
+        if version == current_version:
+            version = await self._try_versions(blueprint, version, "major")
         return str(version)
 
 
 async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
-    updaters = [GenericUpdater(client)]
-    updaters = [u for u in updaters if u.is_blueprint_supported(blueprint)]
-    for updater in updaters:
+    strategies = [GenericUpdateStrategy(client)]
+    strategies = [u for u in strategies if u.is_blueprint_supported(blueprint)]
+    if not strategies:
+        return blueprint.version
+    for update_strategy in strategies:
         try:
-            return await updater(blueprint)
+            return await update_strategy(blueprint)
         except Ops2debUpdaterError as e:
             logger.debug(str(e))
             continue
