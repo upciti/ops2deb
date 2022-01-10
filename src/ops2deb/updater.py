@@ -231,7 +231,7 @@ def update(
                 for r in latest_releases
                 if r.is_new
             ]
-            output_path.write_text("\n".join(lines) + "\n")
+            output_path.write_text("\n".join(lines + [""]))
 
     _, fetcher_errors = separate_successes_from_errors(fetch_results.values())
     if fetcher_errors or updater_errors:
