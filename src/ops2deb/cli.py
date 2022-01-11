@@ -6,7 +6,7 @@ from typing import NoReturn, Optional
 
 import typer
 
-from . import builder, formatter, generator, logger, parser, updater
+from . import __version__, builder, formatter, generator, logger, parser, updater
 from .exceptions import Ops2debError
 from .fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
 
@@ -116,6 +116,11 @@ def format(configuration_path: Path = OPTION_CONFIGURATION) -> None:
         formatter.format(configuration_path)
     except Ops2debError as e:
         error(e)
+
+
+@app.command(help="Outputs ops2deb version.")
+def version() -> None:
+    logger.info(__version__)
 
 
 @app.callback()
