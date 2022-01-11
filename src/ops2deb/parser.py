@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError
+from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError, validator
 from ruamel.yaml import YAML, YAMLError
 
 from .exceptions import Ops2debParserError
-from .templates import environment
+from .jinja import environment
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
 
@@ -27,6 +27,7 @@ class Base(BaseModel):
     class Config:
         extra = "forbid"
         allow_mutation = False
+        anystr_strip_whitespace = True
 
 
 class ArchitectureMap(Base):
@@ -74,8 +75,11 @@ class Blueprint(Base):
     )
     script: List[str] = Field(default_factory=list, description="Build instructions")
 
-    class Config:
-        anystr_strip_whitespace = True
+    @validator("*", pre=True)
+    def render_string_attributes(cls, v: Any) -> str:
+        if isinstance(v, str):
+            return environment.from_string(v).render()
+        return v
 
     def supported_architectures(self) -> List[str]:
         if isinstance(self.fetch, MultiArchitectureRemoteFile):

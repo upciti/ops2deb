@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from jinja2 import Environment, FunctionLoader
@@ -66,3 +67,7 @@ def template_loader(name: str) -> Optional[str]:
 
 
 environment = Environment(loader=FunctionLoader(template_loader))
+
+
+# Allow users to use environment variables in blueprints
+environment.globals["env"] = lambda x: os.environ.get(x)
