@@ -76,10 +76,16 @@ class Blueprint(Base):
     script: List[str] = Field(default_factory=list, description="Build instructions")
 
     @validator("*", pre=True)
-    def render_string_attributes(cls, v: Any) -> str:
+    def _render_string_attributes(cls, v: Any) -> str:
         if isinstance(v, str):
             return environment.from_string(v).render()
         return v
+
+    def _get_additional_variables(self) -> Dict[str, Optional[str]]:
+        return dict(
+            goarch=DEFAULT_GOARCH_MAP.get(self.arch, None),
+            rust_target=DEFAULT_RUST_TARGET_MAP.get(self.arch, None),
+        )
 
     def supported_architectures(self) -> List[str]:
         if isinstance(self.fetch, MultiArchitectureRemoteFile):
@@ -113,13 +119,15 @@ class Blueprint(Base):
             version=version,
             sha256=sha256,
             target=target,
-            goarch=DEFAULT_GOARCH_MAP.get(self.arch, None),
-            rust_target=DEFAULT_RUST_TARGET_MAP.get(self.arch, None),
+            **self._get_additional_variables(),
         )
         return RemoteFile(url=url, sha256=sha256)
 
     def render_script(self, src: Path = None) -> List[str]:
-        return [self.render_string(line, src=str(src)) for line in self.script]
+        return [
+            self.render_string(line, src=str(src), **self._get_additional_variables())
+            for line in self.script
+        ]
 
 
 class Configuration(Base):

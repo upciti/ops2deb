@@ -7,6 +7,8 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
+from ops2deb.parser import Blueprint, RemoteFile
+
 snapshot_apt_Release = """
 Origin: . stable
 Label: . stable
@@ -164,3 +166,24 @@ def tmp_working_directory(tmp_path):
         yield
     finally:
         os.chdir(previous_cwd)
+
+
+@pytest.fixture(scope="function")
+def blueprint_factory():
+    blueprint = Blueprint(
+        name="great-app",
+        version="1.0.0",
+        homepage="http://great-app.io",
+        summary="My great app",
+        description="Detailed description of the great app.",
+        fetch=RemoteFile(
+            url="http://great-app.io/releases/{{version}}/great-app.tar.gz",
+            sha256="deadbeef",
+        ),
+        script=["cp great-app_linux_{{arch}}_{{version}} {{src}}/usr/bin/great-app"],
+    )
+
+    def _blueprint_factory(**kwargs):
+        return Blueprint(**(blueprint.dict() | kwargs))
+
+    return _blueprint_factory
