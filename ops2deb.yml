@@ -130,7 +130,7 @@
     - fakeroot
     - debhelper
   fetch:
-    url: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64.tar.gz
+    url: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64
     sha256: 211bc67e965cda9ab7cdcb227cf114f5114eaa85689eda55a3833d297aea698c
   script:
     - mv ops2deb {{src}}/usr/bin/

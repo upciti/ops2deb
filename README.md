@@ -139,7 +139,8 @@ description: |-
   releases of upstream applications and automatically bump application versions
   in its configuration file.
 script:
-  - ./build-single-binary-application.sh
+  - poetry install -E pyinstaller
+  - poetry run task single_binary_application
   - install -m 755 build/x86_64-unknown-linux-gnu/release/install/ops2deb {{src}}/usr/bin/
 ```
 
@@ -155,6 +156,30 @@ To run ops2deb test suite run:
 
 ```shell
 poetry run task check
+```
+
+To build a python wheel:
+
+```shell
+poetry run poetry build
+```
+
+Note that the `poetry run` is important to enable [poetry-dynamic-versioning](https://github.com/mtkennerly/poetry-dynamic-versioning)
+which is installed as a dev dependency.
+
+To build a single binary applicatin:
+
+Install required build dependencies:
+
+```shell
+sudo apt install binutils python3-dev
+poetry install -E pyinstaller
+```
+
+And run:
+
+```shell
+poetry run task single_binary_application
 ```
 
 ## Important notes

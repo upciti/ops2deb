@@ -49,6 +49,7 @@ safety = "*"
 types-aiofiles = "*"
 types-PyYAML = "*"
 pytest-asyncio = "^0.16.0"
+poetry-dynamic-versioning = "^0.13.1"
 
 [tool.taskipy.tasks]
 check = """
@@ -81,5 +82,14 @@ line_length = 90
 profile = "black"
 
 [build-system]
-requires = ["poetry>=1.0"]
+requires = ["poetry>=1.0.2", "poetry-dynamic-versioning"]
 build-backend = "poetry.masonry.api"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+pattern = "(?x)^(?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision>\\d+)?))?(\\+(?P<tagged_metadata>.+))?$"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["src/ops2deb/__init__.py"]
