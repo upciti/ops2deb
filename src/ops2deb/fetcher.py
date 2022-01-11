@@ -154,14 +154,16 @@ class Fetcher:
             )
 
     async def fetch(self, extract: bool = True) -> Dict[str, FetchResultOrError]:
-        logger.title(f"Fetching {len(self.tasks.keys())} files...")
+        urls = self.tasks.keys()
+        if (task_count := len(urls)) > 0:
+            logger.title(f"Fetching {task_count} files...")
         results = list(
             await asyncio.gather(
                 *[task.fetch(extract) for task in self.tasks.values()],
                 return_exceptions=True,
             )
         )
-        for url, result in zip(self.tasks.keys(), results):
+        for url, result in zip(urls, results):
             if isinstance(result, Exception):
                 if not isinstance(result, Ops2debFetcherError):
                     raise result

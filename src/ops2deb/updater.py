@@ -146,11 +146,7 @@ def _find_latest_releases(
 ) -> List[Union[LatestRelease, Exception]]:
     async def run_tasks() -> Any:
         async with client_factory() as client:
-            tasks = [
-                _find_latest_release(client, blueprint)
-                for blueprint in blueprints
-                if blueprint.fetch is not None
-            ]
+            tasks = [_find_latest_release(client, blueprint) for blueprint in blueprints]
             return await asyncio.gather(*tasks, return_exceptions=True)
 
     return asyncio.run(run_tasks())
@@ -205,6 +201,7 @@ def update(
 
     updater_results = _find_latest_releases(blueprints)
     latest_releases, updater_errors = separate_successes_from_errors(updater_results)
+    latest_releases = [release for release in latest_releases if release.is_new]
     fetch_results = _fetch_latest_files(latest_releases)
 
     # configuration file can be a list of blueprints or a single blueprint
@@ -223,15 +220,15 @@ def update(
                 _update_raw_blueprint(raw_blueprint, release, fetch_results)
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
+
         logger.info("Configuration file updated")
 
-        if output_path is not None:
-            lines = [
-                f"Updated {r.blueprint.name} from {r.blueprint.version} to {r.version}"
-                for r in latest_releases
-                if r.is_new
-            ]
-            output_path.write_text("\n".join(lines + [""]))
+    if output_path is not None:
+        lines = [
+            f"Updated {r.blueprint.name} from {r.blueprint.version} to {r.version}"
+            for r in latest_releases
+        ]
+        output_path.write_text("\n".join(lines + [""]))
 
     _, fetcher_errors = separate_successes_from_errors(fetch_results.values())
     if fetcher_errors or updater_errors:
