@@ -12,6 +12,14 @@ yaml = ruamel.yaml.YAML(typ="safe")
 
 
 mock_valid_configuration = """\
+- name: awesome-metapackage
+  version: 1.0.0
+  arch: all
+  summary: Awesome metapackage
+  description: A detailed description of the awesome metapackage.
+  depends:
+    - great-app
+
 - name: great-app
   version: 1.0.0
   revision: 2
@@ -39,7 +47,8 @@ mock_valid_configuration = """\
     - mv great-app {{src}}/usr/bin/great-app
 """
 
-mock_configuration_up_to_date = """\
+
+mock_up_to_date_configuration = """\
 - name: great-app
   version: 1.1.1
   revision: 2
@@ -167,6 +176,15 @@ mock_configuration_with_multi_arch_remote_file = """\
   - mv great-app {{src}}/usr/bin/great-app
 """
 
+mock_invalid_configuration_yaml_error = """\
+- name: awesome-metapackage
+    version: 1.0.0
+"""
+
+mock_invalid_configuration_validation_error = """\
+- name: awesome-metapackage
+"""
+
 
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path, mock_httpx_client):
@@ -279,16 +297,14 @@ def test_ops2deb_build_should_exit_with_error_when_build_fails(tmp_path, call_op
 
 
 def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
-    result = call_ops2deb(
-        "update", configuration=mock_configuration_with_invalid_archive_checksum
-    )
+    result = call_ops2deb("update")
     print(result.stdout)
     configuration = parse(tmp_path / "ops2deb.yml")
-    assert "bad-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
+    assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
-    assert configuration[0].version == "1.1.1"
+    assert configuration[1].version == "1.1.1"
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
-    assert configuration[0].fetch.sha256 == sha256
+    assert configuration[1].fetch.sha256 == sha256
 
 
 def test_ops2deb_update_should_create_summary_when_called_with_output_file(
@@ -299,9 +315,9 @@ def test_ops2deb_update_should_create_summary_when_called_with_output_file(
         "update",
         "--output-file",
         str(output_file),
-        configuration=mock_configuration_with_invalid_archive_checksum,
+        configuration=mock_valid_configuration,
     )
-    assert output_file.read_text() == "Updated bad-app from 1.0.0 to 1.1.1\n"
+    assert output_file.read_text() == "Updated great-app from 1.0.0 to 1.1.1\n"
 
 
 def test_ops2deb_update_should_create_empty_summary_when_called_with_output_file_and_config_is_up_to_date(  # noqa: E501
@@ -312,7 +328,7 @@ def test_ops2deb_update_should_create_empty_summary_when_called_with_output_file
         "update",
         "--output-file",
         str(output_file),
-        configuration=mock_configuration_up_to_date,
+        configuration=mock_up_to_date_configuration,
     )
     assert output_file.read_text() == ""
 
@@ -350,7 +366,8 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_op
 
 def test_ops2deb_update_should_fail_when_server_error(tmp_path, call_ops2deb):
     result = call_ops2deb("update", configuration=mock_configuration_with_server_error)
-    assert "Server error" in result.stdout
+    stdout = result.stdout
+    assert "Server error when requesting http://testserver/1.1.0/bad-app.zip" in stdout
     assert result.exit_code == 77
 
 
@@ -375,4 +392,18 @@ def test_ops2deb_format_should_exit_with_error_code_when_file_gets_reformatted(
     result = call_ops2deb(
         "format", configuration=mock_configuration_not_properly_formatted
     )
+    assert result.exit_code == 77
+
+
+@pytest.mark.parametrize("subcommand", ["update", "generate", "format", "validate"])
+def test_ops2deb_should_exit_with_error_code_when_configuration_file_is_invalid(
+    call_ops2deb, subcommand
+):
+    result = call_ops2deb(subcommand, configuration=mock_invalid_configuration_yaml_error)
+    assert "Invalid YAML file." in result.stdout
+    assert result.exit_code == 77
+    result = call_ops2deb(
+        subcommand, configuration=mock_invalid_configuration_validation_error
+    )
+    assert "Invalid configuration file." in result.stdout
     assert result.exit_code == 77
