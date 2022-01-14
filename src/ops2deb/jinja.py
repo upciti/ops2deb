@@ -68,6 +68,5 @@ def template_loader(name: str) -> Optional[str]:
 
 environment = Environment(loader=FunctionLoader(template_loader))
 
-
 # Allow users to use environment variables in blueprints
-environment.globals["env"] = lambda x: os.environ.get(x)
+environment.globals["env"] = lambda x, y=None: os.environ.get(x, y)
