@@ -29,7 +29,7 @@ Architecture: {{ package.arch }}
 {%- if package.recommends %}{{ '\n' }}Recommends: {{ package.recommends|sort|join(', ') }}{% endif %}
 {%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
 Description: {{ package.summary }}
- {{ package.description | indent(1) }}
+{% for line in package.description.split('\n') %} {{ line or '.' }}{{ '\n' if not loop.last else '' }}{% endfor %}
 """
 
 DEBIAN_INSTALL = """\

@@ -37,7 +37,8 @@ blueprint_2 = Blueprint(
     revision="3",
     arch="all",
     summary="My great app",
-    description="A detailed description of the super package",
+    description="A detailed description of the super package.\n"
+    "This description has two lines.",
     depends=["package_a"],
     conflicts=["package_c"],
 )
@@ -54,14 +55,15 @@ Architecture: all
 Depends: package_a
 Conflicts: package_c
 Description: My great app
- A detailed description of the super package"""
+ A detailed description of the super package.
+ This description has two lines."""
 
 
 blueprint_3 = Blueprint(
     name="great-app",
     version="1.0.0",
     summary="My great app",
-    description="A detailed description of the super package",
+    description="What should empty lines be replaced with?\n\nWith dots!",
 )
 
 
@@ -74,7 +76,9 @@ Standards-Version: 3.9.6
 Package: great-app
 Architecture: amd64
 Description: My great app
- A detailed description of the super package"""
+ What should empty lines be replaced with?
+ .
+ With dots!"""
 
 
 @pytest.mark.parametrize(

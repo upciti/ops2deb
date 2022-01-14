@@ -22,6 +22,7 @@
   summary: Deploy Kubernetes Helm Charts
   description: |-
     Helmfile is a declarative spec for deploying helm charts. It lets you...
+
     - Keep a directory of chart value files and maintain changes in version
     control.
     - Apply CI/CD to configuration changes.
@@ -116,7 +117,7 @@
     - install -m 755 minikube-linux-amd64 {{src}}/usr/bin/minikube
 
 - name: ops2deb
-  version: 0.16.0
+  version: 0.18.0
   homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-
@@ -125,12 +126,12 @@
     described using a simple configuration file format. Ops2deb can track new
     releases of upstream applications and automatically bump application versions
     in its configuration file.
-  depends:
+  recommends:
     - build-essential
     - fakeroot
     - debhelper
   fetch:
     url: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64
-    sha256: 211bc67e965cda9ab7cdcb227cf114f5114eaa85689eda55a3833d297aea698c
+    sha256: fe0211a702dfb106691f0eace7559bb6f660db63446491bec36096de8909f671
   script:
-    - mv ops2deb {{src}}/usr/bin/
+    - mv ops2deb_linux_amd64 {{src}}/usr/bin/ops2deb
