@@ -11,13 +11,13 @@ repos:
     hooks:
       - id: black
         name: black
-        entry: poetry run black src
+        entry: poetry run black src tests
         language: system
         types: [python]
         pass_filenames: false
       - id: isort
         name: isort
-        entry: poetry run isort src
+        entry: poetry run isort src tests
         language: system
         types: [python]
         pass_filenames: false
