@@ -136,6 +136,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Install Python
         uses: actions/setup-python@v2
@@ -150,6 +152,15 @@ jobs:
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
+
+      - name: Load Cached Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: .venv
+          key: python-dependencies-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Python Dependencies
+        run: poetry install
 
       - name: Build Distribution
         run: poetry run poetry build
