@@ -724,7 +724,7 @@ test = ["shellingham (>=1.3.0,<2.0.0)", "pytest (>=4.4.0,<5.4.0)", "pytest-cov (
 
 [[package]]
 name = "types-aiofiles"
-version = "0.8.2"
+version = "0.8.3"
 description = "Typing stubs for aiofiles"
 category = "dev"
 optional = false
@@ -1268,8 +1268,8 @@ typer = [
     {file = "typer-0.4.0.tar.gz", hash = "sha256:63c3aeab0549750ffe40da79a1b524f60e08a2cbc3126c520ebf2eeaf507f5dd"},
 ]
 types-aiofiles = [
-    {file = "types-aiofiles-0.8.2.tar.gz", hash = "sha256:f26322fe6defa80ee0884ff9a81b5478dd27c84edaa30b8120294fbfd04c80c0"},
-    {file = "types_aiofiles-0.8.2-py3-none-any.whl", hash = "sha256:1dbb898365c77c1b4db469349140fb3b1e1ae68babed3efaf1df3d79f7b2d7d6"},
+    {file = "types-aiofiles-0.8.3.tar.gz", hash = "sha256:77c455ecfb08a81e39441ce35697870bcba8f2682baad4408b5eb48d9efb02c2"},
+    {file = "types_aiofiles-0.8.3-py3-none-any.whl", hash = "sha256:e261d6c0fafc3303c40cab64872609af8c702f6ec6590dc9f04a9bb8aaccc7b2"},
 ]
 types-pyyaml = [
     {file = "types-PyYAML-6.0.3.tar.gz", hash = "sha256:6ea4eefa8579e0ce022f785a62de2bcd647fad4a81df5cf946fd67e4b059920b"},
