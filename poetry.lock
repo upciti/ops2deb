@@ -543,11 +543,11 @@ testing = ["fields", "hunter", "process-tests", "six", "pytest-xdist", "virtuale
 
 [[package]]
 name = "python-debian"
-version = "0.1.42"
+version = "0.1.43"
 description = "Debian package related modules"
 category = "main"
 optional = false
-python-versions = ">=3.3"
+python-versions = ">=3.5"
 
 [package.dependencies]
 chardet = "*"
@@ -1149,9 +1149,9 @@ pytest-cov = [
     {file = "pytest_cov-3.0.0-py3-none-any.whl", hash = "sha256:578d5d15ac4a25e5f961c938b85a05b09fdaae9deef3bb6de9a6e766622ca7a6"},
 ]
 python-debian = [
-    {file = "python-debian-0.1.42.tar.gz", hash = "sha256:a794f4c4ee2318ae7260c2e32dac252b833bdaf6686efc2a1afbc6ecf3f0931f"},
-    {file = "python_debian-0.1.42-py3-none-any.whl", hash = "sha256:3945dc4f9cbc0b56985e806c8c6934657a63e91d48a850b2ccde287c5a873fd4"},
-    {file = "python_debian-0.1.42-py3.9.egg", hash = "sha256:91c3662ccd6c490229444e85b689849ec9f645b790dc466089c6d44937414404"},
+    {file = "python-debian-0.1.43.tar.gz", hash = "sha256:abc702511c4e268da49c22fd97c83de355c559f3271e0798a6b67964be3d8248"},
+    {file = "python_debian-0.1.43-py3-none-any.whl", hash = "sha256:0cc0e09434c019d8f6380d1ce965de2a1e51b454f0b2fb86469486556594cbfc"},
+    {file = "python_debian-0.1.43-py3.9.egg", hash = "sha256:7b5f55358c9b8a5fdea8a2116a145a3345eb51f94b4a71a84071997d58adcf58"},
 ]
 pywin32-ctypes = [
     {file = "pywin32-ctypes-0.2.0.tar.gz", hash = "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942"},
