@@ -28,8 +28,9 @@ def sort_blueprints(blueprints: List[Blueprint]) -> List[Blueprint]:
 
 def format_description(description: str) -> str:
     lines: List[str] = []
+    description = description.strip("\n ")
     for line in description.split("\n"):
-        lines.extend(wrap(line, width=79))
+        lines.extend(wrap(line, width=79) or [""])
     return "\n".join(lines)
 
 
