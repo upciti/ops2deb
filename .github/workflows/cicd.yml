@@ -21,7 +21,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.local
-          key: poetry-dependencies
+          key: poetry-dependencies-v2
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -146,7 +146,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.local
-          key: poetry-dependencies
+          key: poetry-dependencies-v2
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
