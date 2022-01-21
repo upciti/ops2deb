@@ -639,7 +639,7 @@ requests = "*"
 
 [[package]]
 name = "semver"
-version = "3.0.0.dev2"
+version = "3.0.0.dev3"
 description = "Python helper for Semantic Versioning (http://semver.org)"
 category = "main"
 optional = false
@@ -765,7 +765,7 @@ pyinstaller = ["pyinstaller"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "c9afabed12915c511396eda4de0fb974db4f7c88f70005781e9cefa08c12f0d8"
+content-hash = "1c44053191a2a871e918c6c8c080de43c5c427bfd77c8204b1334263b7189810"
 
 [metadata.files]
 aiofiles = [
@@ -1236,8 +1236,8 @@ safety = [
     {file = "safety-1.10.3.tar.gz", hash = "sha256:30e394d02a20ac49b7f65292d19d38fa927a8f9582cdfd3ad1adbbc66c641ad5"},
 ]
 semver = [
-    {file = "semver-3.0.0.dev2-py3-none-any.whl", hash = "sha256:153511dda7e85ce68673607bc7565e252b6495b23a5f631d73c59138b7aea5db"},
-    {file = "semver-3.0.0.dev2.tar.gz", hash = "sha256:55dd56b0144d7fa48708300076d861655769bcfc4334b22cbb08486bf976eb6c"},
+    {file = "semver-3.0.0.dev3-py3-none-any.whl", hash = "sha256:10651d0dacffdce7a2f0658e58894b138f52c2a080f7d69aa999810ebfc1f97d"},
+    {file = "semver-3.0.0.dev3.tar.gz", hash = "sha256:7175229bdcf96a6702b077e30226f041ce112057146ae81e84b51df08a8a75cf"},
 ]
 sniffio = [
     {file = "sniffio-1.2.0-py3-none-any.whl", hash = "sha256:471b71698eac1c2112a40ce2752bb2f4a4814c22a54a3eed3676bc0f5ca9f663"},
