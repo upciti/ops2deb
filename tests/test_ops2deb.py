@@ -202,7 +202,7 @@ def call_ops2deb(tmp_path, mock_httpx_client):
                 "OPS2DEB_EXIT_CODE": "77",
             }
         )
-        return runner.invoke(app, [*args])
+        return runner.invoke(app, [*args], catch_exceptions=False)
 
     return _invoke
 
