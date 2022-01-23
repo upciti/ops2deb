@@ -1,4 +1,6 @@
 import asyncio
+import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
@@ -37,6 +39,22 @@ class BaseUpdateStrategy:
     def __init__(self, client: httpx.AsyncClient):
         self.client = client
 
+    async def _try_version(self, blueprint: Blueprint, version: str) -> bool:
+        if not (remote_file := blueprint.render_fetch(version=version)):
+            return False
+        url = remote_file.url
+        logger.debug(f"{self.__class__.__name__} - {blueprint.name} - Trying {url}")
+        try:
+            response = await self.client.head(url)
+        except httpx.HTTPError as e:
+            raise Ops2debUpdaterError(f"Failed HEAD request to {url}. {str(e)}")
+        status = response.status_code
+        if status >= 500:
+            raise Ops2debUpdaterError(f"Server error when requesting {url}")
+        elif status >= 400:
+            return False
+        return True
+
     @classmethod
     def is_blueprint_supported(cls, blueprint: Blueprint) -> bool:
         raise NotImplementedError
@@ -51,30 +69,12 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
     replies with something else than a 404. More or less a brute force approach.
     """
 
-    async def _try_version(
-        self, blueprint: Blueprint, version: Version
-    ) -> Optional[Version]:
-        if not (remote_file := blueprint.render_fetch(version=str(version))):
-            return None
-        url = remote_file.url
-        logger.debug(f"Trying {url}")
-        try:
-            response = await self.client.head(url)
-        except httpx.HTTPError as e:
-            raise Ops2debUpdaterError(f"Failed HEAD request to {url}. {str(e)}")
-        status = response.status_code
-        if status >= 500:
-            raise Ops2debUpdaterError(f"Server error when requesting {url}")
-        elif status >= 400:
-            return None
-        return version
-
     async def _try_a_few_patches(
         self, blueprint: Blueprint, version: Version
     ) -> Optional[Version]:
         for i in range(0, 3):
             version = version.bump_patch()
-            if await self._try_version(blueprint, version) is not None:
+            if await self._try_version(blueprint, str(version)) is True:
                 return version
         return None
 
@@ -85,7 +85,7 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
         version_part: str,
     ) -> Version:
         bumped_version = getattr(version, f"bump_{version_part}")()
-        if (result := await self._try_version(blueprint, bumped_version)) is None:
+        if await self._try_version(blueprint, str(bumped_version)) is False:
             if version_part != "patch":
                 if (
                     result := await self._try_a_few_patches(blueprint, bumped_version)
@@ -96,7 +96,7 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
             else:
                 return version
         else:
-            return await self._try_versions(blueprint, result, version_part)
+            return await self._try_versions(blueprint, bumped_version, version_part)
 
     @classmethod
     def is_blueprint_supported(cls, blueprint: Blueprint) -> bool:
@@ -114,8 +114,61 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
         return str(version)
 
 
+class GithubUpdateStrategy(BaseUpdateStrategy):
+    """Uses Github release API to find the latest release."""
+
+    github_url_re = r"^https://github.com/(?P<owner>[\w-]+)/(?P<name>[\w-]+)/"
+    github_media_type = "application/vnd.github.v3+json"
+    github_base_api_url = "https://api.github.com"
+
+    @classmethod
+    def _get_github_repo_api_base_url(cls, blueprint: Blueprint) -> str:
+        if (fetch := blueprint.render_fetch()) is None:
+            raise ValueError(f"Blueprint {blueprint.name} has no fetch instruction")
+        if (match := re.match(cls.github_url_re, fetch.url)) is None:
+            raise ValueError(f"URL {fetch.url} is not supported")
+        return f"{cls.github_base_api_url}/repos/{match['owner']}/{match['name']}"
+
+    async def _get_latest_github_release(self, blueprint: Blueprint) -> Dict[str, Any]:
+        repo_api_base_url = self._get_github_repo_api_base_url(blueprint)
+        headers = {"accept": self.github_media_type}
+        if (token := os.environ.get("GITHUB_TOKEN")) is not None:
+            headers["authorization"] = f"token {token}"
+        try:
+            response = await self.client.get(
+                f"{repo_api_base_url}/releases/latest", headers=headers
+            )
+        except httpx.HTTPError as e:
+            raise Ops2debUpdaterError(f"Failed to request Github API. {e}")
+        if response.status_code != 200:
+            error = f"Failed to request Github API. Error {response.status_code}."
+            try:
+                error += f" {response.json()['message']}."
+            except Exception:
+                pass
+            raise Ops2debUpdaterError(error)
+        return response.json()
+
+    @classmethod
+    def is_blueprint_supported(cls, blueprint: Blueprint) -> bool:
+        try:
+            cls._get_github_repo_api_base_url(blueprint)
+            return True
+        except ValueError:
+            return False
+
+    async def __call__(self, blueprint: Blueprint) -> str:
+        latest_release = await self._get_latest_github_release(blueprint)
+        if (tag_name := latest_release.get("tag_name")) is None:
+            raise Ops2debUpdaterError("Failed to determine latest release version")
+        version = tag_name if not tag_name.startswith("v") else tag_name[1:]
+        if await self._try_version(blueprint, version) is False:
+            raise Ops2debUpdaterError("Failed to determine latest release URL")
+        return version
+
+
 async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
-    strategies = [GenericUpdateStrategy(client)]
+    strategies = [GithubUpdateStrategy(client), GenericUpdateStrategy(client)]
     strategies = [u for u in strategies if u.is_blueprint_supported(blueprint)]
     if not strategies:
         return blueprint.version
@@ -123,7 +176,9 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
         try:
             return await update_strategy(blueprint)
         except Ops2debUpdaterError as e:
-            logger.debug(str(e))
+            logger.debug(
+                f"{update_strategy.__class__.__name__} - {blueprint.name} - {str(e)}"
+            )
             continue
     error = f"Failed to update {blueprint.name}, enable debug logs for more information"
     logger.error(error)
