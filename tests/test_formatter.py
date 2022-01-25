@@ -1,6 +1,9 @@
+import json
+
 import pytest
 
-from ops2deb.formatter import format_description
+from ops2deb.formatter import format_blueprint, format_description
+from ops2deb.parser import Blueprint
 
 description_with_empty_line = """
 This thing does the following:
@@ -41,3 +44,29 @@ def test_format_description_should_wrap_long_lines():
 def test_format_description_should_be_idempotent(description):
     result = format_description(description)
     assert format_description(result) == result
+
+
+def test_format_blueprint_should_remove_default_values():
+    raw_blueprint = dict(
+        name="great-app",
+        version="1.0.0",
+        summary="A summary",
+        description="A description",
+    )
+    blueprint = Blueprint(**raw_blueprint)
+    raw_blueprint_with_defaults = json.loads(blueprint.json())
+    assert "revision" in raw_blueprint_with_defaults
+    assert format_blueprint(raw_blueprint_with_defaults) == raw_blueprint
+
+
+def test_format_blueprint_should_not_remove_field_when_value_is_not_default(
+    blueprint_factory,
+):
+    blueprint = blueprint_factory(revision=2, depends=["test"])
+    blueprint = format_blueprint(blueprint.dict())
+    assert {"revision", "depends", "fetch", "script"}.issubset(blueprint.keys())
+
+
+def test_format_blueprint_should_not_render_templated_values(blueprint_factory):
+    blueprint = blueprint_factory(version="{{env('TEST', 0)}}", construct=True)
+    assert format_blueprint(blueprint.dict())["version"] == "{{env('TEST', 0)}}"

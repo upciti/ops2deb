@@ -1,13 +1,12 @@
 import json
-from operator import attrgetter
 from pathlib import Path
 from textwrap import wrap
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import yaml
 
 from .exceptions import Ops2debFormatterError
-from .parser import Blueprint, parse
+from .parser import Blueprint, load, validate
 
 
 class PrettyYAMLDumper(yaml.dumper.SafeDumper):
@@ -22,8 +21,11 @@ class PrettyYAMLDumper(yaml.dumper.SafeDumper):
         return style
 
 
-def sort_blueprints(blueprints: List[Blueprint]) -> List[Blueprint]:
-    return sorted(blueprints, key=attrgetter("name", "version", "revision"))
+def sort_blueprints(blueprints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def key(blueprint: Dict[str, Any]) -> Tuple[str, str, int]:
+        return blueprint["name"], blueprint["version"], blueprint.get("revision", 1)
+
+    return sorted(blueprints, key=key)
 
 
 def format_description(description: str) -> str:
@@ -34,24 +36,35 @@ def format_description(description: str) -> str:
     return "\n".join(lines)
 
 
-def format_blueprint(blueprint: Blueprint) -> Dict[str, Any]:
-    update: Dict[str, str] = {"description": format_description(blueprint.description)}
-    blueprint = blueprint.copy(update=update)
-    keys_with_list = {"recommends", "conflicts", "depends", "script"}
-    exclude = {k for k in keys_with_list if not getattr(blueprint, k)}
-    return json.loads(blueprint.json(exclude_defaults=True, exclude=exclude))
+def format_blueprint(blueprint: Dict[str, Any]) -> Dict[str, Any]:
+    blueprint = json.loads(Blueprint.construct(**blueprint).json(exclude_defaults=True))
+    blueprint["description"] = format_description(blueprint["description"])
+    for key in "depends", "recommends", "script", "conflicts":
+        if not blueprint.get(key):
+            blueprint.pop(key, None)
+    return json.loads(json.dumps(blueprint))
 
 
 def format(configuration_path: Path) -> None:
+    configuration_dict = load(configuration_path)
+    validate(configuration_dict)
+
+    # configuration file can be a list of blueprints or a single blueprint
+    raw_blueprints = (
+        configuration_dict
+        if isinstance(configuration_dict, list)
+        else [configuration_dict]
+    )
+
     # sort blueprints by name, version and revision
-    blueprints = sort_blueprints(parse(configuration_path))
+    raw_blueprints = sort_blueprints(raw_blueprints)
 
     # wrap descriptions, remove default values, remove empty lists
-    formatted_blueprints = [format_blueprint(b) for b in blueprints]
+    raw_blueprints = [format_blueprint(b) for b in raw_blueprints]
 
     # dump to yaml, use | for multiline strings and double quotes instead of single quotes
     yaml_dump = yaml.dump(
-        formatted_blueprints if len(blueprints) > 1 else formatted_blueprints[0],
+        raw_blueprints if len(raw_blueprints) > 1 else raw_blueprints[0],
         Dumper=PrettyYAMLDumper,
         default_flow_style=False,
         sort_keys=False,

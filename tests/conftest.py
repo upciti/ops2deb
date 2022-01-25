@@ -183,7 +183,10 @@ def blueprint_factory():
         script=["cp great-app_linux_{{arch}}_{{version}} {{src}}/usr/bin/great-app"],
     )
 
-    def _blueprint_factory(**kwargs):
-        return Blueprint(**(blueprint.dict() | kwargs))
+    def _blueprint_factory(construct: bool = False, **kwargs):
+        if construct is False:
+            return Blueprint(**(blueprint.dict() | kwargs))
+        else:
+            return Blueprint.construct(**(blueprint.dict() | kwargs))
 
     return _blueprint_factory
