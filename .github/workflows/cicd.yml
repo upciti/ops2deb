@@ -95,7 +95,7 @@ jobs:
           path: ops2deb_linux_amd64
           retention-days: 2
 
-  release:
+  publish_release:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     needs: [test_and_build]
@@ -129,7 +129,7 @@ jobs:
           body_path: changelog.md
           files: ops2deb_linux_amd64
 
-  publish:
+  publish_pypi:
     runs-on: ubuntu-18.04
     needs: [test_and_build]
     if: startsWith(github.ref, 'refs/tags')
@@ -160,6 +160,57 @@ jobs:
           poetry build
 
       - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+  publish_images:
+    runs-on: ubuntu-latest
+    needs: [test_and_build]
+    if: github.event.repository.fork == false && startsWith(github.ref, 'refs/tags')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: ops2deb_linux_amd64
+
+      - name: Set execute permission
+        run: chmod +x ops2deb_linux_amd64
+
+      - name: Login to GitHub Container Registry
+        if: startsWith(github.ref, 'refs/tags')
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build slim Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          build-args: |
+            OPS2DEB_PATH=ops2deb_linux_amd64
+          target: slim
+          tags: |
+            ghcr.io/${{ github.event.repository.full_name }}:latest-slim
+
+      - name: Check Docker image
+        run: docker run --rm -i ghcr.io/${{ github.event.repository.full_name }}:latest-slim --help
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          build-args: |
+            OPS2DEB_PATH=ops2deb_linux_amd64
+          tags: |
+            ghcr.io/${{ github.event.repository.full_name }}:latest
+
+      - name: Publish Docker image
+        if: startsWith(github.ref, 'refs/tags')
+        run: |
+          docker push --all-tags ghcr.io/${{ github.event.repository.full_name }}
