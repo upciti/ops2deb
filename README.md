@@ -5,6 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/ops2deb.svg)](https://pypi.python.org/pypi/ops2deb/)
 [![Downloads](https://static.pepy.tech/personalized-badge/ops2deb?period=total&units=international_system&left_color=blue&right_color=green&left_text=Downloads)](https://pepy.tech/project/ops2deb)
+[![WakeMeOps](https://docs.wakemeops.com/badges/ops2deb.svg)](https://docs.wakemeops.com/packages/ops2deb)
 
 # ops2deb
 
@@ -12,7 +13,6 @@ Are you tired of checking if your favorite devops tools are up-to-date? Are you 
 `ops2deb` is designed to generate Debian packages for common devops tools such as kubectl, kustomize, helm, ...,
 but can be used to package any portable application. In short, it consumes a configuration file and outputs `.deb` packages.
 `ops2deb` can also track new releases of upstream applications and automatically bump application versions in its configuration file.
-
 
 ## Installation
 
@@ -28,7 +28,6 @@ sudo apt-get install ops2deb
 pipx install ops2deb
 ```
 
-
 ## Dependencies
 
 - Python >= 3.9 if installed with `pip` or `pipx`
@@ -43,7 +42,6 @@ If you plan to build packages for `armhf` and `arm64` you will also need the fol
 ```shell
 sudo apt install binutils-aarch64-linux-gnu binutils-arm-linux-gnueabihf
 ```
-
 
 ## Getting started
 
@@ -76,7 +74,6 @@ ops2deb purge
 ```
 
 For more information about existing subcommands and options run `ops2deb --help`.
-
 
 ## Usage examples
 
@@ -224,7 +221,6 @@ Written in YAML and composed of a single blueprint object or a list of blueprint
 | `recommends`  | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`    |
 | `conflicts`   | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`    |
 
-
 ## Development
 
 You will need [poetry](https://python-poetry.org/), and probably [pyenv](https://github.com/pyenv/pyenv) if you don't have python 3.9 on your host.
@@ -262,7 +258,6 @@ And run:
 ```shell
 poetry run task single_binary_application
 ```
-
 
 ## Important notes
 
