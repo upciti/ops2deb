@@ -82,7 +82,13 @@ class Blueprint(Base):
         return v
 
     def _get_additional_variables(self) -> Dict[str, Optional[str]]:
+        target = (
+            (getattr(self.fetch.targets, self.arch) or self.arch)
+            if isinstance(self.fetch, MultiArchitectureRemoteFile) and self.fetch.targets
+            else self.arch
+        )
         return dict(
+            target=target,
             goarch=DEFAULT_GOARCH_MAP.get(self.arch, None),
             rust_target=DEFAULT_RUST_TARGET_MAP.get(self.arch, None),
         )
@@ -107,18 +113,15 @@ class Blueprint(Base):
         if self.fetch is None:
             return None
         if isinstance(self.fetch, MultiArchitectureRemoteFile):
-            sha256 = getattr(self.fetch.sha256, self.arch, None)
-            target = getattr(self.fetch.targets, self.arch, self.arch)
+            sha256 = getattr(self.fetch.sha256, self.arch)
         else:
             sha256 = self.fetch.sha256
-            target = self.arch
         if sha256 is None:
             return None
         url = self.render_string(
             self.fetch.url,
             version=version,
             sha256=sha256,
-            target=target,
             **self._get_additional_variables(),
         )
         return RemoteFile(url=url, sha256=sha256)

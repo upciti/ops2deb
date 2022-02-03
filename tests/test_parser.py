@@ -1,7 +1,33 @@
 import os
 
+import pytest
 
-def test_parser_should_allow_env_jinja_function_in_string_attributes(blueprint_factory):
+
+@pytest.fixture
+def mock_blueprint(blueprint_factory):
+    return blueprint_factory(
+        script=["{{goarch}}", "{{rust_target}}", "{{target}}"],
+        fetch=dict(
+            url="http://{{goarch}}/{{rust_target}}/{{target}}",
+            sha256=dict(amd64="deadbeef"),
+            targets=dict(amd64="x86_64"),
+        ),
+    )
+
+
+def test_render_script_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):
+    blueprint = mock_blueprint
+    assert blueprint.render_script() == ["amd64", "x86_64-unknown-linux-gnu", "x86_64"]
+
+
+def test_render_fetch_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):
+    blueprint = mock_blueprint
+    assert blueprint.render_fetch().url == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
+
+
+def test__render_string_attributes_env_jinja_function_should_work_in_string_attributes(
+    blueprint_factory,
+):
     os.environ.update(
         {
             "CI_PROJECT_NAME": "great-app",
@@ -13,20 +39,7 @@ def test_parser_should_allow_env_jinja_function_in_string_attributes(blueprint_f
         name="{{env('CI_PROJECT_NAME')}}",
         version="{{env('CI_COMMIT_TAG')}}",
         homepage="{{env('CI_PROJECT_URL')}}",
-        summary="awesome summary",
-        description="Great description.",
     )
     assert blueprint.name == os.environ["CI_PROJECT_NAME"]
     assert blueprint.version == os.environ["CI_COMMIT_TAG"]
     assert blueprint.homepage == os.environ["CI_PROJECT_URL"]
-
-
-def test_parser_should_expose_go_arch_and_rust_targets_in_script_and_fetch(
-    blueprint_factory,
-):
-    blueprint = blueprint_factory(
-        script=["{{goarch}}", "{{rust_target}}"],
-        fetch={"url": "http://{{goarch}}/{{rust_target}}", "sha256": "deadbeef"},
-    )
-    assert blueprint.render_script() == ["amd64", "x86_64-unknown-linux-gnu"]
-    assert blueprint.render_fetch().url == "http://amd64/x86_64-unknown-linux-gnu"
