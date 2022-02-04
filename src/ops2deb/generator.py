@@ -7,8 +7,8 @@ from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from .fetcher import Fetcher, FetchResult, FetchResultOrError
-from .jinja import environment
 from .parser import Blueprint, extend
+from .templates import environment
 from .utils import separate_successes_from_errors
 
 

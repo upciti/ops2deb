@@ -5,22 +5,9 @@ from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError, validator
 from ruamel.yaml import YAML, YAMLError
 
 from .exceptions import Ops2debParserError
-from .jinja import environment
+from .jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
-
-
-DEFAULT_GOARCH_MAP = {
-    "amd64": "amd64",
-    "arm64": "arm64",
-    "armhf": "arm",
-}
-
-DEFAULT_RUST_TARGET_MAP = {
-    "amd64": "x86_64-unknown-linux-gnu",
-    "arm64": "aarch64-unknown-linux-gnu",
-    "armhf": "arm-unknown-linux-gnueabihf",
-}
 
 
 class Base(BaseModel):
@@ -83,8 +70,8 @@ class Blueprint(Base):
 
     def _get_additional_variables(self) -> Dict[str, Optional[str]]:
         target = (
-            (getattr(self.fetch.targets, self.arch) or self.arch)
-            if isinstance(self.fetch, MultiArchitectureRemoteFile) and self.fetch.targets
+            (getattr(self.fetch.targets, self.arch, self.arch) or self.arch)
+            if isinstance(self.fetch, MultiArchitectureRemoteFile)
             else self.arch
         )
         return dict(

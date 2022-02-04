@@ -23,3 +23,11 @@ def test_env_function_should_use_default_value_when_env_variable_is_not_defined(
 ):
     os.environ.pop("SOME_VARIABLE")
     assert render_string("{{env('SOME_VARIABLE', 'default')}}") == "default"
+
+
+def test_goarch_filter_should_map_goarch_to_debian_arch(render_string):
+    assert render_string("{{ 'armhf' | goarch }}") == "arm"
+
+
+def test_rust_target_filter_should_map_rust_targets_to_debian_arch(render_string):
+    assert render_string("{{ 'armhf' | rust_target }}") == "arm-unknown-linux-gnueabihf"

@@ -9,10 +9,21 @@ def mock_blueprint(blueprint_factory):
         script=["{{goarch}}", "{{rust_target}}", "{{target}}"],
         fetch=dict(
             url="http://{{goarch}}/{{rust_target}}/{{target}}",
-            sha256=dict(amd64="deadbeef"),
+            sha256=dict(amd64="deadbeef", armhf="deadbeef"),
             targets=dict(amd64="x86_64"),
         ),
     )
+
+
+def test_supported_architectures_should_return_lists_of_archs_from_fetch_sha256(
+    mock_blueprint,
+):
+    assert mock_blueprint.supported_architectures() == ["amd64", "armhf"]
+
+
+def test_render_script_target_should_default_to_blueprint_arch(mock_blueprint):
+    blueprint = mock_blueprint.copy(update={"script": ["{{target}}"], "arch": "armhf"})
+    assert blueprint.render_script() == ["armhf"]
 
 
 def test_render_script_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):

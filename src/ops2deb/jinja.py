@@ -1,72 +1,29 @@
 import os
-from typing import Optional
 
-from jinja2 import Environment, FunctionLoader
+from jinja2 import Environment
 
-DEBIAN_CHANGELOG = """\
-{{ package.name }} ({{ package.version }}) stable; urgency=medium
+DEFAULT_GOARCH_MAP = {
+    "amd64": "amd64",
+    "arm64": "arm64",
+    "armhf": "arm",
+}
 
-  * Release {{ package.version }}
-
- -- ops2deb <ops2deb@upciti.com>  Tue, 07 May 2019 20:31:30 +0000
-"""
-
-DEBIAN_COMPAT = """\
-10
-"""
-
-DEBIAN_CONTROL = """\
-Source: {{ package.name }}
-Priority: optional
-Maintainer: ops2deb <ops2deb@upciti.com>
-Build-Depends: debhelper
-Standards-Version: 3.9.6
-{%- if package.homepage %}{{ '\n' }}Homepage: {{ package.homepage }}{% endif %}
-
-Package: {{ package.name }}
-Architecture: {{ package.arch }}
-{%- if package.depends %}{{ '\n' }}Depends: {{ package.depends|sort|join(', ') }}{% endif %}
-{%- if package.recommends %}{{ '\n' }}Recommends: {{ package.recommends|sort|join(', ') }}{% endif %}
-{%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
-Description: {{ package.summary }}
-{% for line in package.description.split('\n') %} {{ line or '.' }}{{ '\n' if not loop.last else '' }}{% endfor %}
-"""
-
-DEBIAN_INSTALL = """\
-src/* /
-"""
-
-DEBIAN_LINTIAN_OVERRIDES = """\
-{{ package.name }}: statically-linked-binary
-{{ package.name }}: binary-without-manpage
-"""
-
-DEBIAN_RULES = """\
-#!/usr/bin/make -f
-
-%:
-	dh $@
-
-override_dh_shlibdeps:
-	true
-
-override_dh_strip:
-	dh_strip --no-ddebs
-
-override_dh_builddeb:
-	dh_builddeb -- -Zxz
-"""
-
-
-def template_loader(name: str) -> Optional[str]:
-    variable_name = f"DEBIAN_{name.upper().replace('-', '_')}"
-    template_content: str = globals()[variable_name]
-    if variable_name in globals():
-        return template_content
-    return None
-
-
-environment = Environment(loader=FunctionLoader(template_loader))
+DEFAULT_RUST_TARGET_MAP = {
+    "amd64": "x86_64-unknown-linux-gnu",
+    "arm64": "aarch64-unknown-linux-gnu",
+    "armhf": "arm-unknown-linux-gnueabihf",
+}
 
 # Allow users to use environment variables in blueprints
-environment.globals["env"] = lambda x, y=None: os.environ.get(x, y)
+functions = {
+    "env": lambda x, y=None: os.environ.get(x, y),
+}
+
+filters = {
+    "goarch": lambda arch: DEFAULT_GOARCH_MAP.get(arch, None),
+    "rust_target": lambda arch: DEFAULT_RUST_TARGET_MAP.get(arch, None),
+}
+
+environment = Environment()
+environment.globals.update(functions)
+environment.filters.update(filters)
