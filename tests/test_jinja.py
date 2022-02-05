@@ -29,5 +29,15 @@ def test_goarch_filter_should_map_goarch_to_debian_arch(render_string):
     assert render_string("{{ 'armhf' | goarch }}") == "arm"
 
 
+def test_goarch_filter_should_return_input_when_input_is_not_a_debian_arch(render_string):
+    assert render_string("{{ 'input_target' | goarch }}") == "input_target"
+
+
 def test_rust_target_filter_should_map_rust_targets_to_debian_arch(render_string):
     assert render_string("{{ 'armhf' | rust_target }}") == "arm-unknown-linux-gnueabihf"
+
+
+def test_rust_target_filter_should_return_input_when_input_is_not_a_debian_arch(
+    render_string,
+):
+    assert render_string("{{ 'input_target' | rust_target }}") == "input_target"

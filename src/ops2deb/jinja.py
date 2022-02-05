@@ -14,14 +14,15 @@ DEFAULT_RUST_TARGET_MAP = {
     "armhf": "arm-unknown-linux-gnueabihf",
 }
 
-# Allow users to use environment variables in blueprints
+# Let users to use environment variables in blueprints
 functions = {
-    "env": lambda x, y=None: os.environ.get(x, y),
+    "env": lambda variable, default=None: os.environ.get(variable, default),
 }
 
+# Let users override goarch and rust_target by writing {{target|rust_target}} in urls
 filters = {
-    "goarch": lambda arch: DEFAULT_GOARCH_MAP.get(arch, None),
-    "rust_target": lambda arch: DEFAULT_RUST_TARGET_MAP.get(arch, None),
+    "goarch": lambda arch: DEFAULT_GOARCH_MAP.get(arch, arch),
+    "rust_target": lambda arch: DEFAULT_RUST_TARGET_MAP.get(arch, arch),
 }
 
 environment = Environment()
