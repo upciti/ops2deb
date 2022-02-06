@@ -37,22 +37,12 @@ jobs:
       - name: Install Python Dependencies
         run: poetry install
 
-      - name: Fix APT Cache Permission
-        run: sudo chown -R "$(id -u)" /var/cache/apt
-
-      - name: Load Cached APT Dependencies
-        uses: actions/cache@v1
-        with:
-          path: /var/cache/apt/archives
-          key: apt-dependencies
-
       - name: Install APT Dependencies
-        run: |
-          sudo apt-get update -yq
-          sudo apt-get install -y --no-install-recommends debhelper fakeroot
-
-      - name: Fix APT Cache Permission
-        run: sudo chown -R "$(id -u)" /var/cache/apt/archives
+        uses: upciti/wakemeops-action@v1
+        with:
+          packages: |
+            debhelper
+            fakeroot
 
       - name: Run black
         run: poetry run black src tests --check
@@ -62,9 +52,6 @@ jobs:
 
       - name: Run flake8
         run: poetry run flake8 src tests
-
-      - name: Run safety
-        run: poetry export -f requirements.txt | poetry run safety check --bare --stdin
 
       - name: Run mypy
         run: poetry run mypy --show-error-codes src
@@ -106,10 +93,9 @@ jobs:
           fetch-depth: 0
 
       - name: Install clog-cli
-        run: |
-          curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository | sudo bash -s dev
-          sudo apt-get update -yq
-          sudo apt-get install -y clog-cli
+        uses: upciti/wakemeops-action@v1
+        with:
+          packages: clog-cli
 
       - name: Build Release Changelog
         run: |
