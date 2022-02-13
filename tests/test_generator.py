@@ -1,6 +1,7 @@
 import pytest
 
-from ops2deb.generator import generate
+from ops2deb.exceptions import Ops2debGeneratorError
+from ops2deb.generator import SourcePackage, generate
 from ops2deb.parser import Blueprint
 
 blueprint_1 = Blueprint(
@@ -91,3 +92,49 @@ def test_generate_should_produce_identical_control_file_snapshot(
     generate([blueprint], tmp_path)
     control_file = tmp_path / f"great-app_1.0.0_{blueprint.arch}/debian/control"
     assert control_file.read_text() == control
+
+
+def test__install_files_should_create_here_document_in_src_directory_if_destination_is_absolute(  # noqa: E501
+    tmp_path, blueprint_factory
+):
+    files = [dict(path="/test", content="content")]
+    blueprint = blueprint_factory(install=files)
+    SourcePackage(blueprint, tmp_path)._install_files()
+    assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
+
+
+def test__install_files_should_create_here_document_in_package_directory_if_destination_is_relative(  # noqa: E501
+    tmp_path, blueprint_factory
+):
+    files = [dict(path="test", content="content")]
+    blueprint = blueprint_factory(install=files)
+    SourcePackage(blueprint, tmp_path)._install_files()
+    assert (tmp_path / "great-app_1.0.0_amd64/test").is_file()
+
+
+def test__install_files_should_fail_to_create_here_document_if_file_already_exists(
+    tmp_path, blueprint_factory
+):
+    files = [dict(path="/test", content="content"), dict(path="/test", content="content")]
+    blueprint = blueprint_factory(install=files)
+    with pytest.raises(Ops2debGeneratorError):
+        SourcePackage(blueprint, tmp_path)._install_files()
+
+
+def test__install_files_should_copy_file_when_input_is_a_source_destination_str(
+    tmp_path, blueprint_factory
+):
+    source = tmp_path / "test"
+    source.write_text("test")
+    blueprint = blueprint_factory(install=[f"{source}:/test"])
+    SourcePackage(blueprint, tmp_path)._install_files()
+    assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
+    assert (tmp_path / "great-app_1.0.0_amd64/src/test").read_text() == "test"
+
+
+def test__install_files_should_fail_when_input_is_a_source_destination_str_and_source_does_not_exist(  # noqa: E501
+    tmp_path, blueprint_factory
+):
+    blueprint = blueprint_factory(install=[f"{tmp_path}/test:/test"])
+    with pytest.raises(Ops2debGeneratorError):
+        SourcePackage(blueprint, tmp_path)._install_files()

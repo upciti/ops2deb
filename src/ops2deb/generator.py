@@ -7,7 +7,7 @@ from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from .fetcher import Fetcher, FetchResult, FetchResultOrError
-from .parser import Blueprint, extend
+from .parser import Blueprint, HereDocument, extend
 from .templates import environment
 from .utils import separate_successes_from_errors
 
@@ -50,6 +50,29 @@ class SourcePackage:
             shutil.copy2(fetch_result.storage_path, self.fetch_directory)
         else:
             shutil.copytree(fetch_result.storage_path, self.fetch_directory)
+
+    def _install_files(self) -> None:
+        for entry in self.blueprint.install:
+            destination = Path(self.blueprint.render_string(entry.destination))
+            if (
+                destination.is_absolute() is True
+                and destination.is_relative_to(self.package_directory) is False
+            ):
+                destination = self.source_directory / destination.relative_to("/")
+            if destination.is_absolute() is False:
+                destination = self.package_directory / destination
+            if destination.exists():
+                raise Ops2debGeneratorError(f"Destination {destination} already exists")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+
+            if isinstance(entry, HereDocument):
+                destination.write_text(entry.content)
+            else:
+                if Path(entry.source).exists() is False:
+                    raise Ops2debGeneratorError(f"Source {entry.source} does not exist")
+                if Path(entry.source).is_file() is False:
+                    raise Ops2debGeneratorError(f"Source {entry.source} is not a file")
+                shutil.copy2(entry.source, destination)
 
     def _run_script(self) -> None:
         # if blueprint has no fetch instruction, we stay in the directory from which
@@ -97,6 +120,9 @@ class SourcePackage:
             "lintian-overrides",
         ]:
             self._render_template(template)
+
+        # copy files / create here documents
+        self._install_files()
 
         # run blueprint script
         self._run_script()

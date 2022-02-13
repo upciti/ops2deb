@@ -40,6 +40,40 @@ class MultiArchitectureRemoteFile(Base):
     )
 
 
+class SourceDestinationStr(str):
+    source: str
+    destination: str
+
+    @classmethod
+    def __get_validators__(cls) -> Any:
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: str) -> "SourceDestinationStr":
+        if not isinstance(v, str):
+            raise TypeError("string required")
+        if len(paths := v.split(":")) != 2:
+            raise TypeError("string must have one ':' separator")
+        string = cls(v)
+        string.source = paths[0]
+        string.destination = paths[1]
+        return string
+
+    def __repr__(self) -> str:
+        return (
+            f"SourceDestinationStr(source={self.source}, destination={self.destination})"
+        )
+
+
+class HereDocument(Base):
+    content: str = Field(..., description="File content")
+    path: str = Field(..., description="Path where the file will be written")
+
+    @property
+    def destination(self) -> str:
+        return self.path
+
+
 class Blueprint(Base):
     name: str = Field(..., description="Package name")
     version: str = Field(..., description="Package name")
@@ -62,6 +96,7 @@ class Blueprint(Base):
         description="Describe a file (or a file per architecture) to download before "
         "running the build script",
     )
+    install: List[Union[HereDocument, SourceDestinationStr]] = Field(default_factory=list)
     script: List[str] = Field(default_factory=list, description="Build instructions")
 
     @validator("*", pre=True)

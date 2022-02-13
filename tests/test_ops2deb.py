@@ -42,6 +42,9 @@ mock_valid_configuration = """\
   fetch:
     url: http://testserver/{{version}}/super-app.zip
     sha256: 5d5e3a6e8449040d6a25082675295e1aa44b3ea474166c24090d27054a58627a
+  install:
+    - path: debian/copyright
+      content: 2021 John Doe. All rights reserved.
   script:
     - ls
     - mv great-app {{src}}/usr/bin/great-app
@@ -221,6 +224,7 @@ def test_ops2deb_generate_should_succeed_with_valid_configuration(tmp_path, call
     print(result.stdout)
     assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/debian/copyright").is_file()
     assert result.exit_code == 0
 
 
