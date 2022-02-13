@@ -57,7 +57,9 @@ class SourcePackage:
         cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
 
         # run script
-        for line in self.blueprint.render_script(src=self.source_directory):
+        for line in self.blueprint.render_script(
+            src=self.source_directory, debian=self.debian_directory
+        ):
             logger.info(f"$ {line}")
             result = subprocess.run(line, shell=True, cwd=cwd, capture_output=True)
             if stdout := result.stdout.decode():

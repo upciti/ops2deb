@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -86,14 +88,14 @@ class Blueprint(Base):
         else:
             return [self.arch]
 
-    def render_string(self, string: str, **kwargs: Optional[str]) -> str:
+    def render_string(self, string: str, **kwargs: Optional[str | Path]) -> str:
         version = kwargs.pop("version", None)
         version = version or self.version
         return environment.from_string(string).render(
             name=self.name,
             arch=self.arch,
             version=version,
-            **kwargs,
+            **(self._get_additional_variables() | kwargs),
         )
 
     def render_fetch(self, version: Optional[str] = None) -> Optional[RemoteFile]:
@@ -109,15 +111,11 @@ class Blueprint(Base):
             self.fetch.url,
             version=version,
             sha256=sha256,
-            **self._get_additional_variables(),
         )
         return RemoteFile(url=url, sha256=sha256)
 
-    def render_script(self, src: Path = None) -> List[str]:
-        return [
-            self.render_string(line, src=str(src), **self._get_additional_variables())
-            for line in self.script
-        ]
+    def render_script(self, src: Path, debian: Path) -> List[str]:
+        return [self.render_string(line, src=src, debian=debian) for line in self.script]
 
 
 class Configuration(Base):
