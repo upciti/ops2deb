@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from pydantic import ValidationError
 
 
 @pytest.fixture
@@ -10,7 +11,7 @@ def mock_blueprint(blueprint_factory):
             url="http://{{goarch}}/{{rust_target}}/{{target}}",
             sha256=dict(amd64="deadbeef", armhf="deadbeef"),
             targets=dict(amd64="x86_64"),
-        ),
+        )
     )
 
 
@@ -63,3 +64,24 @@ def test__render_string_attributes_env_jinja_function_should_work_in_string_attr
 def test_render_fetch_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):
     blueprint = mock_blueprint
     assert blueprint.render_fetch().url == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
+
+
+def test_install_entry_should_have_source_and_destination_attributes_when_entry_is_a_source_destination_str(  # noqa: E501
+    blueprint_factory,
+):
+    blueprint = blueprint_factory(install=["a:b"])
+    assert repr(blueprint.install[0]) == "SourceDestinationStr(source=a, destination=b)"
+
+
+def test___init___should_fail_if_install_entry_is_a_string_without_a_separator(
+    blueprint_factory,
+):
+    with pytest.raises(ValidationError):
+        blueprint_factory(install=["invalid_input"])
+
+
+def test___init___should_fail_if_install_entry_is_a_string_with_more_than_one_separator(
+    blueprint_factory,
+):
+    with pytest.raises(ValidationError):
+        blueprint_factory(install=["invalid::input"])

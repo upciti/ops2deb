@@ -39,10 +39,10 @@ def format_description(description: str) -> str:
 def format_blueprint(blueprint: Dict[str, Any]) -> Dict[str, Any]:
     blueprint = json.loads(Blueprint.construct(**blueprint).json(exclude_defaults=True))
     blueprint["description"] = format_description(blueprint["description"])
-    for key in "depends", "recommends", "script", "conflicts":
+    for key in "depends", "recommends", "script", "conflicts", "install":
         if not blueprint.get(key):
             blueprint.pop(key, None)
-    return json.loads(json.dumps(blueprint))
+    return blueprint
 
 
 def format(configuration_path: Path) -> None:

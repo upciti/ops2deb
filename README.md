@@ -4,7 +4,7 @@
 [![Generic badge](https://img.shields.io/badge/type_checked-mypy-informational.svg)](https://mypy.readthedocs.io/en/stable/introduction.html)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/ops2deb.svg)](https://pypi.python.org/pypi/ops2deb/)
-[![Downloads](https://static.pepy.tech/personalized-badge/ops2deb?period=total&units=international_system&left_color=blue&right_color=green&left_text=Downloads)](https://pepy.tech/project/ops2deb)
+[![Downloads](https://pepy.tech/badge/ops2deb/month)](https://pepy.tech/project/ops2deb)
 [![WakeMeOps](https://docs.wakemeops.com/badges/ops2deb.svg)](https://docs.wakemeops.com/packages/ops2deb)
 
 # ops2deb
