@@ -174,6 +174,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Docker meta for slim images
+        id: metaslim
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/upciti/ops2deb
+          flavor: suffix=-slim,onlatest=true
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+
       - name: Build slim Docker image
         uses: docker/build-push-action@v2
         with:
@@ -181,11 +193,22 @@ jobs:
           build-args: |
             OPS2DEB_PATH=ops2deb_linux_amd64
           target: slim
-          tags: |
-            ghcr.io/${{ github.event.repository.full_name }}:latest-slim
+          tags: ${{ steps.metaslim.outputs.tags }}
+          labels: ${{ steps.metaslim.outputs.labels }}
 
       - name: Check Docker image
         run: docker run --rm -i ghcr.io/${{ github.event.repository.full_name }}:latest-slim --help
+
+      - name: Docker meta for big images
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/upciti/ops2deb
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
 
       - name: Build Docker image
         uses: docker/build-push-action@v2
@@ -193,8 +216,8 @@ jobs:
           context: .
           build-args: |
             OPS2DEB_PATH=ops2deb_linux_amd64
-          tags: |
-            ghcr.io/${{ github.event.repository.full_name }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
       - name: Publish Docker image
         if: startsWith(github.ref, 'refs/tags')
