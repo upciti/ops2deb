@@ -49,8 +49,7 @@ In a test directory run:
 
 ```shell
 curl https://raw.githubusercontent.com/upciti/ops2deb/main/ops2deb.yml
-ops2deb generate
-ops2deb build
+ops2deb  # equivalent to ops2deb generate && ops2deb build
 ```
 
 To check for new releases run:
