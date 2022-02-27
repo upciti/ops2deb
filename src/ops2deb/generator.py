@@ -148,7 +148,7 @@ def generate(
     blueprints: List[Blueprint],
     output_directory: Path,
     debian_repository: Optional[str] = None,
-) -> None:
+) -> List[SourcePackage]:
     # each blueprint can yield multiple source packages, one per supported arch
     packages = [SourcePackage(b, output_directory) for b in extend(blueprints)]
 
@@ -166,3 +166,5 @@ def generate(
     _, errors = separate_successes_from_errors(fetch_results.values())
     if errors:
         raise Ops2debGeneratorError(f"{len(errors)} failures occurred")
+
+    return packages

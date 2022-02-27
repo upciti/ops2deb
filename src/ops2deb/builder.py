@@ -1,7 +1,7 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from . import logger
 from .exceptions import Ops2debBuilderError
@@ -56,31 +56,43 @@ async def build_package(cwd: Path) -> None:
         logger.info(f"Successfully built {str(cwd)}")
 
 
-def build(output_directory: Path, workers: int = 4) -> None:
+def build(package_paths: List[Path], workers: int) -> None:
     """
-    Run several instances of dpkg-buildpackage in parallel.
-    :param output_directory: path where to search for source packages
+    Build debian source packages in parallel.
+    :param package_paths: list of debian source package paths
     :param workers: Number of threads to run in parallel
     """
 
-    logger.title("Building source packages...")
-
-    paths = []
-    for output_directory in output_directory.iterdir():
-        if output_directory.is_dir() and (output_directory / "debian/control").is_file():
-            paths.append(output_directory)
+    logger.title(f"Building {len(package_paths)} source packages...")
 
     async def _build_package(sem: asyncio.Semaphore, _path: Path) -> Optional[int]:
         async with sem:  # semaphore limits num of simultaneous builds
             return await build_package(_path)
 
-    async def _build_all() -> Any:
+    async def _build_packages() -> Any:
         sem = asyncio.Semaphore(workers)
         return await asyncio.gather(
-            *[_build_package(sem, p) for p in paths], return_exceptions=True
+            *[_build_package(sem, p) for p in package_paths], return_exceptions=True
         )
 
-    results = asyncio.run(_build_all())
+    results = asyncio.run(_build_packages())
 
     if errors := [e for e in results if isinstance(e, Exception)]:
         raise Ops2debBuilderError(f"{len(errors)} failures occurred")
+
+
+def build_all(output_directory: Path, workers: int) -> None:
+    """
+    Build debian source packages in parallel.
+    :param output_directory: path where to search for source packages
+    :param workers: Number of threads to run in parallel
+    """
+
+    if output_directory.is_dir() is False:
+        raise Ops2debBuilderError(f"Directory {output_directory} does not exist")
+
+    paths = []
+    for output_directory in output_directory.iterdir():
+        if output_directory.is_dir() and (output_directory / "debian/control").is_file():
+            paths.append(output_directory)
+    build(paths, workers)
