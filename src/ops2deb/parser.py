@@ -174,6 +174,10 @@ def load(
         raise Ops2debParserError(f"Invalid YAML file.\n{e}")
     except FileNotFoundError:
         raise Ops2debParserError(f"File not found: {configuration_path.absolute()}")
+    except IsADirectoryError:
+        raise Ops2debParserError(
+            f"Path points to a directory: {configuration_path.absolute()}"
+        )
 
 
 def validate(
