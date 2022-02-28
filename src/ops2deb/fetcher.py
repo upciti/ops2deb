@@ -1,9 +1,10 @@
 import asyncio
+import bz2
 import hashlib
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, Union
 
 import aiofiles
 import httpx
@@ -17,15 +18,16 @@ from .utils import log_and_raise
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
 
 
-async def _run(*args: str) -> asyncio.subprocess.Process:
-    logger.debug(f"Running {' '.join(args)}")
-    proc = await asyncio.create_subprocess_exec(
-        *args,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    await proc.communicate()
-    return proc
+def _unpack_bz2(file_path: str, extract_path: str) -> None:
+    # FIXME: handle io errors
+    output_path = Path(extract_path) / Path(file_path).stem
+    with output_path.open(mode="wb") as output:
+        with bz2.open(file_path, "r") as bz2_archive:
+            while chunk := bz2_archive.read(10000):
+                output.write(chunk)
+
+
+shutil.register_unpack_format("bz2", [".bz2"], _unpack_bz2)
 
 
 async def _download_file(url: str, download_path: Path) -> None:
@@ -62,29 +64,13 @@ async def _hash_file(file_path: Path) -> str:
 async def _extract_archive(archive_path: Path, extract_path: Path) -> bool:
     tmp_extract_path = f"{extract_path}_tmp"
     Path(tmp_extract_path).mkdir(exist_ok=True)
-    commands = [
-        (
-            {".tar.gz", ".tar.xz", ".tar"},
-            ["/bin/tar", "-C", tmp_extract_path, "-xf", str(archive_path)],
-        ),
-        ({".zip"}, ["/usr/bin/unzip", "-d", tmp_extract_path, str(archive_path)]),
-    ]
-    selected_command: Optional[List[str]] = None
-
-    for extensions, command in commands:
-        for extension in extensions:
-            if archive_path.name.endswith(extension):
-                selected_command = command
-                break
-
-    if selected_command is None:
-        return False
-
     logger.info(f"Extracting {archive_path.name}...")
-    proc = await _run(*selected_command)
-    if proc.returncode:
-        log_and_raise(Ops2debFetcherError(f"Failed to extract archive {archive_path}"))
-
+    try:
+        await asyncio.get_running_loop().run_in_executor(
+            None, shutil.unpack_archive, archive_path, tmp_extract_path
+        )
+    except shutil.ReadError as e:
+        log_and_raise(Ops2debFetcherError(e))
     shutil.move(tmp_extract_path, extract_path)
     return True
 

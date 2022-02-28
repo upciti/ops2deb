@@ -219,7 +219,7 @@ def format(
         error(e, exit_code)
 
 
-@app.command(help="Outputs ops2deb version.")
+@app.command(help="Output ops2deb version.")
 def version() -> None:
     logger.info(__version__)
 
