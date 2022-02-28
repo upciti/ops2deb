@@ -30,7 +30,8 @@ Depends: package_a
 Recommends: package_b
 Conflicts: package_c
 Description: My great app
- A detailed description of the super package"""
+ A detailed description of the super package
+"""
 
 blueprint_2 = Blueprint(
     name="great-app",
@@ -57,7 +58,8 @@ Depends: package_a
 Conflicts: package_c
 Description: My great app
  A detailed description of the super package.
- This description has two lines."""
+ This description has two lines.
+"""
 
 
 blueprint_3 = Blueprint(
@@ -79,7 +81,8 @@ Architecture: amd64
 Description: My great app
  What should empty lines be replaced with?
  .
- With dots!"""
+ With dots!
+"""
 
 
 @pytest.mark.parametrize(

@@ -40,14 +40,13 @@ mock_valid_configuration = """\
     A detailed description of the super package
     Lorem ipsum dolor sit amet, consectetur adipiscing elit
   fetch:
-    url: http://testserver/{{version}}/super-app.zip
-    sha256: 5d5e3a6e8449040d6a25082675295e1aa44b3ea474166c24090d27054a58627a
+    url: http://testserver/{{version}}/super-app
+    sha256: 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
   install:
     - path: debian/copyright
       content: 2021 John Doe. All rights reserved.
   script:
-    - ls
-    - mv great-app {{src}}/usr/bin/great-app
+    - mv super-app {{src}}/usr/bin/super-app
 """
 
 
