@@ -18,6 +18,10 @@ class Ops2debFetcherError(Ops2debError):
     pass
 
 
+class Ops2debExtractError(Ops2debFetcherError):
+    pass
+
+
 class Ops2debUpdaterWarning(Ops2debError):
     pass
 

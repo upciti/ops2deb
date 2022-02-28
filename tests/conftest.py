@@ -129,15 +129,9 @@ async def server_great_app_tar_gz(request: Request):
     )
 
 
-@starlette_app.route("/1.0.0/super-app.zip")
-async def serve_super_app_zip(request: Request):
-    return build_server_response(
-        b"""UEsDBBQACAAIAFVdkFIAAAAAAAAAAAAAAAAJACAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1
-        eAsAAQToAwAABOgDAAADAFBLBwgAAAAAAgAAAAAAAABQSwECFAMUAAgACABVXZBSAAAAAAIAAAAA
-        AAAACQAgAAAAAAAAAAAAtIEAAAAAZ3JlYXQtYXBwVVQNAAcTXHlgE1x5YBNceWB1eAsAAQToAwAA
-        BOgDAABQSwUGAAAAAAEAAQBXAAAAWQAAAAAA""",
-        content_type="application/zip",
-    )
+@starlette_app.route("/1.0.0/super-app")
+async def serve_super_app(request: Request):
+    return build_server_response(b"aGVsbG8K", content_type="application/octet-stream")
 
 
 @starlette_app.route("/1.1.0/bad-app.zip")
