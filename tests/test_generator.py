@@ -124,7 +124,7 @@ def test__install_files_should_fail_to_create_here_document_if_file_already_exis
         SourcePackage(blueprint, tmp_path)._install_files()
 
 
-def test__install_files_should_copy_file_when_input_is_a_source_destination_str(
+def test__install_files_should_copy_file_when_input_is_a_source_destination_str_and_source_is_a_file(  # noqa: E501
     tmp_path, blueprint_factory
 ):
     source = tmp_path / "test"
@@ -133,6 +133,19 @@ def test__install_files_should_copy_file_when_input_is_a_source_destination_str(
     SourcePackage(blueprint, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").read_text() == "test"
+
+
+def test__install_files_should_copy_dir_tree_when_input_is_a_source_destination_str_and_source_is_a_dir(  # noqa: E501
+    tmp_path, blueprint_factory
+):
+    source = tmp_path / "test"
+    tree = source / "usr" / "share" / "a"
+    tree.mkdir(parents=True)
+    (tree / "test").write_text("test")
+    blueprint = blueprint_factory(install=[f"{source}:/"])
+    SourcePackage(blueprint, tmp_path)._install_files()
+    assert (tmp_path / "great-app_1.0.0_amd64/src/usr/share/a/test").is_file()
+    assert (tmp_path / "great-app_1.0.0_amd64/src/usr/share/a/test").read_text() == "test"
 
 
 def test__install_files_should_fail_when_input_is_a_source_destination_str_and_source_does_not_exist(  # noqa: E501
