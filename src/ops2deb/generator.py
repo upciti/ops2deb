@@ -7,9 +7,9 @@ from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from .fetcher import Fetcher, FetchResult, FetchResultOrError
-from .parser import Blueprint, HereDocument, extend
+from .parser import Blueprint, HereDocument, SourceDestinationStr, extend
 from .templates import environment
-from .utils import separate_successes_from_errors
+from .utils import separate_successes_from_errors, working_directory
 
 
 def _format_command_output(output: str) -> str:
@@ -51,6 +51,28 @@ class SourcePackage:
         else:
             shutil.copytree(fetch_result.storage_path, self.fetch_directory)
 
+    @classmethod
+    def _install_here_document(cls, entry: HereDocument, destination: Path) -> None:
+        if destination.exists():
+            raise Ops2debGeneratorError(f"Destination {destination} already exists")
+        destination.write_text(entry.content)
+
+    @classmethod
+    def _install_source_destination_str(
+        cls, entry: SourceDestinationStr, destination: Path
+    ) -> None:
+        source = Path(entry.source)
+        if source.exists() is False:
+            raise Ops2debGeneratorError(f"Source {entry.source} does not exist")
+        if source.is_dir() is True:
+            shutil.copytree(source, destination, dirs_exist_ok=True, symlinks=True)
+        elif source.is_file() is True:
+            shutil.copy2(entry.source, destination)
+        else:
+            raise Ops2debGeneratorError(
+                f"Source {entry.source} is not a file nor a directory"
+            )
+
     def _install_files(self) -> None:
         for entry in self.blueprint.install:
             destination = Path(self.blueprint.render_string(entry.destination))
@@ -61,30 +83,20 @@ class SourcePackage:
                 destination = self.source_directory / destination.relative_to("/")
             if destination.is_absolute() is False:
                 destination = self.package_directory / destination
-            if destination.exists():
-                raise Ops2debGeneratorError(f"Destination {destination} already exists")
             destination.parent.mkdir(parents=True, exist_ok=True)
 
             if isinstance(entry, HereDocument):
-                destination.write_text(entry.content)
-            else:
-                if Path(entry.source).exists() is False:
-                    raise Ops2debGeneratorError(f"Source {entry.source} does not exist")
-                if Path(entry.source).is_file() is False:
-                    raise Ops2debGeneratorError(f"Source {entry.source} is not a file")
-                shutil.copy2(entry.source, destination)
+                self._install_here_document(entry, destination)
+            elif isinstance(entry, SourceDestinationStr):
+                self._install_source_destination_str(entry, destination)
 
     def _run_script(self) -> None:
-        # if blueprint has no fetch instruction, we stay in the directory from which
-        # ops2deb was called
-        cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
-
         # run script
         for line in self.blueprint.render_script(
             src=self.source_directory, debian=self.debian_directory
         ):
             logger.info(f"$ {line}")
-            result = subprocess.run(line, shell=True, cwd=cwd, capture_output=True)
+            result = subprocess.run(line, shell=True, capture_output=True)
             if stdout := result.stdout.decode():
                 logger.info(_format_command_output(stdout))
             if stderr := result.stderr.decode():
@@ -121,11 +133,15 @@ class SourcePackage:
         ]:
             self._render_template(template)
 
-        # copy files / create here documents
-        self._install_files()
+        # if blueprint has no fetch instruction, we stay in the directory from which
+        # ops2deb was called, otherwise we run install and script from the fetch directory
+        cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
 
-        # run blueprint script
-        self._run_script()
+        with working_directory(cwd):
+            # copy files / create here documents
+            self._install_files()
+            # run blueprint script
+            self._run_script()
 
 
 def filter_already_published_packages(

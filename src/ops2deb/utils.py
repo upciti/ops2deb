@@ -1,4 +1,7 @@
-from typing import Iterable, List, Tuple, TypeVar, Union
+import os
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Iterable, Iterator, List, Tuple, TypeVar, Union
 
 from . import logger
 from .exceptions import Ops2debError
@@ -25,3 +28,13 @@ def separate_successes_from_errors(
         else:
             results.append(item)
     return results, errors
+
+
+@contextmanager
+def working_directory(path: Path) -> Iterator[None]:
+    origin = Path().absolute()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(origin)
