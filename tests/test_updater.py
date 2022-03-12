@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import pytest
 from httpx import AsyncClient
@@ -31,16 +31,19 @@ def app_factory():
 
 @pytest.fixture
 def github_app_factory():
-    def _github_app_factory(tag_name: str):
+    def _github_app_factory(latest_release: str, versions: Optional[List[str]] = None):
+        versions = versions or []
         app = Starlette(debug=True)
 
-        @app.route(f"/owner/name/releases/{tag_name}/some-app.tar.gz")
+        @app.route("/owner/name/releases/{version}/some-app.tar.gz")
         def github_asset(request: Request):
-            return Response()
+            version = request.path_params["version"]
+            status = 200 if version in versions or version == latest_release else 404
+            return Response(status_code=status)
 
         @app.route("/repos/owner/name/releases/latest")
         def github_release_api(request: Request):
-            return JSONResponse({"tag_name": tag_name})
+            return JSONResponse({"tag_name": latest_release})
 
         return app
 
@@ -92,10 +95,21 @@ async def test_github_update_strategy_should_find_expected_blueprint_release(
         assert await update_strategy(blueprint) == "2.3.0"
 
 
+async def test_github_update_strategy_should_not_return_an_older_version_than_current_one(
+    blueprint_factory, github_app_factory
+):
+    app = github_app_factory("0.1.0", versions=["1.0.0"])
+    url = "https://github.com/owner/name/releases/{{version}}/some-app.tar.gz"
+    blueprint = blueprint_factory(fetch={"url": url, "sha256": "deadbeef"})
+    async with AsyncClient(app=app) as client:
+        update_strategy = GithubUpdateStrategy(client)
+        assert await update_strategy(blueprint) == "1.0.0"
+
+
 async def test_github_update_strategy_should_fail_gracefully_when_asset_not_found(
     blueprint_factory, github_app_factory
 ):
-    app = github_app_factory(tag_name="someapp-v2.3.0")
+    app = github_app_factory("someapp-v2.3.0")
     url = "https://github.com/owner/name/releases/someapp-v{{version}}/some-app.tar.gz"
     blueprint = blueprint_factory(fetch={"url": url, "sha256": "deadbeef"})
     async with AsyncClient(app=app) as client:
