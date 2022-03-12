@@ -49,8 +49,8 @@ isort = "*"
 safety = "*"
 types-aiofiles = "*"
 types-PyYAML = "*"
-pytest-asyncio = "^0.18.2"
-poetry-dynamic-versioning = "^0.14.0"
+pytest-asyncio = ">=0.18.0"
+poetry-dynamic-versioning = ">=0.13.0"
 
 [tool.taskipy.tasks]
 check = """
