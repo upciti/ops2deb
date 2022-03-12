@@ -3,7 +3,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import httpx
 import ruamel.yaml
@@ -12,10 +12,10 @@ from semver.version import Version
 
 from . import logger
 from .client import client_factory
-from .exceptions import Ops2debUpdaterError
-from .fetcher import Fetcher, FetchResult, FetchResultOrError
-from .parser import Blueprint, RemoteFile, extend, load, validate
-from .utils import separate_successes_from_errors
+from .exceptions import Ops2debError, Ops2debUpdaterError
+from .fetcher import Fetcher, FetchResult
+from .parser import Blueprint, RemoteFile, load, validate
+from .utils import separate_results_from_errors
 
 
 # fixme: move this somewhere else, this code is also duplicated in formatter.py
@@ -29,6 +29,7 @@ class FixIndentEmitter(Emitter):
 class LatestRelease:
     blueprint: Blueprint
     version: str
+    remote_files: Dict[str, RemoteFile]
 
     @property
     def is_new(self) -> bool:
@@ -189,52 +190,65 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
 
 async def _find_latest_release(
     client: httpx.AsyncClient, blueprint: Blueprint
-) -> LatestRelease:
+) -> Optional[LatestRelease]:
     version = await _find_latest_version(client, blueprint)
-    if blueprint.version != version:
-        logger.info(
-            f"{blueprint.name} can be bumped from {blueprint.version} to {version}"
+    if blueprint.version == version:
+        return None
+
+    remote_files = {}
+    for arch in blueprint.supported_architectures():
+        blueprint = blueprint.copy(update={"arch": arch})
+        remote_file = cast(RemoteFile, blueprint.render_fetch(version))
+        remote_files[arch] = remote_file
+
+    logger.info(f"{blueprint.name} can be bumped from {blueprint.version} to {version}")
+    return LatestRelease(blueprint, version, remote_files)
+
+
+async def _find_latest_releases(
+    blueprint_list: List[Blueprint], skip_names: List[str]
+) -> Tuple[Dict[int, LatestRelease], Dict[int, Ops2debError]]:
+    async with client_factory() as client:
+        blueprints = {
+            index: blueprint
+            for index, blueprint in enumerate(blueprint_list)
+            if blueprint.name not in skip_names and blueprint.fetch is not None
+        }
+        tasks = [_find_latest_release(client, b) for b in blueprints.values()]
+        tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
+        results, errors = separate_results_from_errors(
+            dict(zip(blueprints.keys(), tasks_results))
         )
-    return LatestRelease(blueprint, version)
+        results = {k: r for k, r in results.items() if r is not None}
+        return results, errors
 
 
-def _find_latest_releases(
-    blueprints: List[Blueprint],
-) -> List[Union[LatestRelease, Exception]]:
-    async def run_tasks() -> Any:
-        async with client_factory() as client:
-            tasks = [_find_latest_release(client, blueprint) for blueprint in blueprints]
-            return await asyncio.gather(*tasks, return_exceptions=True)
-
-    return asyncio.run(run_tasks())
+def find_latest_releases(
+    blueprints: List[Blueprint], skip_names: Optional[List[str]] = None
+) -> Tuple[Dict[int, LatestRelease], Dict[int, Ops2debError]]:
+    skip_names = skip_names or []
+    return asyncio.run(_find_latest_releases(blueprints, skip_names))
 
 
-def _fetch_latest_files(
-    latest_releases: List[LatestRelease],
-) -> Dict[str, FetchResultOrError]:
-    blueprints = [
-        release.blueprint.copy(update={"version": release.version})
-        for release in latest_releases
-        if release.blueprint.version != release.version
-    ]
-    remote_files = [cast(RemoteFile, b.render_fetch()) for b in extend(blueprints)]
+def fetch_latest_releases(
+    latest_releases: Dict[int, LatestRelease],
+) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    remote_files: List[RemoteFile] = []
+    for latest_release in latest_releases.values():
+        remote_files.extend(latest_release.remote_files.values())
     fetcher = Fetcher(remote_files)
     return fetcher.sync_fetch(extract=False)
 
 
-def _update_raw_blueprint(
+def update_raw_blueprint(
     raw_blueprint: Dict[str, Any],
     latest_release: LatestRelease,
-    fetch_results: Dict[str, FetchResultOrError],
+    fetch_results: Dict[str, FetchResult],
 ) -> None:
     new_sha256_object: Any = {}
 
-    for arch in latest_release.blueprint.supported_architectures():
-        blueprint = latest_release.blueprint.copy(update={"arch": arch})
-        remote_file = cast(RemoteFile, blueprint.render_fetch(latest_release.version))
+    for arch, remote_file in latest_release.remote_files.items():
         fetch_result = fetch_results[remote_file.url]
-        if not isinstance(fetch_result, FetchResult):
-            return
         if isinstance(latest_release.blueprint.fetch, RemoteFile):
             new_sha256_object = fetch_result.sha256_sum
         else:
@@ -246,7 +260,10 @@ def _update_raw_blueprint(
 
 
 def update(
-    configuration_path: Path, dry_run: bool = False, output_path: Optional[Path] = None
+    configuration_path: Path,
+    dry_run: bool = False,
+    output_path: Optional[Path] = None,
+    skip_names: List[str] = None,
 ) -> None:
     yaml = ruamel.yaml.YAML(typ="rt")
     yaml.Emitter = FixIndentEmitter
@@ -256,10 +273,8 @@ def update(
 
     logger.title("Looking for new releases...")
 
-    updater_results = _find_latest_releases(blueprints)
-    latest_releases, updater_errors = separate_successes_from_errors(updater_results)
-    latest_releases = [release for release in latest_releases if release.is_new]
-    fetch_results = _fetch_latest_files(latest_releases)
+    releases, update_errors = find_latest_releases(blueprints, skip_names)
+    fetch_results, fetch_errors = fetch_latest_releases(releases)
 
     # configuration file can be a list of blueprints or a single blueprint
     raw_blueprints = (
@@ -268,13 +283,12 @@ def update(
         else [configuration_dict]
     )
 
-    if not latest_releases:
+    if not releases:
         logger.info("Did not found any updates")
 
-    if dry_run is False and latest_releases:
-        for raw_blueprint, release in zip(raw_blueprints, updater_results):
-            if isinstance(release, LatestRelease) and release.is_new:
-                _update_raw_blueprint(raw_blueprint, release, fetch_results)
+    if dry_run is False and releases:
+        for index, release in releases.items():
+            update_raw_blueprint(raw_blueprints[index], release, fetch_results)
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
 
@@ -283,12 +297,11 @@ def update(
     if output_path is not None:
         lines = [
             f"Updated {r.blueprint.name} from {r.blueprint.version} to {r.version}"
-            for r in latest_releases
+            for r in releases.values()
         ]
         output_path.write_text("\n".join(lines + [""]))
 
-    _, fetcher_errors = separate_successes_from_errors(fetch_results.values())
-    if fetcher_errors or updater_errors:
+    if update_errors or fetch_errors:
         raise Ops2debUpdaterError(
-            f"{len(fetcher_errors)+len(updater_errors)} failures occurred"
+            f"{len(fetch_errors)+len(update_errors)} failures occurred"
         )

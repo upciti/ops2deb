@@ -6,10 +6,10 @@ from typing import Dict, List, Optional
 from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
-from .fetcher import Fetcher, FetchResult, FetchResultOrError
+from .fetcher import Fetcher, FetchResult
 from .parser import Blueprint, HereDocument, SourceDestinationStr, extend
 from .templates import environment
-from .utils import separate_successes_from_errors, working_directory
+from .utils import working_directory
 
 
 def _format_command_output(output: str) -> str:
@@ -104,12 +104,11 @@ class SourcePackage:
             if result.returncode:
                 raise Ops2debGeneratorScriptError
 
-    def generate(self, fetch_results: Dict[str, FetchResultOrError]) -> None:
-        fetch_result: Optional[FetchResultOrError] = None
+    def generate(self, fetch_results: Dict[str, FetchResult]) -> None:
+        fetch_result: Optional[FetchResult] = None
         if self.remote_file is not None:
-            fetch_result = fetch_results[self.remote_file.url]
-            if not isinstance(fetch_result, FetchResult):
-                # fetch failed, we cannot generate source package
+            fetch_result = fetch_results.get(self.remote_file.url, None)
+            if fetch_result is None:
                 return
 
         logger.title(f"Generating source package {self.directory_name}...")
@@ -119,7 +118,7 @@ class SourcePackage:
         self._init()
 
         # copy downloaded/extracted archive to package fetch directory
-        if isinstance(fetch_result, FetchResult):
+        if fetch_result is not None:
             self._populate_with_fetch_result(fetch_result)
 
         # render debian/* files
@@ -174,13 +173,12 @@ def generate(
 
     # run fetch instructions (download, verify, extract) in parallel
     files = [p.remote_file for p in packages if p.remote_file is not None]
-    fetch_results = Fetcher(files).sync_fetch()
+    fetch_results, fetch_errors = Fetcher(files).sync_fetch()
 
     for package in packages:
         package.generate(fetch_results)
 
-    _, errors = separate_successes_from_errors(fetch_results.values())
-    if errors:
-        raise Ops2debGeneratorError(f"{len(errors)} failures occurred")
+    if fetch_errors:
+        raise Ops2debGeneratorError(f"{len(fetch_errors)} failures occurred")
 
     return packages

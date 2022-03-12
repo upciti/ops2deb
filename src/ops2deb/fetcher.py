@@ -5,7 +5,7 @@ import shutil
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable, Tuple
 
 import aiofiles
 import httpx
@@ -13,9 +13,9 @@ import unix_ar
 
 from . import logger
 from .client import client_factory
-from .exceptions import Ops2debExtractError, Ops2debFetcherError
+from .exceptions import Ops2debError, Ops2debExtractError, Ops2debFetcherError
 from .parser import RemoteFile
-from .utils import log_and_raise
+from .utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
 
@@ -109,9 +109,6 @@ class FetchResult:
     storage_path: Path
 
 
-FetchResultOrError = Union[FetchResult, Ops2debFetcherError]
-
-
 class FetchTask:
     def __init__(self, cache_directory_path: Path, remote_file: RemoteFile):
         url_hash = hashlib.sha256(remote_file.url.encode()).hexdigest()
@@ -164,28 +161,24 @@ class Fetcher:
 
     def __init__(self, remote_files: Iterable[RemoteFile]) -> None:
         self.tasks: Dict[str, FetchTask] = {}
-        self.results: Dict[str, FetchResultOrError] = {}
         for remote_file in remote_files:
             self.tasks[remote_file.url] = FetchTask(
                 self.cache_directory_path, remote_file
             )
 
-    async def fetch(self, extract: bool = True) -> Dict[str, FetchResultOrError]:
+    async def fetch(
+        self, extract: bool = True
+    ) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
         urls = self.tasks.keys()
         if (task_count := len(urls)) > 0:
             logger.title(f"Fetching {task_count} files...")
-        results = list(
-            await asyncio.gather(
-                *[task.fetch(extract) for task in self.tasks.values()],
-                return_exceptions=True,
-            )
+        results = await asyncio.gather(
+            *[task.fetch(extract) for task in self.tasks.values()],
+            return_exceptions=True,
         )
-        for url, result in zip(urls, results):
-            if isinstance(result, Exception):
-                if not isinstance(result, Ops2debFetcherError):
-                    raise result
-            self.results[url] = result
-        return self.results
+        return separate_results_from_errors(dict(zip(urls, results)))
 
-    def sync_fetch(self, extract: bool = True) -> Dict[str, FetchResultOrError]:
+    def sync_fetch(
+        self, extract: bool = True
+    ) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
         return asyncio.run(self.fetch(extract))
