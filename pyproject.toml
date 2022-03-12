@@ -50,7 +50,7 @@ safety = "*"
 types-aiofiles = "*"
 types-PyYAML = "*"
 pytest-asyncio = "^0.18.2"
-poetry-dynamic-versioning = "^0.13.1"
+poetry-dynamic-versioning = "^0.14.0"
 
 [tool.taskipy.tasks]
 check = """
