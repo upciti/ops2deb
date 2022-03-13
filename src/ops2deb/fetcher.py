@@ -5,7 +5,7 @@ import shutil
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import aiofiles
 import httpx
@@ -18,6 +18,8 @@ from .parser import RemoteFile
 from .utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
+
+_cache_directory_path = DEFAULT_CACHE_DIRECTORY
 
 
 def _unpack_bz2(file_path: str, extract_path: str) -> None:
@@ -110,17 +112,17 @@ class FetchResult:
 
 
 class FetchTask:
-    def __init__(self, cache_directory_path: Path, remote_file: RemoteFile):
-        url_hash = hashlib.sha256(remote_file.url.encode()).hexdigest()
-        self.url = remote_file.url
-        self.file_name = remote_file.url.split("/")[-1]
-        self.base_path = cache_directory_path / url_hash
+    def __init__(self, url: str, sha256: Optional[str] = None):
+        url_hash = hashlib.sha256(url.encode()).hexdigest()
+        self.url = url
+        self.file_name = url.split("/")[-1]
+        self.base_path = _cache_directory_path / url_hash
         self.download_path = self.base_path / self.file_name
         self.extract_path = self.base_path / f"{self.file_name}_out"
         self.checksum_path = self.base_path / f"{self.file_name}.sum"
-        self.expected_hash = remote_file.sha256
+        self.expected_hash = sha256
 
-    async def fetch(self, extract: bool) -> FetchResult:
+    async def fetch(self) -> FetchResult:
         self.base_path.mkdir(exist_ok=True, parents=True)
         if self.download_path.is_file() is False:
             await _download_file(self.url, self.download_path)
@@ -133,11 +135,11 @@ class FetchTask:
 
         storage_path = (
             self.extract_path
-            if extract and _is_archive_format_supported(self.download_path)
+            if self.expected_hash and _is_archive_format_supported(self.download_path)
             else self.download_path
         )
 
-        if extract is True:
+        if self.expected_hash:
             if computed_hash != self.expected_hash:
                 log_and_raise(
                     Ops2debFetcherError(
@@ -152,33 +154,27 @@ class FetchTask:
         return FetchResult(computed_hash, storage_path)
 
 
-class Fetcher:
-    cache_directory_path = DEFAULT_CACHE_DIRECTORY
+async def _run_tasks(
+    tasks: List[FetchTask],
+) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    if tasks:
+        logger.title(f"Fetching {len(tasks)} files...")
+    results = await asyncio.gather(*[t.fetch() for t in tasks], return_exceptions=True)
+    return separate_results_from_errors(dict(zip([r.url for r in tasks], results)))
 
-    @classmethod
-    def set_cache_directory(cls, path: Path) -> None:
-        cls.cache_directory_path = path
 
-    def __init__(self, remote_files: Iterable[RemoteFile]) -> None:
-        self.tasks: Dict[str, FetchTask] = {}
-        for remote_file in remote_files:
-            self.tasks[remote_file.url] = FetchTask(
-                self.cache_directory_path, remote_file
-            )
+def set_cache_directory(path: Path) -> None:
+    global _cache_directory_path
+    _cache_directory_path = path
 
-    async def fetch(
-        self, extract: bool = True
-    ) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
-        urls = self.tasks.keys()
-        if (task_count := len(urls)) > 0:
-            logger.title(f"Fetching {task_count} files...")
-        results = await asyncio.gather(
-            *[task.fetch(extract) for task in self.tasks.values()],
-            return_exceptions=True,
-        )
-        return separate_results_from_errors(dict(zip(urls, results)))
 
-    def sync_fetch(
-        self, extract: bool = True
-    ) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
-        return asyncio.run(self.fetch(extract))
+async def fetch_urls(
+    urls: List[str],
+) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    return await _run_tasks([FetchTask(url) for url in urls])
+
+
+def fetch_remote_files(
+    remote_files: List[RemoteFile],
+) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    return asyncio.run(_run_tasks([FetchTask(r.url, r.sha256) for r in remote_files]))

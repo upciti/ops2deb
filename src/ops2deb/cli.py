@@ -9,7 +9,7 @@ import typer
 
 from . import __version__, builder, formatter, generator, logger, parser, updater
 from .exceptions import Ops2debError
-from .fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
+from .fetcher import DEFAULT_CACHE_DIRECTORY, set_cache_directory
 
 
 class DefaultCommandGroup(click.Group):
@@ -128,7 +128,7 @@ def default(
     debian_repository: str = option_debian_repository,
     workers_count: int = option_workers_count,
 ) -> None:
-    Fetcher.set_cache_directory(cache_directory)
+    set_cache_directory(cache_directory)
     try:
         blueprints = parser.parse(configuration_path)
         packages = generator.generate(blueprints, output_directory, debian_repository)
@@ -146,7 +146,7 @@ def generate(
     cache_directory: Path = option_cache_directory,
     debian_repository: str = option_debian_repository,
 ) -> None:
-    Fetcher.set_cache_directory(cache_directory)
+    set_cache_directory(cache_directory)
     try:
         blueprints = parser.parse(configuration_path)
         generator.generate(blueprints, output_directory, debian_repository)
@@ -188,7 +188,7 @@ def update(
         help="Path to file where to save a summary of updated files.",
     ),
 ) -> None:
-    Fetcher.set_cache_directory(cache_directory)
+    set_cache_directory(cache_directory)
     try:
         updater.update(configuration_path, dry_run, output_path)
     except Ops2debError as e:

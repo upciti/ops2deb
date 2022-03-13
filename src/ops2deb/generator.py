@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from . import logger
 from .apt import DebianRepositoryPackage, sync_list_repository_packages
 from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
-from .fetcher import Fetcher, FetchResult
+from .fetcher import FetchResult, fetch_remote_files
 from .parser import Blueprint, HereDocument, SourceDestinationStr, extend
 from .templates import environment
 from .utils import working_directory
@@ -173,7 +173,7 @@ def generate(
 
     # run fetch instructions (download, verify, extract) in parallel
     files = [p.remote_file for p in packages if p.remote_file is not None]
-    fetch_results, fetch_errors = Fetcher(files).sync_fetch()
+    fetch_results, fetch_errors = fetch_remote_files(files)
 
     for package in packages:
         package.generate(fetch_results)

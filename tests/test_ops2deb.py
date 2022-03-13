@@ -121,6 +121,22 @@ mock_configuration_with_server_error = """\
 """
 
 
+mock_configuration_with_multi_arch_remote_file_and_404_on_one_file = """\
+- name: great-app
+  summary: Great package
+  version: 1.0.0
+  description: A detailed description of the great package.
+  fetch:
+    url: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
+    sha256:
+      amd64: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+      armhf: abb864290dedcd1e06857f33bf03b0875d485c06fce80f86944e6565080b8fb5
+      arm64: abb864290dedcd1e06857f33bf03b0875d485c06fce80f86944e6565080b8fb5
+  script:
+  - mv great-app {{src}}/usr/bin/great-app
+"""
+
+
 mock_configuration_single_blueprint_without_fetch = """\
 name: cool-app
 version: 1.0.0
@@ -375,10 +391,22 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_op
     assert "revision" not in configuration[1].keys()
 
 
-def test_ops2deb_update_should_fail_when_server_error(tmp_path, call_ops2deb):
+def test_ops2deb_update_should_fail_gracefully_when_server_error(tmp_path, call_ops2deb):
     result = call_ops2deb("update", configuration=mock_configuration_with_server_error)
-    stdout = result.stdout
-    assert "Server error when requesting http://testserver/1.1.0/bad-app.zip" in stdout
+    error = "Server error when requesting http://testserver/1.1.0/bad-app.zip"
+    assert error in result.stdout
+    assert result.exit_code == 77
+
+
+def test_ops2deb_update_should_fail_gracefully_with_multiarch_blueprint_when_404_error_on_a_file(  # noqa E501
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb(
+        "update",
+        configuration=mock_configuration_with_multi_arch_remote_file_and_404_on_one_file,
+    )
+    error = "Failed to download http://testserver/1.1.1/great-app-arm64.tar.gz."
+    assert error in result.stdout
     assert result.exit_code == 77
 
 
