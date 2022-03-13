@@ -410,6 +410,14 @@ def test_ops2deb_update_should_fail_gracefully_with_multiarch_blueprint_when_404
     assert result.exit_code == 77
 
 
+def test_ops2deb_update_should_skip_blueprints_when_skip_option_is_used(
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb("update", "--skip", "great-app", "-s", "super-app")
+    assert result.exit_code == 0
+    assert (tmp_path / "ops2deb.yml").read_text() == mock_valid_configuration
+
+
 def test_ops2deb_format_should_be_idempotent(tmp_path, call_ops2deb):
     call_ops2deb("format", configuration=mock_configuration_not_properly_formatted)
     formatted_configuration = (tmp_path / "ops2deb.yml").read_text()

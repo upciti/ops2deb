@@ -187,10 +187,17 @@ def update(
         envvar="OPS2DEB_OUTPUT_FILE",
         help="Path to file where to save a summary of updated files.",
     ),
+    skip: Optional[List[str]] = typer.Option(
+        None,
+        "-s",
+        "--skip",
+        envvar="OPS2DEB_SKIP_BLUEPRINTS",
+        help="Name of blueprint that should not be updated. Can be used multiple times.",
+    ),
 ) -> None:
     set_cache_directory(cache_directory)
     try:
-        updater.update(configuration_path, dry_run, output_path)
+        updater.update(configuration_path, dry_run, output_path, skip)
     except Ops2debError as e:
         error(e, exit_code)
 
