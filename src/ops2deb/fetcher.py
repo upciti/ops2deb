@@ -1,5 +1,6 @@
 import asyncio
 import bz2
+import gzip
 import hashlib
 import shutil
 import tarfile
@@ -22,12 +23,18 @@ DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
 _cache_directory_path = DEFAULT_CACHE_DIRECTORY
 
 
+def _unpack_gz(file_path: str, extract_path: str) -> None:
+    output_path = Path(extract_path) / Path(file_path).stem
+    with output_path.open("wb") as output:
+        with gzip.open(file_path, "rb") as gz_archive:
+            shutil.copyfileobj(gz_archive, output)
+
+
 def _unpack_bz2(file_path: str, extract_path: str) -> None:
     output_path = Path(extract_path) / Path(file_path).stem
     with output_path.open(mode="wb") as output:
-        with bz2.open(file_path, "r") as bz2_archive:
-            while chunk := bz2_archive.read(10000):
-                output.write(chunk)
+        with bz2.open(file_path, "rb") as bz2_archive:
+            shutil.copyfileobj(bz2_archive, output)
 
 
 def _unpack_deb(file_path: str, extract_path: str) -> None:
@@ -44,6 +51,7 @@ def _unpack_deb(file_path: str, extract_path: str) -> None:
             tar_file.close()
 
 
+shutil.register_unpack_format("gz", [".gz"], _unpack_gz)
 shutil.register_unpack_format("bz2", [".bz2"], _unpack_bz2)
 shutil.register_unpack_format("deb", [".deb"], _unpack_deb)
 
@@ -79,7 +87,7 @@ async def _hash_file(file_path: Path) -> str:
     return sha256_hash.hexdigest()
 
 
-def _is_archive_format_supported(archive_path: Path) -> bool:
+def is_archive_format_supported(archive_path: Path) -> bool:
     for name, extensions, _ in shutil.get_unpack_formats():
         for extension in extensions:
             if archive_path.name.endswith(extension):
@@ -87,7 +95,7 @@ def _is_archive_format_supported(archive_path: Path) -> bool:
     return False
 
 
-async def _extract_archive(archive_path: Path, extract_path: Path) -> None:
+async def extract_archive(archive_path: Path, extract_path: Path) -> None:
     tmp_extract_path = f"{extract_path}_tmp"
     Path(tmp_extract_path).mkdir(exist_ok=True)
     logger.info(f"Extracting {archive_path.name}...")
@@ -135,7 +143,7 @@ class FetchTask:
 
         storage_path = (
             self.extract_path
-            if self.expected_hash and _is_archive_format_supported(self.download_path)
+            if self.expected_hash and is_archive_format_supported(self.download_path)
             else self.download_path
         )
 
@@ -148,7 +156,7 @@ class FetchTask:
                     )
                 )
             if self.extract_path.exists() is False and storage_path == self.extract_path:
-                await _extract_archive(self.download_path, self.extract_path)
+                await extract_archive(self.download_path, self.extract_path)
 
         logger.info(f"Done with {self.download_path.name}")
         return FetchResult(computed_hash, storage_path)
