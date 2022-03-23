@@ -41,7 +41,12 @@ def test_render_string_should_evaluate_goarch_and_rust_targets_and_target(
     assert blueprint.render_string(template) == result
 
 
-def test__render_string_attributes_env_jinja_function_should_work_in_string_attributes(
+def test_render_fetch_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):
+    blueprint = mock_blueprint
+    assert blueprint.render_fetch().url == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
+
+
+def test_blueprint_should_evaluate_env_jinja_function_when_used_in_string_attributes(
     blueprint_factory,
 ):
     os.environ.update(
@@ -61,26 +66,21 @@ def test__render_string_attributes_env_jinja_function_should_work_in_string_attr
     assert blueprint.homepage == os.environ["CI_PROJECT_URL"]
 
 
-def test_render_fetch_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):
-    blueprint = mock_blueprint
-    assert blueprint.render_fetch().url == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
-
-
-def test_install_entry_should_have_source_and_destination_attributes_when_entry_is_a_source_destination_str(  # noqa: E501
+def test_blueprint_should_have_source_and_destination_attributes_when_install_is_a_string(
     blueprint_factory,
 ):
     blueprint = blueprint_factory(install=["a:b"])
     assert repr(blueprint.install[0]) == "SourceDestinationStr(source=a, destination=b)"
 
 
-def test___init___should_fail_if_install_entry_is_a_string_without_a_separator(
+def test_blueprint_should_raise_when_install_is_a_string_and_colon_separator_is_missing(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(install=["invalid_input"])
 
 
-def test___init___should_fail_if_install_entry_is_a_string_with_more_than_one_separator(
+def test_blueprint_should_raise_when_install_is_a_string_with_more_than_one_separator(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from ops2deb.exceptions import Ops2debExtractError
-from ops2deb.fetcher import _extract_archive, _is_archive_format_supported
+from ops2deb.fetcher import extract_archive, is_archive_format_supported
 
 
 @pytest.fixture
@@ -15,17 +15,6 @@ def decode_and_write(tmp_path):
         return file_path
 
     return _decode_and_write
-
-
-@pytest.fixture
-def bzip2_archive(decode_and_write) -> Path:
-    return decode_and_write(
-        "bz2",
-        b"""
-        QlpoOTFBWSZTWZxgt0MAAALTgAAQQAAAICaB2gAgADEA0AETTJ5TTyhDB4IxKqht3i6fi7kinChI
-        TjBboYA=
-        """,
-    )
 
 
 @pytest.fixture
@@ -73,44 +62,57 @@ def extract_path(tmp_path) -> Path:
     return tmp_path / "extracted"
 
 
-def test__is_archive_format_supported_should_return_false_when_file_is_not_an_archive(
+def test_is_archive_format_supported_should_return_false_when_file_is_not_an_archive(
     tmp_path,
 ):
     file_path = tmp_path / "file"
     file_path.touch()
-    assert _is_archive_format_supported(file_path) is False
+    assert is_archive_format_supported(file_path) is False
 
 
 @pytest.mark.parametrize(
-    "extension", ["deb", "zip", "bz2", "tar", "tar.bz2", "tar.xz", "tar.gz"]
+    "extension", ["deb", "zip", "bz2", "tar", "tar.bz2", "tar.xz", "tar.gz", "gz"]
 )
-def test__is_archive_format_supported_should_return_true_when_archive_format_is_supported(
+def test_is_archive_format_supported_should_return_true_when_archive_format_is_supported(
     tmp_path,
     extension,
 ):
     file_path = tmp_path / f"file.{extension}"
     file_path.touch()
-    assert _is_archive_format_supported(file_path) is True
+    assert is_archive_format_supported(file_path) is True
 
 
-async def test__extract_archive_should_extract_data_and_control_tar_when_archive_is_a_deb(
+async def test_extract_archive_should_extract_data_and_control_tar_when_archive_is_a_deb(
     debian_package, extract_path
 ):
-    await _extract_archive(debian_package, extract_path)
+    await extract_archive(debian_package, extract_path)
     assert (extract_path / "control").is_dir()
     assert (extract_path / "data").is_dir()
     assert (extract_path / "data/usr/bin/great-app").is_file()
 
 
-async def test__extract_archive_should_raise_read_error_when_archive_is_an_invalid_deb(
+async def test_extract_archive_should_raise_read_error_when_archive_is_an_invalid_deb(
     debian_package, extract_path, truncate_file
 ):
     with pytest.raises(Ops2debExtractError):
-        await _extract_archive(truncate_file(debian_package, 1000), extract_path)
+        await extract_archive(truncate_file(debian_package, 1000), extract_path)
 
 
-async def test__extract_archive_should_extract_bzip2_archive_when_file_name_ends_with_bz2(
-    bzip2_archive, extract_path
+async def test_extract_archive_should_extract_bzip2_archive_when_file_name_ends_with_bz2(
+    extract_path, decode_and_write
 ):
-    await _extract_archive(bzip2_archive, extract_path)
+    archive_path = decode_and_write(
+        "bz2", b"QlpoOTFBWSZTWRpUZJIAAAAFAABAAgSgACGaaDNNEzOLuSKcKEgNKjJJAA=="
+    )
+    await extract_archive(archive_path, extract_path)
     assert (extract_path / "archive").is_file()
+    assert (extract_path / "archive").read_text() == "Hello"
+
+
+async def test_extract_archive_should_extract_gz_archive_when_file_name_ends_with_gz(
+    extract_path, decode_and_write
+):
+    archive_path = decode_and_write("gz", b"H4sICCqjO2IAA2hlbGxvAPNIzcnJBwCCidH3BQAAAA==")
+    await extract_archive(archive_path, extract_path)
+    assert (extract_path / "archive").is_file()
+    assert (extract_path / "archive").read_text() == "Hello"
