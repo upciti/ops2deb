@@ -57,20 +57,19 @@ class SourcePackage:
             raise Ops2debGeneratorError(f"Destination {destination} already exists")
         destination.write_text(entry.content)
 
-    @classmethod
     def _install_source_destination_str(
-        cls, entry: SourceDestinationStr, destination: Path
+        self, entry: SourceDestinationStr, destination: Path
     ) -> None:
-        source = Path(entry.source)
+        source = Path(self.blueprint.render_string(entry.source))
         if source.exists() is False:
-            raise Ops2debGeneratorError(f"Source {entry.source} does not exist")
+            raise Ops2debGeneratorError(f"Source {str(source)} does not exist")
         if source.is_dir() is True:
             shutil.copytree(source, destination, dirs_exist_ok=True, symlinks=True)
         elif source.is_file() is True:
-            shutil.copy2(entry.source, destination)
+            shutil.copy2(source, destination)
         else:
             raise Ops2debGeneratorError(
-                f"Source {entry.source} is not a file nor a directory"
+                f"Source {str(source)} is not a file nor a directory"
             )
 
     def _install_files(self) -> None:
