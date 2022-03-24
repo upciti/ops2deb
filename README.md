@@ -87,8 +87,8 @@ description: |
 fetch:
   url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
   sha256: 3f4b52a8072013e4cd34c9ea07e3c0c4e0350b227e00507fb1ae44a9adbf6785
-script:
-  - mv kubectl {{src}}/usr/bin/
+install:
+  - kubectl:/usr/bin/
 ```
 
 ### Creating a metapackage
@@ -179,8 +179,8 @@ fetch:
   targets:
     amd64: x86_64-unknown-linux-gnu
     armhf: armv7-unknown-linux-gnueabihf
-script:
-  - mv btm {{src}}/usr/bin/
+install:
+  - btm:/usr/bin/
 ```
 
 ### Using environment variables

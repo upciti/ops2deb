@@ -63,8 +63,8 @@
   fetch:
     url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
     sha256: 156fd5e7ebbedf3c482fd274089ad75a448b04cf42bc53f370e4e4ea628f705e
-  script:
-    - mv kubectl {{src}}/usr/bin/
+  install:
+    - kubectl:/usr/bin/
 
 - name: kubeseal
   version: 0.16.0
@@ -76,8 +76,8 @@
   fetch:
     url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-linux-amd64
     sha256: 0899c583053a7c242359985545d9c5c76899fb965dd9d1c46cbcc8b4dd2071ed
-  script:
-    - install -m 755 kubeseal-linux-amd64 {{src}}/usr/bin/kubeseal
+  install:
+    - kubeseal-linux-amd64:/usr/bin/kubeseal
 
 - name: kustomize
   version: 4.4.1
@@ -94,8 +94,8 @@
   fetch:
     url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
     sha256: 2d5927efec40ba32a121c49f6df9955b8b8a296ef1dec4515a46fc84df158798
-  script:
-    - mv kustomize {{src}}/usr/bin/
+  install:
+    - kustomize:/usr/bin/
 
 - name: minikube
   version: 1.24.0
@@ -113,8 +113,8 @@
   fetch:
     url: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
     sha256: 3bc218476cf205acf11b078d45210a4882e136d24a3cbb7d8d645408e423b8fe
-  script:
-    - install -m 755 minikube-linux-amd64 {{src}}/usr/bin/minikube
+  install:
+    - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
   version: 0.18.0
@@ -133,5 +133,5 @@
   fetch:
     url: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64
     sha256: fe0211a702dfb106691f0eace7559bb6f660db63446491bec36096de8909f671
-  script:
-    - mv ops2deb_linux_amd64 {{src}}/usr/bin/ops2deb
+  install:
+    - ops2deb_linux_amd64:/usr/bin/ops2deb
