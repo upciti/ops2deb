@@ -153,7 +153,7 @@ pipenv = ["pipenv"]
 
 [[package]]
 name = "dunamai"
-version = "1.11.0"
+version = "1.11.1"
 description = "Dynamic version generation"
 category = "dev"
 optional = false
@@ -391,14 +391,14 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "poetry-dynamic-versioning"
-version = "0.14.0"
+version = "0.14.1"
 description = "Plugin for Poetry to enable dynamic versioning based on VCS tags"
 category = "dev"
 optional = false
 python-versions = ">=3.5,<4.0"
 
 [package.dependencies]
-dunamai = ">=1.10,<2.0"
+dunamai = ">=1.11.1,<2.0.0"
 jinja2 = {version = ">=2.11.1,<4", markers = "python_version >= \"3.6\" and python_version < \"4.0\""}
 tomlkit = ">=0.4"
 
@@ -889,8 +889,8 @@ dparse = [
     {file = "dparse-0.5.1.tar.gz", hash = "sha256:a1b5f169102e1c894f9a7d5ccf6f9402a836a5d24be80a986c7ce9eaed78f367"},
 ]
 dunamai = [
-    {file = "dunamai-1.11.0-py3-none-any.whl", hash = "sha256:356308618710b4e32d5b614571c850e7b19f57217ecf311f600f4638ccda5e2c"},
-    {file = "dunamai-1.11.0.tar.gz", hash = "sha256:338f9be40c9aa974c4bdc4fb6d49a630692315593c45b23b5941c5298c075567"},
+    {file = "dunamai-1.11.1-py3-none-any.whl", hash = "sha256:2a7230203f8e995b35013c213e01c72f0966992096ec9e27e8a73890e7b59c27"},
+    {file = "dunamai-1.11.1.tar.gz", hash = "sha256:2c56f2befc9c0bd69ed20635170afba441bf526a9db7e002ec6c088a926288a3"},
 ]
 flake8 = [
     {file = "flake8-4.0.1-py2.py3-none-any.whl", hash = "sha256:479b1304f72536a55948cb40a32dce8bb0ffe3501e26eaf292c7e60eb5e0428d"},
@@ -1030,8 +1030,8 @@ pluggy = [
     {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
 ]
 poetry-dynamic-versioning = [
-    {file = "poetry-dynamic-versioning-0.14.0.tar.gz", hash = "sha256:be5f66a866becb1d5e642ba51e01587a825fae0983022d9304927b709abd9cae"},
-    {file = "poetry_dynamic_versioning-0.14.0-py3-none-any.whl", hash = "sha256:5138810f15aec0a72219119e28ea829a889a1e173d8bb7c59309b24c3ac79724"},
+    {file = "poetry-dynamic-versioning-0.14.1.tar.gz", hash = "sha256:01cc73a4bc4861bb91b138c235d49851d5563d373643b3f3c5cf8664d1115b5b"},
+    {file = "poetry_dynamic_versioning-0.14.1-py3-none-any.whl", hash = "sha256:29284bc6ae8c2ddde299801f174908ac864bfd8bae201a5f6e627c35d3df38c4"},
 ]
 psutil = [
     {file = "psutil-5.9.0-cp27-cp27m-manylinux2010_i686.whl", hash = "sha256:55ce319452e3d139e25d6c3f85a1acf12d1607ddedea5e35fb47a552c051161b"},
@@ -1139,6 +1139,7 @@ pytest = [
 ]
 pytest-asyncio = [
     {file = "pytest-asyncio-0.18.3.tar.gz", hash = "sha256:7659bdb0a9eb9c6e3ef992eef11a2b3e69697800ad02fb06374a210d85b29f91"},
+    {file = "pytest_asyncio-0.18.3-1-py3-none-any.whl", hash = "sha256:16cf40bdf2b4fb7fc8e4b82bd05ce3fbcd454cbf7b92afc445fe299dabb88213"},
     {file = "pytest_asyncio-0.18.3-py3-none-any.whl", hash = "sha256:8fafa6c52161addfd41ee7ab35f11836c5a16ec208f93ee388f752bea3493a84"},
 ]
 pytest-cov = [
