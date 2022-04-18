@@ -724,7 +724,7 @@ test = ["shellingham (>=1.3.0,<2.0.0)", "pytest (>=4.4.0,<5.4.0)", "pytest-cov (
 
 [[package]]
 name = "types-aiofiles"
-version = "0.8.5"
+version = "0.8.8"
 description = "Typing stubs for aiofiles"
 category = "dev"
 optional = false
@@ -1139,6 +1139,7 @@ pytest = [
 ]
 pytest-asyncio = [
     {file = "pytest-asyncio-0.18.3.tar.gz", hash = "sha256:7659bdb0a9eb9c6e3ef992eef11a2b3e69697800ad02fb06374a210d85b29f91"},
+    {file = "pytest_asyncio-0.18.3-1-py3-none-any.whl", hash = "sha256:16cf40bdf2b4fb7fc8e4b82bd05ce3fbcd454cbf7b92afc445fe299dabb88213"},
     {file = "pytest_asyncio-0.18.3-py3-none-any.whl", hash = "sha256:8fafa6c52161addfd41ee7ab35f11836c5a16ec208f93ee388f752bea3493a84"},
 ]
 pytest-cov = [
@@ -1265,8 +1266,8 @@ typer = [
     {file = "typer-0.4.0.tar.gz", hash = "sha256:63c3aeab0549750ffe40da79a1b524f60e08a2cbc3126c520ebf2eeaf507f5dd"},
 ]
 types-aiofiles = [
-    {file = "types-aiofiles-0.8.5.tar.gz", hash = "sha256:567ace1ecd918542f23c2f05deaca48779df18f020aafe35ea0c7f60f61fd710"},
-    {file = "types_aiofiles-0.8.5-py3-none-any.whl", hash = "sha256:e1867580b1305735ed75854c68096627b3ddb6059b22dd3e089304b398bba0ef"},
+    {file = "types-aiofiles-0.8.8.tar.gz", hash = "sha256:62942901b44dd8fb14b5581e8389fa0fe5c03b8aef7a1f86ac08e7b550d7dc11"},
+    {file = "types_aiofiles-0.8.8-py3-none-any.whl", hash = "sha256:64846425bc267beec45ddf50b14fb532e6612b9d74c976761cc5e1c47a88a06b"},
 ]
 types-pyyaml = [
     {file = "types-PyYAML-6.0.5.tar.gz", hash = "sha256:464e050914f3d1d83a8c038e1cf46da5cb96b7cd02eaa096bcaa03675edd8a2e"},
