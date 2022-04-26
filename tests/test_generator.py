@@ -115,6 +115,15 @@ def test__install_files_should_create_here_document_in_package_directory_if_dest
     assert (tmp_path / "great-app_1.0.0_amd64/test").is_file()
 
 
+def test__install_files_should_render_content_in_here_document(
+    tmp_path, blueprint_factory
+):
+    files = [dict(path="test", content="{{version}}")]
+    blueprint = blueprint_factory(install=files)
+    SourcePackage(blueprint, tmp_path)._install_files()
+    assert (tmp_path / "great-app_1.0.0_amd64/test").read_text() == blueprint.version
+
+
 def test__install_files_should_fail_to_create_here_document_if_file_already_exists(
     tmp_path, blueprint_factory
 ):
