@@ -51,11 +51,10 @@ class SourcePackage:
         else:
             shutil.copytree(fetch_result.storage_path, self.fetch_directory)
 
-    @classmethod
-    def _install_here_document(cls, entry: HereDocument, destination: Path) -> None:
+    def _install_here_document(self, entry: HereDocument, destination: Path) -> None:
         if destination.exists():
             raise Ops2debGeneratorError(f"Destination {destination} already exists")
-        destination.write_text(entry.content)
+        destination.write_text(self.blueprint.render_string(entry.content))
 
     def _install_source_destination_str(
         self, entry: SourceDestinationStr, destination: Path
