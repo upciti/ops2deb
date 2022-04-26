@@ -2,7 +2,6 @@
 FROM bitnami/minideb:bullseye AS slim
 ENV LC_ALL=C.UTF-8 \
     LANG=C.UTF-8
-RUN install_packages unzip tar
 ARG OPS2DEB_PATH="dist/ops2deb"
 COPY ${OPS2DEB_PATH} /usr/local/bin/ops2deb
 ENTRYPOINT ["ops2deb"]
