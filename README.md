@@ -243,7 +243,7 @@ poetry run poetry build
 Note that the `poetry run` is important to enable [poetry-dynamic-versioning](https://github.com/mtkennerly/poetry-dynamic-versioning)
 which is installed as a dev dependency.
 
-To build a single binary applicatin:
+To build a single binary application:
 
 Install required build dependencies:
 
