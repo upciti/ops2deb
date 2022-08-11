@@ -97,7 +97,7 @@ option_output_directory: Path = typer.Option(
     help="Directory where debian source packages are generated and built.",
 )
 
-option_debian_repository: str = typer.Option(
+option_debian_repository: Optional[str] = typer.Option(
     None,
     "--repository",
     "-r",
@@ -105,6 +105,13 @@ option_debian_repository: str = typer.Option(
     help='Format: "{debian_repo_url} {distribution_name}". '
     'Example: "http://deb.wakemeops.com/ stable". '
     "Packages already published in the repo won't be generated.",
+)
+
+option_only: Optional[List[str]] = typer.Option(
+    None,
+    "--only",
+    envvar="OPS2DEB_ONLY_BLUEPRINTS",
+    help="Only blueprints with matching names will be taken into account",
 )
 
 option_workers_count: int = typer.Option(
@@ -126,13 +133,16 @@ def default(
     configuration_path: Path = option_configuration,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
-    debian_repository: str = option_debian_repository,
+    debian_repository: Optional[str] = option_debian_repository,
+    only: Optional[List[str]] = option_only,
     workers_count: int = option_workers_count,
 ) -> None:
     set_cache_directory(cache_directory)
     try:
         blueprints = parser.parse(configuration_path)
-        packages = generator.generate(blueprints, output_directory, debian_repository)
+        packages = generator.generate(
+            blueprints, output_directory, debian_repository, only or None
+        )
         builder.build([p.package_directory for p in packages], workers_count)
     except Ops2debError as e:
         error(e, exit_code)
@@ -145,12 +155,13 @@ def generate(
     configuration_path: Path = option_configuration,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
-    debian_repository: str = option_debian_repository,
+    debian_repository: Optional[str] = option_debian_repository,
+    only: Optional[List[str]] = option_only,
 ) -> None:
     set_cache_directory(cache_directory)
     try:
         blueprints = parser.parse(configuration_path)
-        generator.generate(blueprints, output_directory, debian_repository)
+        generator.generate(blueprints, output_directory, debian_repository, only or None)
     except Ops2debError as e:
         error(e, exit_code)
 

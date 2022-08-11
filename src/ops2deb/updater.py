@@ -276,7 +276,7 @@ def update(
     configuration_path: Path,
     dry_run: bool = False,
     output_path: Optional[Path] = None,
-    skip_names: List[str] = None,
+    skip_names: Optional[List[str]] = None,
 ) -> None:
     yaml = ruamel.yaml.YAML(typ="rt")
     yaml.Emitter = FixIndentEmitter
