@@ -300,6 +300,13 @@ def test_ops2deb_generate_should_run_script_from_current_directory_when_blueprin
     assert (tmp_path / "cool-app_1.0.0_all/src/usr/bin/cool-app").is_file()
 
 
+def test_ops2deb_generate_should_honor_only_argument(tmp_path, call_ops2deb):
+    result = call_ops2deb("generate", "--only", "great-app")
+    print(result.stdout)
+    assert list(tmp_path.glob("*_all")) == [tmp_path / "great-app_1.0.0_all"]
+    assert result.exit_code == 0
+
+
 def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     call_ops2deb("generate")
     result = call_ops2deb("build")
