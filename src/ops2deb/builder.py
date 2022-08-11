@@ -1,7 +1,7 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from . import logger
 from .exceptions import Ops2debBuilderError
@@ -65,9 +65,9 @@ def build(package_paths: List[Path], workers: int) -> None:
 
     logger.title(f"Building {len(package_paths)} source packages...")
 
-    async def _build_package(sem: asyncio.Semaphore, _path: Path) -> Optional[int]:
+    async def _build_package(sem: asyncio.Semaphore, _path: Path) -> None:
         async with sem:  # semaphore limits num of simultaneous builds
-            return await build_package(_path)
+            await build_package(_path)
 
     async def _build_packages() -> Any:
         sem = asyncio.Semaphore(workers)
