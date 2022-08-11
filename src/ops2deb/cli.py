@@ -6,13 +6,14 @@ from typing import Any, List, NoReturn, Optional, Tuple
 
 import click
 import typer
+from typer.core import TyperGroup
 
 from . import __version__, builder, formatter, generator, logger, parser, updater
 from .exceptions import Ops2debError
 from .fetcher import DEFAULT_CACHE_DIRECTORY, set_cache_directory
 
 
-class DefaultCommandGroup(click.Group):
+class DefaultCommandGroup(TyperGroup):
     """
     Make it so that calling ops2deb without a subcommand
     is equivalent to calling the default subcommand.
