@@ -166,12 +166,12 @@ def generate(
     # each blueprint can yield multiple source packages, one per supported arch
     packages = [SourcePackage(b, output_directory) for b in extend(blueprints)]
 
-    # filter out packages already available in the debian repository
-    if debian_repository is not None:
-        packages = filter_already_published_packages(packages, debian_repository)
-
     if only_names is not None:
         packages = [p for p in packages if p.blueprint.name in only_names]
+
+    # filter out packages already available in the debian repository
+    if debian_repository is not None and packages:
+        packages = filter_already_published_packages(packages, debian_repository)
 
     # run fetch instructions (download, verify, extract) in parallel
     files = [p.remote_file for p in packages if p.remote_file is not None]
