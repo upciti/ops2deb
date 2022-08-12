@@ -16,5 +16,7 @@ RUN install_packages \
     fakeroot \
     debhelper \
     binutils-arm-linux-gnueabihf \
-    binutils-aarch64-linux-gnu
+    binutils-aarch64-linux-gnu \
+    git \
+    ca-certificates
 USER 1000
