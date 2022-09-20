@@ -38,7 +38,8 @@ def format_description(description: str) -> str:
 
 def format_blueprint(blueprint: Dict[str, Any]) -> Dict[str, Any]:
     blueprint = json.loads(Blueprint.construct(**blueprint).json(exclude_defaults=True))
-    blueprint["description"] = format_description(blueprint["description"])
+    if "description" in blueprint.keys():
+        blueprint["description"] = format_description(blueprint["description"])
     keys_to_remove: List[str] = []
     for key, value in blueprint.items():
         if isinstance(value, list) and not blueprint.get(key):

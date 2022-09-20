@@ -25,7 +25,6 @@ mock_valid_configuration = """\
   revision: 2
   arch: all
   summary: Great package
-  description: A detailed description of the great package.
   fetch:
     url: http://testserver/{{version}}/great-app.tar.gz
     sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
