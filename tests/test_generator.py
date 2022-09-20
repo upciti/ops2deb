@@ -12,6 +12,7 @@ blueprint_1 = Blueprint(
     arch="all",
     summary="My great app",
     description="A detailed description of the super package",
+    build_depends=["build-dep-1", "build-dep-2"],
     provides=["virtual_package"],
     depends=["package_a"],
     recommends=["package_b"],
@@ -21,7 +22,7 @@ blueprint_1 = Blueprint(
 control_1 = """Source: great-app
 Priority: optional
 Maintainer: ops2deb <ops2deb@upciti.com>
-Build-Depends: debhelper
+Build-Depends: debhelper, build-dep-1, build-dep-2
 Standards-Version: 3.9.6
 Homepage: http://great-app.io
 
