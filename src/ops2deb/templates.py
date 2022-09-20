@@ -18,7 +18,7 @@ DEBIAN_CONTROL = """\
 Source: {{ package.name }}
 Priority: optional
 Maintainer: ops2deb <ops2deb@upciti.com>
-Build-Depends: debhelper
+Build-Depends: debhelper{%- if package.build_depends %}, {{ package.build_depends|sort|join(', ') }}{% endif %}
 Standards-Version: 3.9.6
 {%- if package.homepage %}{{ '\n' }}Homepage: {{ package.homepage }}{% endif %}
 
