@@ -82,6 +82,10 @@ class Blueprint(Base):
     arch: Architecture = Field("amd64", description="Package architecture")
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field(..., description="Package description")
+    provides: List[str] = Field(
+        default_factory=list,
+        description="List of virtual packages provided by this package",
+    )
     depends: List[str] = Field(default_factory=list, description="Package dependencies")
     recommends: List[str] = Field(
         default_factory=list, description="Package recommended dependencies"
