@@ -28,8 +28,11 @@ async def _download_repository_release_file(
     client: httpx.AsyncClient, distribution: str
 ) -> Release:
     url = f"/dists/{distribution}/Release"
-    response = await client.get(url)
-    response.raise_for_status()
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+    except httpx.HTTPError:
+        raise Ops2debAptError(f"Failed to download APT repository file at {url}")
     return Release(response.text)
 
 
@@ -38,9 +41,12 @@ async def _download_repository_packages_file(
 ) -> bytes:
     url = f"/dists/{distribution}/{component}/binary-{arch}/Packages"
     logger.debug(f"Downloading {url}...")
-    async with client.stream("GET", url) as response:
-        response.raise_for_status()
-        return await response.aread()
+    try:
+        async with client.stream("GET", url) as response:
+            response.raise_for_status()
+            return await response.aread()
+    except httpx.HTTPError:
+        raise Ops2debAptError(f"Failed to download APT repository file at {url}")
 
 
 def _parse_repository_packages_file(content: bytes) -> Iterator[DebianRepositoryPackage]:
