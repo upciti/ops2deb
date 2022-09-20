@@ -81,7 +81,7 @@ class Blueprint(Base):
     revision: int = Field(1, description="Package revision")
     arch: Architecture = Field("amd64", description="Package architecture")
     summary: str = Field(..., description="Package short description, one line only")
-    description: str = Field(..., description="Package description")
+    description: str = Field("", description="Package description")
     build_depends: List[str] = Field(
         default_factory=list, description="Package build dependencies"
     )

@@ -88,9 +88,34 @@ Description: My great app
 """
 
 
+blueprint_4 = Blueprint(
+    name="great-app",
+    version="1.0.0",
+    summary="My great app",
+)
+
+
+control_4 = """Source: great-app
+Priority: optional
+Maintainer: ops2deb <ops2deb@upciti.com>
+Build-Depends: debhelper
+Standards-Version: 3.9.6
+
+Package: great-app
+Architecture: amd64
+Description: My great app
+
+"""
+
+
 @pytest.mark.parametrize(
     "blueprint, control",
-    [(blueprint_1, control_1), (blueprint_2, control_2), (blueprint_3, control_3)],
+    [
+        (blueprint_1, control_1),
+        (blueprint_2, control_2),
+        (blueprint_3, control_3),
+        (blueprint_4, control_4),
+    ],
 )
 def test_generate_should_produce_identical_control_file_snapshot(
     tmp_path, blueprint, control
