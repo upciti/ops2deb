@@ -12,6 +12,7 @@ blueprint_1 = Blueprint(
     arch="all",
     summary="My great app",
     description="A detailed description of the super package",
+    provides=["virtual_package"],
     depends=["package_a"],
     recommends=["package_b"],
     conflicts=["package_c"],
@@ -26,6 +27,7 @@ Homepage: http://great-app.io
 
 Package: great-app
 Architecture: all
+Provides: virtual_package
 Depends: package_a
 Recommends: package_b
 Conflicts: package_c

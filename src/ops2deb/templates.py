@@ -24,6 +24,7 @@ Standards-Version: 3.9.6
 
 Package: {{ package.name }}
 Architecture: {{ package.arch }}
+{%- if package.provides %}{{ '\n' }}Provides: {{ package.provides|sort|join(', ') }}{% endif %}
 {%- if package.depends %}{{ '\n' }}Depends: {{ package.depends|sort|join(', ') }}{% endif %}
 {%- if package.recommends %}{{ '\n' }}Recommends: {{ package.recommends|sort|join(', ') }}{% endif %}
 {%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
