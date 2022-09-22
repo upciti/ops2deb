@@ -93,6 +93,10 @@ class Blueprint(Base):
     recommends: List[str] = Field(
         default_factory=list, description="Package recommended dependencies"
     )
+    replaces: List[str] = Field(
+        default_factory=list,
+        description="List of packages replaced by this package",
+    )
     conflicts: List[str] = Field(
         default_factory=list,
         description="Conflicting packages, for more information read "

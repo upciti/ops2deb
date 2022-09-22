@@ -16,7 +16,8 @@ blueprint_1 = Blueprint(
     provides=["virtual_package"],
     depends=["package_a"],
     recommends=["package_b"],
-    conflicts=["package_c"],
+    replaces=["package_c"],
+    conflicts=["package_d"],
 )
 
 control_1 = """Source: great-app
@@ -31,7 +32,8 @@ Architecture: all
 Provides: virtual_package
 Depends: package_a
 Recommends: package_b
-Conflicts: package_c
+Replaces: package_c
+Conflicts: package_d
 Description: My great app
  A detailed description of the super package
 """
