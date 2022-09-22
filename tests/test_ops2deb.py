@@ -14,6 +14,7 @@ yaml = ruamel.yaml.YAML(typ="safe")
 mock_valid_configuration = """\
 - name: awesome-metapackage
   version: "{{env('CI_COMMIT_TAG', '1.0.0')}}"
+  epoch: 1
   arch: all
   summary: Awesome metapackage
   description: A detailed description of the awesome metapackage.
