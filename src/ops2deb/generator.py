@@ -20,7 +20,8 @@ def _format_command_output(output: str) -> str:
 
 class SourcePackage:
     def __init__(self, blueprint: Blueprint, output_directory: Path):
-        self.debian_version = f"{blueprint.version}-{blueprint.revision}~ops2deb"
+        epoch = f"{blueprint.epoch}:" if blueprint.epoch else ""
+        self.debian_version = f"{epoch}{blueprint.version}-{blueprint.revision}~ops2deb"
         self.directory_name = f"{blueprint.name}_{blueprint.version}_{blueprint.arch}"
         self.package_directory = (output_directory / self.directory_name).absolute()
         self.debian_directory = self.package_directory / "debian"
