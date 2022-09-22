@@ -27,6 +27,7 @@ Architecture: {{ package.arch }}
 {%- if package.provides %}{{ '\n' }}Provides: {{ package.provides|sort|join(', ') }}{% endif %}
 {%- if package.depends %}{{ '\n' }}Depends: {{ package.depends|sort|join(', ') }}{% endif %}
 {%- if package.recommends %}{{ '\n' }}Recommends: {{ package.recommends|sort|join(', ') }}{% endif %}
+{%- if package.replaces %}{{ '\n' }}Replaces: {{ package.replaces|sort|join(', ') }}{% endif %}
 {%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
 Description: {{ package.summary }}
 {% if package.description %}{% for line in package.description.split('\n') %} {{ line or '.' }}{{ '\n' if not loop.last else '' }}{% endfor %}{% endif %}
