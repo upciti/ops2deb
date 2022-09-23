@@ -8,9 +8,9 @@ import click
 import typer
 from typer.core import TyperGroup
 
-from . import __version__, builder, formatter, generator, logger, parser, updater
-from .exceptions import Ops2debError
-from .fetcher import DEFAULT_CACHE_DIRECTORY, set_cache_directory
+from ops2deb import __version__, builder, formatter, generator, logger, parser, updater
+from ops2deb.exceptions import Ops2debError
+from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, set_cache_directory
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -29,7 +29,7 @@ class DefaultCommandGroup(TyperGroup):
             args.insert(0, self.default_command)
         return super().parse_args(ctx, args)
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> Optional[click.Command]:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         if cmd_name.startswith("-") and cmd_name not in self.commands:
             cmd_name = self.default_command
             ctx.default_command = True  # type: ignore
@@ -37,7 +37,7 @@ class DefaultCommandGroup(TyperGroup):
 
     def resolve_command(
         self, ctx: click.Context, args: List[str]
-    ) -> Tuple[Optional[str], Optional[click.Command], List[str]]:
+    ) -> Tuple[str | None, click.Command | None, List[str]]:
         cmd_name, cmd, args = super().resolve_command(ctx, args)
         if hasattr(ctx, "default_command") and cmd_name:
             args.insert(0, cmd_name)

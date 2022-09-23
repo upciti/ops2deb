@@ -5,19 +5,19 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Tuple, cast
 
 import httpx
 import ruamel.yaml
 from ruamel.yaml.emitter import Emitter
 from semver.version import Version
 
-from . import logger
-from .client import client_factory
-from .exceptions import Ops2debError, Ops2debUpdaterError
-from .fetcher import FetchResult, fetch_urls
-from .parser import Blueprint, RemoteFile, load, validate
-from .utils import separate_results_from_errors
+from ops2deb import logger
+from ops2deb.client import client_factory
+from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
+from ops2deb.fetcher import FetchResult, fetch_urls
+from ops2deb.parser import Blueprint, RemoteFile, load, validate
+from ops2deb.utils import separate_results_from_errors
 
 
 # fixme: move this somewhere else, this code is also duplicated in formatter.py
@@ -63,7 +63,7 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
 
     async def _try_a_few_patches(
         self, blueprint: Blueprint, version: Version
-    ) -> Optional[Version]:
+    ) -> Version | None:
         for i in range(0, 3):
             version = version.bump_patch()
             if await self._try_version(blueprint, str(version)) is True:
@@ -169,7 +169,7 @@ class LatestRelease:
     fetch_results: Dict[str, FetchResult]
 
     def update_configuration(
-        self, blueprint_dict: Union[Dict[str, Any], List[Dict[str, Any]]]
+        self, blueprint_dict: Dict[str, Any] | List[Dict[str, Any]]
     ) -> None:
         # configuration file can be a list of blueprints or a single blueprint
         raw_blueprint = (
@@ -215,7 +215,7 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
 
 
 async def _find_latest_releases(
-    blueprint_list: List[Blueprint], skip_names: Optional[List[str]] = None
+    blueprint_list: List[Blueprint], skip_names: List[str] | None = None
 ) -> Tuple[List[LatestRelease], Dict[int, Ops2debError]]:
     skip_names = skip_names or []
     blueprints = {
@@ -267,7 +267,7 @@ async def _find_latest_releases(
 
 
 def find_latest_releases(
-    blueprint_list: List[Blueprint], skip_names: Optional[List[str]] = None
+    blueprint_list: List[Blueprint], skip_names: List[str] | None = None
 ) -> Tuple[List[LatestRelease], Dict[int, Ops2debError]]:
     return asyncio.run(_find_latest_releases(blueprint_list, skip_names))
 
@@ -275,8 +275,8 @@ def find_latest_releases(
 def update(
     configuration_path: Path,
     dry_run: bool = False,
-    output_path: Optional[Path] = None,
-    skip_names: Optional[List[str]] = None,
+    output_path: Path | None = None,
+    skip_names: List[str] | None = None,
 ) -> None:
     yaml = ruamel.yaml.YAML(typ="rt")
     yaml.Emitter = FixIndentEmitter

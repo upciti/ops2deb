@@ -3,9 +3,9 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List
 
-from . import logger
-from .exceptions import Ops2debBuilderError
-from .utils import log_and_raise
+from ops2deb import logger
+from ops2deb.exceptions import Ops2debBuilderError
+from ops2deb.utils import log_and_raise
 
 
 def parse_debian_control(cwd: Path) -> Dict[str, str]:

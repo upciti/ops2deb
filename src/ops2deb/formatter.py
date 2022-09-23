@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Tuple
 
 import yaml
 
-from .exceptions import Ops2debFormatterError
-from .parser import Blueprint, load, validate
+from ops2deb.exceptions import Ops2debFormatterError
+from ops2deb.parser import Blueprint, load, validate
 
 
 class PrettyYAMLDumper(yaml.dumper.SafeDumper):

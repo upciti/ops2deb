@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal
 
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError, validator
 from ruamel.yaml import YAML, YAMLError
 
-from .exceptions import Ops2debParserError
-from .jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
+from ops2deb.exceptions import Ops2debParserError
+from ops2deb.jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
 
@@ -18,9 +18,9 @@ class Base(BaseModel):
 
 
 class ArchitectureMap(Base):
-    amd64: Optional[str] = None
-    armhf: Optional[str] = None
-    arm64: Optional[str] = None
+    amd64: str | None = None
+    armhf: str | None = None
+    arm64: str | None = None
 
 
 class RemoteFile(Base):
@@ -31,7 +31,7 @@ class RemoteFile(Base):
 class MultiArchitectureRemoteFile(Base):
     url: AnyHttpUrl = Field(..., description="URL template of the file")
     sha256: ArchitectureMap = Field(..., description="SHA256 checksum of each file")
-    targets: Optional[ArchitectureMap] = Field(
+    targets: ArchitectureMap | None = Field(
         None,
         description="Architecture to target name map. The URL can be templated with "
         "the target name to download the right file/archive for each architecture.",
@@ -75,7 +75,7 @@ class HereDocument(Base):
 class Blueprint(Base):
     name: str = Field(..., description="Package name")
     version: str = Field(..., description="Package name")
-    homepage: Optional[AnyHttpUrl] = Field(None, description="Upstream project homepage")
+    homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
     revision: int = Field(1, description="Package revision", ge=1)
     epoch: int = Field(0, description="Package epoch", ge=0)
     arch: Architecture = Field("amd64", description="Package architecture")
@@ -101,12 +101,12 @@ class Blueprint(Base):
         description="Conflicting packages, for more information read "
         "https://www.debian.org/doc/debian-policy/ch-relationships.html",
     )
-    fetch: Optional[Union[RemoteFile, MultiArchitectureRemoteFile]] = Field(
+    fetch: RemoteFile | MultiArchitectureRemoteFile | None = Field(
         None,
         description="Describe a file (or a file per architecture) to download before "
         "running the build script",
     )
-    install: List[Union[HereDocument, SourceDestinationStr]] = Field(default_factory=list)
+    install: List[HereDocument | SourceDestinationStr] = Field(default_factory=list)
     script: List[str] = Field(default_factory=list, description="Build instructions")
 
     @validator("*", pre=True)
@@ -115,7 +115,7 @@ class Blueprint(Base):
             return environment.from_string(v).render()
         return v
 
-    def _get_additional_variables(self) -> Dict[str, Optional[str]]:
+    def _get_additional_variables(self) -> Dict[str, str | None]:
         target = (
             (getattr(self.fetch.targets, self.arch, self.arch) or self.arch)
             if isinstance(self.fetch, MultiArchitectureRemoteFile)
@@ -133,7 +133,7 @@ class Blueprint(Base):
         else:
             return [self.arch]
 
-    def render_string(self, string: str, **kwargs: Optional[str | Path]) -> str:
+    def render_string(self, string: str, **kwargs: str | Path | None) -> str:
         version = kwargs.pop("version", None)
         version = version or self.version
         return environment.from_string(string).render(
@@ -143,7 +143,7 @@ class Blueprint(Base):
             **(self._get_additional_variables() | kwargs),
         )
 
-    def render_fetch(self, version: Optional[str] = None) -> Optional[RemoteFile]:
+    def render_fetch(self, version: str | None = None) -> RemoteFile | None:
         if self.fetch is None:
             return None
         if isinstance(self.fetch, MultiArchitectureRemoteFile):
@@ -161,7 +161,7 @@ class Blueprint(Base):
 
 
 class Configuration(Base):
-    __root__: Union[List[Blueprint], Blueprint]
+    __root__: List[Blueprint] | Blueprint
 
 
 def extend(blueprints: List[Blueprint]) -> List[Blueprint]:
@@ -174,7 +174,7 @@ def extend(blueprints: List[Blueprint]) -> List[Blueprint]:
 
 def load(
     configuration_path: Path, yaml: YAML = YAML()
-) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
+) -> List[Dict[str, Any]] | Dict[str, Any]:
     try:
         return yaml.load(configuration_path.open("r"))
     except YAMLError as e:
@@ -188,7 +188,7 @@ def load(
 
 
 def validate(
-    configuration_dict: Union[List[Dict[str, Any]], Dict[str, Any]]
+    configuration_dict: List[Dict[str, Any]] | Dict[str, Any]
 ) -> List[Blueprint]:
     try:
         blueprints = Configuration.parse_obj(configuration_dict).__root__
