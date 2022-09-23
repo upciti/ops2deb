@@ -72,9 +72,16 @@ class SourcePackage:
                 f"Source {str(source)} is not a file nor a directory"
             )
 
+    def _render_string(self, string: str) -> str:
+        return self.blueprint.render_string(
+            string,
+            src=self.source_directory,
+            debian=self.debian_directory,
+        )
+
     def _install_files(self) -> None:
         for entry in self.blueprint.install:
-            destination = Path(self.blueprint.render_string(entry.destination))
+            destination = Path(self._render_string(entry.destination))
             if (
                 destination.is_absolute() is True
                 and destination.is_relative_to(self.package_directory) is False
@@ -90,10 +97,8 @@ class SourcePackage:
                 self._install_source_destination_str(entry, destination)
 
     def _run_script(self) -> None:
-        # run script
-        for line in self.blueprint.render_script(
-            src=self.source_directory, debian=self.debian_directory
-        ):
+        for line in self.blueprint.script:
+            line = self._render_string(line)
             logger.info(f"$ {line}")
             result = subprocess.run(line, shell=True, capture_output=True)
             if stdout := result.stdout.decode():

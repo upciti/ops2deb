@@ -193,3 +193,13 @@ def test__install_files_should_fail_when_input_is_a_source_destination_str_and_s
     blueprint = blueprint_factory(install=[f"{tmp_path}/test:/test"])
     with pytest.raises(Ops2debGeneratorError):
         SourcePackage(blueprint, tmp_path)._install_files()
+
+
+def test__install_files_should_render_debian_variable_in_source_destination_str(
+    tmp_path, blueprint_factory
+):
+    source = tmp_path / "test"
+    source.touch()
+    blueprint = blueprint_factory(install=[str(source) + ":{{debian}}/test"])
+    SourcePackage(blueprint, tmp_path)._install_files()
+    assert (tmp_path / "great-app_1.0.0_amd64/debian/test").is_file()
