@@ -161,9 +161,6 @@ class Blueprint(Base):
         )
         return RemoteFile(url=url, sha256=sha256)
 
-    def render_script(self, src: Path, debian: Path) -> List[str]:
-        return [self.render_string(line, src=src, debian=debian) for line in self.script]
-
 
 class Configuration(Base):
     __root__: Union[List[Blueprint], Blueprint]
