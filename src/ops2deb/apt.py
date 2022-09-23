@@ -7,9 +7,9 @@ import httpx
 from debian.deb822 import Packages, Release
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
-from . import logger
-from .client import client_factory
-from .exceptions import Ops2debAptError
+from ops2deb import logger
+from ops2deb.client import client_factory
+from ops2deb.exceptions import Ops2debAptError
 
 
 class DebianRepository(BaseModel):

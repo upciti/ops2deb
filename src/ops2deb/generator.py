@@ -1,15 +1,15 @@
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from . import logger
-from .apt import DebianRepositoryPackage, sync_list_repository_packages
-from .exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
-from .fetcher import FetchResult, fetch_remote_files
-from .parser import Blueprint, HereDocument, SourceDestinationStr, extend
-from .templates import environment
-from .utils import working_directory
+from ops2deb import logger
+from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
+from ops2deb.exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
+from ops2deb.fetcher import FetchResult, fetch_remote_files
+from ops2deb.parser import Blueprint, HereDocument, SourceDestinationStr, extend
+from ops2deb.templates import environment
+from ops2deb.utils import working_directory
 
 
 def _format_command_output(output: str) -> str:
@@ -109,7 +109,7 @@ class SourcePackage:
                 raise Ops2debGeneratorScriptError
 
     def generate(self, fetch_results: Dict[str, FetchResult]) -> None:
-        fetch_result: Optional[FetchResult] = None
+        fetch_result: FetchResult | None = None
         if self.remote_file is not None:
             fetch_result = fetch_results.get(self.remote_file.url, None)
             if fetch_result is None:
@@ -166,8 +166,8 @@ def filter_already_published_packages(
 def generate(
     blueprints: List[Blueprint],
     output_directory: Path,
-    debian_repository: Optional[str] = None,
-    only_names: Optional[List[str]] = None,
+    debian_repository: str | None = None,
+    only_names: List[str] | None = None,
 ) -> List[SourcePackage]:
     # each blueprint can yield multiple source packages, one per supported arch
     packages = [SourcePackage(b, output_directory) for b in extend(blueprints)]

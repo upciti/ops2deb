@@ -6,17 +6,17 @@ import shutil
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import aiofiles
 import httpx
 import unix_ar
 
-from . import logger
-from .client import client_factory
-from .exceptions import Ops2debError, Ops2debExtractError, Ops2debFetcherError
-from .parser import RemoteFile
-from .utils import log_and_raise, separate_results_from_errors
+from ops2deb import logger
+from ops2deb.client import client_factory
+from ops2deb.exceptions import Ops2debError, Ops2debExtractError, Ops2debFetcherError
+from ops2deb.parser import RemoteFile
+from ops2deb.utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
 
@@ -120,7 +120,7 @@ class FetchResult:
 
 
 class FetchTask:
-    def __init__(self, url: str, sha256: Optional[str] = None):
+    def __init__(self, url: str, sha256: str | None = None):
         url_hash = hashlib.sha256(url.encode()).hexdigest()
         self.url = url
         self.file_name = url.split("/")[-1]
