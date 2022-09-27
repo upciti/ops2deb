@@ -738,8 +738,8 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "types-pyyaml"
-version = "6.0.11"
+name = "types-PyYAML"
+version = "6.0.12"
 description = "Typing stubs for PyYAML"
 category = "dev"
 optional = false
@@ -1301,9 +1301,9 @@ types-aiofiles = [
     {file = "types-aiofiles-22.1.0.tar.gz", hash = "sha256:8ae2e1d2f99b62754cffe6a8761fd6eeb8a0675569dc73818248e5bc30cb9074"},
     {file = "types_aiofiles-22.1.0-py3-none-any.whl", hash = "sha256:460c3b1c7fa24ec5f2c7d46cf3a849f07c7007a57fc19884be17e5159351fc39"},
 ]
-types-pyyaml = [
-    {file = "types-PyYAML-6.0.11.tar.gz", hash = "sha256:7f7da2fd11e9bc1e5e9eb3ea1be84f4849747017a59fc2eee0ea34ed1147c2e0"},
-    {file = "types_PyYAML-6.0.11-py3-none-any.whl", hash = "sha256:8f890028123607379c63550179ddaec4517dc751f4c527a52bb61934bf495989"},
+types-PyYAML = [
+    {file = "types-PyYAML-6.0.12.tar.gz", hash = "sha256:f6f350418125872f3f0409d96a62a5a5ceb45231af5cc07ee0034ec48a3c82fa"},
+    {file = "types_PyYAML-6.0.12-py3-none-any.whl", hash = "sha256:29228db9f82df4f1b7febee06bbfb601677882e98a3da98132e31c6874163e15"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
