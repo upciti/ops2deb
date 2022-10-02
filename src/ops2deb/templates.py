@@ -60,6 +60,23 @@ override_dh_builddeb:
 """
 
 
+DEBIAN_PACKAGE_CONTROL = """\
+Package: {{ control.Package }}
+Version: {{ version }}
+Architecture: {{ control.Architecture }}
+Maintainer: {{ control.Maintainer }}
+Installed-Size: {{ installed_size }}
+{%- if control.Provides %}{{ '\n' }}Provides: {{ control.Provides }}{% endif %}
+{%- if control.Depends %}{{ '\n' }}Depends: {{ control.Depends }}{% endif %}
+{%- if control.Recommends %}{{ '\n' }}Recommends: {{ control.Recommends }}{% endif %}
+{%- if control.Replaces %}{{ '\n' }}Replaces: {{ control.Replaces }}{% endif %}
+{%- if control.Conflicts %}{{ '\n' }}Conflicts: {{ control.Conflicts }}{% endif %}
+Priority: {{ control.Priority }}
+{%- if control.Homepage %}{{ '\n' }}Homepage: {{ control.Homepage }}{% endif %}
+Description: {% for line in control.Description.split('\n') %}{{ line }}\n{% endfor %}
+"""
+
+
 def template_loader(name: str) -> Optional[str]:
     variable_name = f"DEBIAN_{name.upper().replace('-', '_')}"
     template_content: str = globals()[variable_name]
