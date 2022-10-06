@@ -30,7 +30,7 @@ pipx install ops2deb
 
 ## Dependencies
 
-- Python >= 3.9 if installed with `pip` or `pipx`
+- Python >= 3.10 if installed with `pip` or `pipx`
 - To build debian packages with `ops2deb build` you need the following packages on your host:
 
 ```shell
@@ -222,7 +222,7 @@ Written in YAML and composed of a single blueprint object or a list of blueprint
 
 ## Development
 
-You will need [poetry](https://python-poetry.org/), and probably [pyenv](https://github.com/pyenv/pyenv) if you don't have python 3.9 on your host.
+You will need [poetry](https://python-poetry.org/), and probably [pyenv](https://github.com/pyenv/pyenv) if you don't have python 3.10 on your host.
 
 ```shell
 poetry install
