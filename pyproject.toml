@@ -30,6 +30,7 @@ Jinja2 = "^3"
 pydantic = "^1"
 pyinstaller = { version = "5.4.1", optional = true }
 unix-ar = "^0.2.1"
+rich = "*"
 
 [tool.poetry.extras]
 pyinstaller = ["pyinstaller"]
