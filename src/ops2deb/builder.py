@@ -87,9 +87,11 @@ def build_all(output_directory: Path, workers: int) -> None:
     :param output_directory: path where to search for source packages
     :param workers: Number of threads to run in parallel
     """
+    if output_directory.exists() is False:
+        raise Ops2debBuilderError(f"Directory {output_directory} does not exist")
 
     if output_directory.is_dir() is False:
-        raise Ops2debBuilderError(f"Directory {output_directory} does not exist")
+        raise Ops2debBuilderError(f"{output_directory} is not a directory")
 
     paths = []
     for output_directory in output_directory.iterdir():
