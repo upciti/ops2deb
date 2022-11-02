@@ -50,7 +50,11 @@ class SourcePackage:
             self.fetch_directory.mkdir(exist_ok=True)
             shutil.copy2(fetch_result.storage_path, self.fetch_directory)
         else:
-            shutil.copytree(fetch_result.storage_path, self.fetch_directory)
+            shutil.copytree(
+                fetch_result.storage_path,
+                self.fetch_directory,
+                ignore_dangling_symlinks=True,
+            )
 
     def _install_here_document(self, entry: HereDocument, destination: Path) -> None:
         if destination.exists():
