@@ -557,7 +557,7 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 
 [[package]]
 name = "python-debian"
-version = "0.1.47"
+version = "0.1.48"
 description = "Debian package related modules"
 category = "main"
 optional = false
@@ -1207,8 +1207,8 @@ pytest-cov = [
     {file = "pytest_cov-4.0.0-py3-none-any.whl", hash = "sha256:2feb1b751d66a8bd934e5edfa2e961d11309dc37b73b0eabe73b5945fee20f6b"},
 ]
 python-debian = [
-    {file = "python-debian-0.1.47.tar.gz", hash = "sha256:51e202823777a3d716a843b8a540fba2ba0bed9f507a87c0c0f9eefcdec3342c"},
-    {file = "python_debian-0.1.47-py3-none-any.whl", hash = "sha256:3209ba3602bfe429e695c00d64e00d695dc93c26cfa9b53ff3656469bc3fa5b5"},
+    {file = "python-debian-0.1.48.tar.gz", hash = "sha256:62d50547d06a5638ce1c5e80d7d701ddf16963b407afcf5bdc83c7de4db94f7c"},
+    {file = "python_debian-0.1.48-py3-none-any.whl", hash = "sha256:00edb2c95a9e28e17067c055d17a66e90abf9d7c80cfda93095e7193e5ae58c3"},
 ]
 pywin32-ctypes = [
     {file = "pywin32-ctypes-0.2.0.tar.gz", hash = "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942"},
