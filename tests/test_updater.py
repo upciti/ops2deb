@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 from httpx import AsyncClient
@@ -18,7 +18,7 @@ def app_factory():
     def _app_response(request: Request):
         return Response(status_code=200)
 
-    def _app_factory(versions: List[str]):
+    def _app_factory(versions: list[str]):
         app = Starlette(debug=True)
         for version in versions:
             app.add_route(
@@ -31,7 +31,7 @@ def app_factory():
 
 @pytest.fixture
 def github_app_factory():
-    def _github_app_factory(latest_release: str, versions: Optional[List[str]] = None):
+    def _github_app_factory(latest_release: str, versions: Optional[list[str]] = None):
         versions = versions or []
         app = Starlette(debug=True)
 

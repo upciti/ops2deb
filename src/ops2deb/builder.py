@@ -1,14 +1,14 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ops2deb import logger
 from ops2deb.exceptions import Ops2debBuilderError
 from ops2deb.utils import log_and_raise
 
 
-def parse_debian_control(cwd: Path) -> Dict[str, str]:
+def parse_debian_control(cwd: Path) -> dict[str, str]:
     """
     Extract fields from debian/control
     :param cwd: Path to debian source package
@@ -56,7 +56,7 @@ async def build_package(cwd: Path) -> None:
         logger.info(f"Successfully built {str(cwd)}")
 
 
-def build(package_paths: List[Path], workers: int) -> None:
+def build(package_paths: list[Path], workers: int) -> None:
     """
     Build debian source packages in parallel.
     :param package_paths: list of debian source package paths

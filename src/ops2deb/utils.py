@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Dict, Iterator, Tuple, TypeVar
+from typing import Iterator, Tuple, TypeVar
 
 from ops2deb import logger
 from ops2deb.exceptions import Ops2debError
@@ -17,10 +17,10 @@ U = TypeVar("U")
 
 
 def separate_results_from_errors(
-    results_and_errors: Dict[U, T | Exception]
-) -> Tuple[Dict[U, T], Dict[U, Ops2debError]]:
-    results: Dict[U, T] = {}
-    errors: Dict[U, Ops2debError] = {}
+    results_and_errors: dict[U, T | Exception]
+) -> Tuple[dict[U, T], dict[U, Ops2debError]]:
+    results: dict[U, T] = {}
+    errors: dict[U, Ops2debError] = {}
     for key, value in results_and_errors.items():
         if isinstance(value, Ops2debError):
             errors[key] = value
