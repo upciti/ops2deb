@@ -1,5 +1,5 @@
 - name: helm
-  version: 3.7.2
+  version: 3.10.1
   homepage: https://helm.sh/
   summary: The Kubernetes package manager
   description: |-
@@ -10,14 +10,14 @@
   fetch:
     url: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
     sha256:
-      amd64: 4ae30e48966aba5f807a4e140dad6736ee1a392940101e4d79ffb4ee86200a9e
-      armhf: ab73727f1c00903aff010a3557ab4366a1a13ce2d243c9cb191e703fbb76c915
-      arm64: b0214eabbb64791f563bd222d17150ce39bf4e2f5de49f49fdb456ce9ae8162f
+      amd64: c12d2cd638f2d066fec123d0bd7f010f32c643afdf288d39a4610b1f9cb32af3
+      armhf: 309f56a35185023262b4f20f7315d4e60854b517243444b34f5a458c81b33009
+      arm64: d04b38d439ab8655abb4cb9ccc1efa8a3fe95f3f68af46d9137c6b7985491833
   script:
     - mv linux-*/helm {{src}}/usr/bin/
 
 - name: helmfile
-  version: 0.143.0
+  version: 0.144.0
   homepage: https://github.com/roboll/helmfile
   summary: Deploy Kubernetes Helm Charts
   description: |-
@@ -33,13 +33,13 @@
   fetch:
     url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_{{goarch}}
     sha256:
-      amd64: 829b2b27aa4d7111f6c5b047ca162d2a9aef76b6646bb31c895850683a86c2c1
-      arm64: 91fae17f3b43dcfd34b0cc8b0d69eb3937b13d0e3ddca96dcada58bdafc1ccf4
+      amd64: dcf865a715028d3a61e2fec09f2a0beaeb7ff10cde32e096bf94aeb9a6eb4f02
+      arm64: 8461bbb13ba23f4333dc99d96bf7a24c283cd7683e746acf639d80bbd828926a
   script:
     - install -m 755 helmfile_linux_* {{src}}/usr/bin/helmfile
 
 - name: istioctl
-  version: 1.12.1
+  version: 1.15.3
   homepage: https://istio.io/
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
@@ -47,14 +47,14 @@
     - kubectl
   fetch:
     url: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
-    sha256: 7b1279810a77590bd7af60d6d26074a89c32e6aff7512fdc37f38b093e34e382
+    sha256: f5fe82687f3777d6e5c9e4cda0d99bd03ff7aefaa9f10b0e608e0990a6ab000a
   script:
     - install -d {{src}}/opt/istio
     - mv * {{src}}/opt/istio/
     - ln -s /opt/istio/istio-{{version}}/bin/istioctl {{src}}/usr/bin/istioctl
 
 - name: kubectl
-  version: 1.23.1
+  version: 1.25.3
   homepage: https://github.com/kubernetes/kubectl
   summary: Command line client for controlling a Kubernetes cluster
   description: |-
@@ -62,25 +62,25 @@
     clusters.
   fetch:
     url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
-    sha256: 156fd5e7ebbedf3c482fd274089ad75a448b04cf42bc53f370e4e4ea628f705e
+    sha256: f57e568495c377407485d3eadc27cda25310694ef4ffc480eeea81dea2b60624
   install:
     - kubectl:/usr/bin/
 
 - name: kubeseal
-  version: 0.16.0
+  version: 0.19.1
   homepage: https://github.com/bitnami-labs/sealed-secrets
   summary: Secret management solution for k8s
   description: |-
     Encrypt your Secret into a SealedSecret, which is safe to store - even to a
     public repository.
   fetch:
-    url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-linux-amd64
-    sha256: 0899c583053a7c242359985545d9c5c76899fb965dd9d1c46cbcc8b4dd2071ed
+    url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-{{version}}-linux-amd64.tar.gz
+    sha256: a78aa5c04b24bd3cbc72527a40bc13ae4d15f911e3053da510a68ddcd2cfd27a
   install:
-    - kubeseal-linux-amd64:/usr/bin/kubeseal
+    - kubeseal:/usr/bin/kubeseal
 
 - name: kustomize
-  version: 4.4.1
+  version: 4.5.7
   homepage: https://kustomize.io/
   summary: Kubernetes native configuration management
   description: |-
@@ -93,12 +93,12 @@
     - kubectl
   fetch:
     url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
-    sha256: 2d5927efec40ba32a121c49f6df9955b8b8a296ef1dec4515a46fc84df158798
+    sha256: 701e3c4bfa14e4c520d481fdf7131f902531bfc002cb5062dcf31263a09c70c9
   install:
     - kustomize:/usr/bin/
 
 - name: minikube
-  version: 1.24.0
+  version: 1.27.1
   homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
   description: |-
@@ -112,12 +112,12 @@
     Addons for easily installed Kubernetes applications
   fetch:
     url: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
-    sha256: 3bc218476cf205acf11b078d45210a4882e136d24a3cbb7d8d645408e423b8fe
+    sha256: 159bc79f3914dadb7c9f56b6e9d5b73a1c54acb26dca8f1ea84b99ff5da42620
   install:
     - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
-  version: 0.18.0
+  version: 0.35.0
   homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-
@@ -132,6 +132,6 @@
     - debhelper
   fetch:
     url: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64
-    sha256: fe0211a702dfb106691f0eace7559bb6f660db63446491bec36096de8909f671
+    sha256: 65e2ab3967dddb99c330d1027bb4e74e04b0eb5942c48f8b9ad38c912363d1d5
   install:
     - ops2deb_linux_amd64:/usr/bin/ops2deb
