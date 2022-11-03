@@ -2,7 +2,7 @@ import shutil
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, List, NoReturn, Optional, Tuple
+from typing import Any, List, NoReturn, Optional
 
 import click
 import typer
@@ -24,7 +24,7 @@ class DefaultCommandGroup(TyperGroup):
         self.ignore_unknown_options = True
         super().__init__(*args, **kwargs)
 
-    def parse_args(self, ctx: click.Context, args: List[str]) -> List[str]:
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         if not args:
             args.insert(0, self.default_command)
         return super().parse_args(ctx, args)
@@ -36,8 +36,8 @@ class DefaultCommandGroup(TyperGroup):
         return super().get_command(ctx, cmd_name)
 
     def resolve_command(
-        self, ctx: click.Context, args: List[str]
-    ) -> Tuple[str | None, click.Command | None, List[str]]:
+        self, ctx: click.Context, args: list[str]
+    ) -> tuple[str | None, click.Command | None, list[str]]:
         cmd_name, cmd, args = super().resolve_command(ctx, args)
         if hasattr(ctx, "default_command") and cmd_name:
             args.insert(0, cmd_name)

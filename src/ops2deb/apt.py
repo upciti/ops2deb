@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from itertools import chain, product
-from typing import Iterator, List
+from typing import Iterator
 
 import httpx
 from debian.deb822 import Packages, Release
@@ -71,7 +71,7 @@ def _parse_debian_repository_option(debian_repository: str) -> DebianRepository:
 
 async def list_repository_packages(
     debian_repository: str,
-) -> List[DebianRepositoryPackage]:
+) -> list[DebianRepositoryPackage]:
     repository = _parse_debian_repository_option(debian_repository)
     async with client_factory(base_url=repository.url) as client:
         release = await _download_repository_release_file(client, repository.distribution)
@@ -95,6 +95,6 @@ async def list_repository_packages(
 
 def sync_list_repository_packages(
     debian_repository: str,
-) -> List[DebianRepositoryPackage]:
+) -> list[DebianRepositoryPackage]:
     """Example: "http://deb.wakemeops.com/ stable" """
     return asyncio.run(list_repository_packages(debian_repository))

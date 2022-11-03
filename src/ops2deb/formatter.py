@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from textwrap import wrap
-from typing import Any, Dict, List, Tuple
+from typing import Any, Tuple
 
 import yaml
 
@@ -21,26 +21,26 @@ class PrettyYAMLDumper(yaml.dumper.SafeDumper):
         return style
 
 
-def sort_blueprints(blueprints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    def key(blueprint: Dict[str, Any]) -> Tuple[str, str, int]:
+def sort_blueprints(blueprints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def key(blueprint: dict[str, Any]) -> Tuple[str, str, int]:
         return blueprint["name"], blueprint["version"], blueprint.get("revision", 1)
 
     return sorted(blueprints, key=key)
 
 
 def format_description(description: str) -> str:
-    lines: List[str] = []
+    lines: list[str] = []
     description = description.strip("\n ")
     for line in description.split("\n"):
         lines.extend(wrap(line, width=79) or [""])
     return "\n".join(lines)
 
 
-def format_blueprint(blueprint: Dict[str, Any]) -> Dict[str, Any]:
+def format_blueprint(blueprint: dict[str, Any]) -> dict[str, Any]:
     blueprint = json.loads(Blueprint.construct(**blueprint).json(exclude_defaults=True))
     if "description" in blueprint.keys():
         blueprint["description"] = format_description(blueprint["description"])
-    keys_to_remove: List[str] = []
+    keys_to_remove: list[str] = []
     for key, value in blueprint.items():
         if isinstance(value, list) and not blueprint.get(key):
             keys_to_remove.append(key)
@@ -77,7 +77,7 @@ def format(configuration_path: Path) -> None:
 
     # add line break between blueprints
     yaml_dump_lines = yaml_dump.split(b"\n")
-    new_yaml_dump_lines: List[bytes] = [yaml_dump_lines[0]]
+    new_yaml_dump_lines: list[bytes] = [yaml_dump_lines[0]]
     for line in yaml_dump_lines[1:]:
         if line.startswith(b"- "):
             new_yaml_dump_lines.append(b"")

@@ -6,7 +6,7 @@ import shutil
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Tuple
 
 import aiofiles
 import httpx
@@ -163,8 +163,8 @@ class FetchTask:
 
 
 async def _run_tasks(
-    tasks: List[FetchTask],
-) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    tasks: list[FetchTask],
+) -> Tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
     if tasks:
         logger.title(f"Fetching {len(tasks)} files...")
     results = await asyncio.gather(*[t.fetch() for t in tasks], return_exceptions=True)
@@ -177,12 +177,12 @@ def set_cache_directory(path: Path) -> None:
 
 
 async def fetch_urls(
-    urls: List[str],
-) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    urls: list[str],
+) -> Tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
     return await _run_tasks([FetchTask(url) for url in urls])
 
 
 def fetch_remote_files(
-    remote_files: List[RemoteFile],
-) -> Tuple[Dict[str, FetchResult], Dict[str, Ops2debError]]:
+    remote_files: list[RemoteFile],
+) -> Tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
     return asyncio.run(_run_tasks([FetchTask(r.url, r.sha256) for r in remote_files]))

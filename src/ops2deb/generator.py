@@ -2,7 +2,6 @@ import logging
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, List
 
 from dirsync import sync
 
@@ -121,7 +120,7 @@ class SourcePackage:
             if result.returncode:
                 raise Ops2debGeneratorScriptError
 
-    def generate(self, fetch_results: Dict[str, FetchResult]) -> None:
+    def generate(self, fetch_results: dict[str, FetchResult]) -> None:
         fetch_result: FetchResult | None = None
         if self.remote_file is not None:
             fetch_result = fetch_results.get(self.remote_file.url, None)
@@ -161,10 +160,10 @@ class SourcePackage:
 
 
 def filter_already_published_packages(
-    packages: List[SourcePackage], debian_repository: str
-) -> List[SourcePackage]:
+    packages: list[SourcePackage], debian_repository: str
+) -> list[SourcePackage]:
     already_published_packages = sync_list_repository_packages(debian_repository)
-    filtered_packages: List[SourcePackage] = []
+    filtered_packages: list[SourcePackage] = []
     for package in packages:
         if (
             DebianRepositoryPackage(
@@ -177,11 +176,11 @@ def filter_already_published_packages(
 
 
 def generate(
-    blueprints: List[Blueprint],
+    blueprints: list[Blueprint],
     output_directory: Path,
     debian_repository: str | None = None,
-    only_names: List[str] | None = None,
-) -> List[SourcePackage]:
+    only_names: list[str] | None = None,
+) -> list[SourcePackage]:
     # each blueprint can yield multiple source packages, one per supported arch
     packages = [SourcePackage(b, output_directory) for b in extend(blueprints)]
 
