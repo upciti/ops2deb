@@ -203,6 +203,16 @@ mock_invalid_configuration_validation_error = """\
 - name: awesome-metapackage
 """
 
+mock_configuration_with_dangling_symlink_in_archive = """\
+- name: great-app
+  summary: Great package
+  version: 1.0.0
+  description: A detailed description of the great package.
+  fetch:
+    url: http://testserver/{{version}}/dangling-symlink.tar.xz
+    sha256: 7010dc76519072ceb552433f0eda2904dba197312fc9abd946cdcece65ba2af5
+"""
+
 
 @pytest.fixture(scope="function")
 def call_ops2deb(tmp_path, mock_httpx_client):
@@ -304,6 +314,16 @@ def test_ops2deb_generate_should_honor_only_argument(tmp_path, call_ops2deb):
     result = call_ops2deb("generate", "--only", "great-app")
     print(result.stdout)
     assert list(tmp_path.glob("*_all")) == [tmp_path / "great-app_1.0.0_all"]
+    assert result.exit_code == 0
+
+
+def test_ops2deb_generate_should_not_crash_when_archive_contains_a_dangling_symlink(
+    tmp_path, call_ops2deb
+):
+    result = call_ops2deb(
+        "generate", configuration=mock_configuration_with_dangling_symlink_in_archive
+    )
+    print(result.stdout)
     assert result.exit_code == 0
 
 

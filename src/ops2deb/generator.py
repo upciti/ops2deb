@@ -1,7 +1,10 @@
+import logging
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, List
+
+from dirsync import sync
 
 from ops2deb import logger
 from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
@@ -50,10 +53,16 @@ class SourcePackage:
             self.fetch_directory.mkdir(exist_ok=True)
             shutil.copy2(fetch_result.storage_path, self.fetch_directory)
         else:
-            shutil.copytree(
-                fetch_result.storage_path,
-                self.fetch_directory,
-                ignore_dangling_symlinks=True,
+            dirsync_logger = logging.getLogger("dirsync")
+            dirsync_logger.setLevel(logging.CRITICAL)
+            # FIXME: is there a more recent lib to sync trees?
+            #  shutil.copytree is not an option: https://bugs.python.org/issue38523
+            sync(
+                str(fetch_result.storage_path),
+                str(self.fetch_directory),
+                "sync",
+                create=True,
+                logger=dirsync_logger,
             )
 
     def _install_here_document(self, entry: HereDocument, destination: Path) -> None:
