@@ -139,6 +139,15 @@ async def serve_error_500(request: Request):
     return Response(status_code=500)
 
 
+@starlette_app.route("/1.0.0/dangling-symlink.tar.xz")
+async def serve_dangling_symlink_tar_xz(request: Request):
+    return build_server_response(
+        b"""/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4AX/AGFdADIYSiE4i4ddgZh67LcVqfV6kAa92oeZZszM
+2Tg8AMYeZqxKzl9Ypxd5dz3hYKZmYWYxihSJZAW6R+XAe2ce+dJboUIlwezUAwemw+f4mQVxSk0S
+tLV2svttG83alyZFRFwAAAAALhYEWE9UVL0AAX2ADAAAAOjF2Y+xxGf7AgAAAAAEWVo="""
+    )
+
+
 @pytest.fixture(scope="function")
 def mock_httpx_client():
     real_async_client = httpx.AsyncClient
