@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, Tuple, cast
 
 import httpx
 import ruamel.yaml
@@ -121,7 +121,7 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
             raise ValueError(f"URL {fetch.url} is not supported")
         return f"{cls.github_base_api_url}/repos/{match['owner']}/{match['name']}"
 
-    async def _get_latest_github_release(self, blueprint: Blueprint) -> Dict[str, Any]:
+    async def _get_latest_github_release(self, blueprint: Blueprint) -> dict[str, str]:
         repo_api_base_url = self._get_github_repo_api_base_url(blueprint)
         headers = {"accept": self.github_media_type}
         if (token := os.environ.get("GITHUB_TOKEN")) is not None:
@@ -139,7 +139,7 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
             except Exception:
                 pass
             raise Ops2debUpdaterError(error)
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
     @classmethod
     def is_blueprint_supported(cls, blueprint: Blueprint) -> bool:
@@ -166,10 +166,10 @@ class LatestRelease:
     blueprint_index: int
     blueprint: Blueprint
     version: str
-    fetch_results: Dict[str, FetchResult]
+    fetch_results: dict[str, FetchResult]
 
     def update_configuration(
-        self, blueprint_dict: Dict[str, Any] | List[Dict[str, Any]]
+        self, blueprint_dict: dict[str, Any] | list[dict[str, Any]]
     ) -> None:
         # configuration file can be a list of blueprints or a single blueprint
         raw_blueprint = (
@@ -215,8 +215,8 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
 
 
 async def _find_latest_releases(
-    blueprint_list: List[Blueprint], skip_names: List[str] | None = None
-) -> Tuple[List[LatestRelease], Dict[int, Ops2debError]]:
+    blueprint_list: list[Blueprint], skip_names: list[str] | None = None
+) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
     skip_names = skip_names or []
     blueprints = {
         index: blueprint
@@ -235,7 +235,7 @@ async def _find_latest_releases(
     blueprints = {i: b for i, b in blueprints.items() if versions[i] != b.version}
 
     # gather the urls of files we need to download to get the new checksums
-    urls: Dict[int, Dict[str, str]] = defaultdict(dict)
+    urls: dict[int, dict[str, str]] = defaultdict(dict)
     for index, blueprint in blueprints.items():
         for arch in blueprint.supported_architectures():
             blueprint = blueprint.copy(update={"arch": arch})
@@ -252,7 +252,7 @@ async def _find_latest_releases(
                 errors[index] = exception
     blueprints = {i: b for i, b in blueprints.items() if i not in errors.keys()}
 
-    latest_releases: List[LatestRelease] = []
+    latest_releases: list[LatestRelease] = []
     for index, blueprint in blueprints.items():
         latest_releases.append(
             LatestRelease(
@@ -267,8 +267,8 @@ async def _find_latest_releases(
 
 
 def find_latest_releases(
-    blueprint_list: List[Blueprint], skip_names: List[str] | None = None
-) -> Tuple[List[LatestRelease], Dict[int, Ops2debError]]:
+    blueprint_list: list[Blueprint], skip_names: list[str] | None = None
+) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
     return asyncio.run(_find_latest_releases(blueprint_list, skip_names))
 
 
@@ -276,7 +276,7 @@ def update(
     configuration_path: Path,
     dry_run: bool = False,
     output_path: Path | None = None,
-    skip_names: List[str] | None = None,
+    skip_names: list[str] | None = None,
 ) -> None:
     yaml = ruamel.yaml.YAML(typ="rt")
     yaml.Emitter = FixIndentEmitter

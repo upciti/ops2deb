@@ -15,7 +15,7 @@ class PrettyYAMLDumper(yaml.dumper.SafeDumper):
         self.state = self.expect_first_block_sequence_item
 
     def choose_scalar_style(self) -> str:
-        style = super().choose_scalar_style()
+        style: str = super().choose_scalar_style()
         style = '"' if style == "'" else style
         style = "|" if self.analysis.multiline else style
         return style
