@@ -84,6 +84,16 @@ exclude = '''
 line_length = 90
 profile = "black"
 
+[tool.mypy]
+files = "src"
+strict = true
+plugins = ["pydantic.mypy"]
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = ['unix_ar', "dirsync"]
+ignore_missing_imports = true
+
 [build-system]
 requires = ["poetry>=1.0.2", "poetry-dynamic-versioning"]
 build-backend = "poetry.masonry.api"

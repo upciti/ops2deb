@@ -121,7 +121,7 @@ async def server_great_app_armhf_1_1_1_tar_gz(request: Request):
 @starlette_app.route("/1.0.0/great-app-amd64.tar.gz")
 @starlette_app.route("/1.1.0/great-app-amd64.tar.gz")
 @starlette_app.route("/1.1.1/great-app-amd64.tar.gz")
-async def server_great_app_tar_gz(request: Request):
+async def serve_great_app_tar_gz(request: Request):
     return build_server_response(
         b"""H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF
         fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf

@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Any, Dict, List, Literal
+from typing import Any, Literal
 
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError, validator
-from ruamel.yaml import YAML, YAMLError
+from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
 
 from ops2deb.exceptions import Ops2debParserError
 from ops2deb.jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
@@ -81,22 +81,22 @@ class Blueprint(Base):
     arch: Architecture = Field("amd64", description="Package architecture")
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field("", description="Package description")
-    build_depends: List[str] = Field(
+    build_depends: list[str] = Field(
         default_factory=list, description="Package build dependencies"
     )
-    provides: List[str] = Field(
+    provides: list[str] = Field(
         default_factory=list,
         description="List of virtual packages provided by this package",
     )
-    depends: List[str] = Field(default_factory=list, description="Package dependencies")
-    recommends: List[str] = Field(
+    depends: list[str] = Field(default_factory=list, description="Package dependencies")
+    recommends: list[str] = Field(
         default_factory=list, description="Package recommended dependencies"
     )
-    replaces: List[str] = Field(
+    replaces: list[str] = Field(
         default_factory=list,
         description="List of packages replaced by this package",
     )
-    conflicts: List[str] = Field(
+    conflicts: list[str] = Field(
         default_factory=list,
         description="Conflicting packages, for more information read "
         "https://www.debian.org/doc/debian-policy/ch-relationships.html",
@@ -106,16 +106,16 @@ class Blueprint(Base):
         description="Describe a file (or a file per architecture) to download before "
         "running the build script",
     )
-    install: List[HereDocument | SourceDestinationStr] = Field(default_factory=list)
-    script: List[str] = Field(default_factory=list, description="Build instructions")
+    install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
+    script: list[str] = Field(default_factory=list, description="Build instructions")
 
     @validator("*", pre=True)
-    def _render_string_attributes(cls, v: Any) -> str:
+    def _render_string_attributes(cls, v: Any) -> Any:
         if isinstance(v, str):
             return environment.from_string(v).render()
         return v
 
-    def _get_additional_variables(self) -> Dict[str, str | None]:
+    def _get_additional_variables(self) -> dict[str, str | None]:
         target = (
             (getattr(self.fetch.targets, self.arch, self.arch) or self.arch)
             if isinstance(self.fetch, MultiArchitectureRemoteFile)
@@ -127,7 +127,7 @@ class Blueprint(Base):
             rust_target=DEFAULT_RUST_TARGET_MAP.get(self.arch, None),
         )
 
-    def supported_architectures(self) -> List[str]:
+    def supported_architectures(self) -> list[str]:
         if isinstance(self.fetch, MultiArchitectureRemoteFile):
             return list(self.fetch.sha256.dict(exclude_none=True).keys())
         else:
@@ -161,20 +161,18 @@ class Blueprint(Base):
 
 
 class Configuration(Base):
-    __root__: List[Blueprint] | Blueprint
+    __root__: list[Blueprint] | Blueprint
 
 
-def extend(blueprints: List[Blueprint]) -> List[Blueprint]:
-    extended_list: List[Blueprint] = []
+def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
+    extended_list: list[Blueprint] = []
     for blueprint in blueprints:
         for arch in blueprint.supported_architectures():
             extended_list.append(blueprint.copy(update={"arch": arch}))
     return extended_list
 
 
-def load(
-    configuration_path: Path, yaml: YAML = YAML()
-) -> List[Dict[str, Any]] | Dict[str, Any]:
+def load(configuration_path: Path, yaml: YAML = YAML()) -> Any:
     try:
         return yaml.load(configuration_path.open("r"))
     except YAMLError as e:
@@ -188,8 +186,8 @@ def load(
 
 
 def validate(
-    configuration_dict: List[Dict[str, Any]] | Dict[str, Any]
-) -> List[Blueprint]:
+    configuration_dict: list[dict[str, Any]] | dict[str, Any]
+) -> list[Blueprint]:
     try:
         blueprints = Configuration.parse_obj(configuration_dict).__root__
     except ValidationError as e:
@@ -199,5 +197,5 @@ def validate(
     return blueprints
 
 
-def parse(configuration_path: Path) -> List[Blueprint]:
+def parse(configuration_path: Path) -> list[Blueprint]:
     return validate(load(configuration_path))
