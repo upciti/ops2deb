@@ -795,7 +795,7 @@ test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.
 
 [[package]]
 name = "types-aiofiles"
-version = "22.1.0.3"
+version = "22.1.0.4"
 description = "Typing stubs for aiofiles"
 category = "dev"
 optional = false
@@ -1392,8 +1392,8 @@ typer = [
     {file = "typer-0.7.0.tar.gz", hash = "sha256:ff797846578a9f2a201b53442aedeb543319466870fbe1c701eab66dd7681165"},
 ]
 types-aiofiles = [
-    {file = "types-aiofiles-22.1.0.3.tar.gz", hash = "sha256:9406b93f970e5d647b2183c3a01a253e77693b175b6e31de997192639f6c4955"},
-    {file = "types_aiofiles-22.1.0.3-py3-none-any.whl", hash = "sha256:c12668e29307ce06f751dbe02960a9fe6a3e3d9055911ca254839e8e9a78553f"},
+    {file = "types-aiofiles-22.1.0.4.tar.gz", hash = "sha256:54465417fdfafc723e6f0fca66de5498866f1cf2595b72c9da35c96d1c3e9fce"},
+    {file = "types_aiofiles-22.1.0.4-py3-none-any.whl", hash = "sha256:3c3d389ceec04c78bd33d13304332dcc46856a418d7d4ebf95e398f1efa3a3b7"},
 ]
 types-pyyaml = [
     {file = "types-PyYAML-6.0.12.1.tar.gz", hash = "sha256:70ccaafcf3fb404d57bffc1529fdd86a13e8b4f2cf9fc3ee81a6408ce0ad59d2"},
