@@ -415,7 +415,7 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "poetry-dynamic-versioning"
-version = "0.21.1"
+version = "0.21.2"
 description = "Plugin for Poetry to enable dynamic versioning based on VCS tags"
 category = "dev"
 optional = false
@@ -1122,8 +1122,8 @@ pluggy = [
     {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
 ]
 poetry-dynamic-versioning = [
-    {file = "poetry_dynamic_versioning-0.21.1-py3-none-any.whl", hash = "sha256:846ae837d4a81b3d2bf0a2433209f2d19b68b4dd5ecf1fd4996f0b1a667153c4"},
-    {file = "poetry_dynamic_versioning-0.21.1.tar.gz", hash = "sha256:0ba2a991a388f4ef202b0cf63629510cf64e7fef3ad232574f9598dd8c379d46"},
+    {file = "poetry_dynamic_versioning-0.21.2-py3-none-any.whl", hash = "sha256:1e31e0c0058222a299dd277a18eb680ca63ab77ba6ecdad88fcbe49e4cba2852"},
+    {file = "poetry_dynamic_versioning-0.21.2.tar.gz", hash = "sha256:d8e0cefbc351833f694a373baaad9886f57be8339f08ba81a9c29366a582e45e"},
 ]
 psutil = [
     {file = "psutil-5.9.3-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:b4a247cd3feaae39bb6085fcebf35b3b8ecd9b022db796d89c8f05067ca28e71"},
