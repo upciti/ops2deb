@@ -122,7 +122,7 @@ Description: My great app
 def test_generate_should_produce_identical_control_file_snapshot(
     tmp_path, blueprint, control
 ):
-    generate([blueprint], tmp_path)
+    generate([blueprint], tmp_path, tmp_path)
     control_file = tmp_path / f"great-app_1.0.0_{blueprint.arch}/debian/control"
     assert control_file.read_text() == control
 
@@ -132,7 +132,7 @@ def test__install_files_should_create_here_document_in_src_directory_if_destinat
 ):
     files = [dict(path="/test", content="content")]
     blueprint = blueprint_factory(install=files)
-    SourcePackage(blueprint, tmp_path)._install_files()
+    SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
 
 
@@ -141,7 +141,7 @@ def test__install_files_should_create_here_document_in_package_directory_if_dest
 ):
     files = [dict(path="test", content="content")]
     blueprint = blueprint_factory(install=files)
-    SourcePackage(blueprint, tmp_path)._install_files()
+    SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/test").is_file()
 
 
@@ -150,7 +150,7 @@ def test__install_files_should_render_content_in_here_document(
 ):
     files = [dict(path="test", content="{{version}}")]
     blueprint = blueprint_factory(install=files)
-    SourcePackage(blueprint, tmp_path)._install_files()
+    SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/test").read_text() == blueprint.version
 
 
@@ -160,7 +160,7 @@ def test__install_files_should_fail_to_create_here_document_if_file_already_exis
     files = [dict(path="/test", content="content"), dict(path="/test", content="content")]
     blueprint = blueprint_factory(install=files)
     with pytest.raises(Ops2debGeneratorError):
-        SourcePackage(blueprint, tmp_path)._install_files()
+        SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
 
 
 def test__install_files_should_copy_file_when_input_is_a_source_destination_str_and_source_is_a_file(  # noqa: E501
@@ -169,7 +169,7 @@ def test__install_files_should_copy_file_when_input_is_a_source_destination_str_
     source = tmp_path / "test"
     source.write_text("test")
     blueprint = blueprint_factory(install=[f"{source}:/test"])
-    SourcePackage(blueprint, tmp_path)._install_files()
+    SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").read_text() == "test"
 
@@ -182,7 +182,7 @@ def test__install_files_should_copy_dir_tree_when_input_is_a_source_destination_
     tree.mkdir(parents=True)
     (tree / "test").write_text("test")
     blueprint = blueprint_factory(install=[f"{source}:/"])
-    SourcePackage(blueprint, tmp_path)._install_files()
+    SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/share/a/test").is_file()
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/share/a/test").read_text() == "test"
 
@@ -192,14 +192,13 @@ def test__install_files_should_fail_when_input_is_a_source_destination_str_and_s
 ):
     blueprint = blueprint_factory(install=[f"{tmp_path}/test:/test"])
     with pytest.raises(Ops2debGeneratorError):
-        SourcePackage(blueprint, tmp_path)._install_files()
+        SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
 
 
-def test__install_files_should_render_debian_variable_in_source_destination_str(
+def test__install_files_should_render_cwd_and_debian_variable_in_source_destination_str(
     tmp_path, blueprint_factory
 ):
-    source = tmp_path / "test"
-    source.touch()
-    blueprint = blueprint_factory(install=[str(source) + ":{{debian}}/test"])
-    SourcePackage(blueprint, tmp_path)._install_files()
+    (tmp_path / "test").touch()
+    blueprint = blueprint_factory(install=["{{cwd}}/test:{{debian}}/test"])
+    SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/debian/test").is_file()
