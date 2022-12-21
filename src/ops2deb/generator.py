@@ -21,7 +21,9 @@ def _format_command_output(output: str) -> str:
 
 
 class SourcePackage:
-    def __init__(self, blueprint: Blueprint, output_directory: Path):
+    def __init__(
+        self, blueprint: Blueprint, output_directory: Path, configuration_directory: Path
+    ):
         epoch = f"{blueprint.epoch}:" if blueprint.epoch else ""
         self.debian_version = f"{epoch}{blueprint.version}-{blueprint.revision}~ops2deb"
         self.directory_name = f"{blueprint.name}_{blueprint.version}_{blueprint.arch}"
@@ -31,6 +33,7 @@ class SourcePackage:
         self.fetch_directory = self.package_directory / "fetched"
         self.blueprint = blueprint
         self.remote_file = self.blueprint.render_fetch()
+        self.configuration_directory = configuration_directory
 
     def _render_template(self, template_name: str) -> None:
         template = environment.get_template(f"{template_name}")
@@ -67,12 +70,12 @@ class SourcePackage:
     def _install_here_document(self, entry: HereDocument, destination: Path) -> None:
         if destination.exists():
             raise Ops2debGeneratorError(f"Destination {destination} already exists")
-        destination.write_text(self.blueprint.render_string(entry.content))
+        destination.write_text(self._render_string(entry.content))
 
     def _install_source_destination_str(
         self, entry: SourceDestinationStr, destination: Path
     ) -> None:
-        source = Path(self.blueprint.render_string(entry.source))
+        source = Path(self._render_string(entry.source))
         if source.exists() is False:
             raise Ops2debGeneratorError(f"Source {str(source)} does not exist")
         if source.is_dir() is True:
@@ -89,6 +92,7 @@ class SourcePackage:
             string,
             src=self.source_directory,
             debian=self.debian_directory,
+            cwd=self.configuration_directory,
         )
 
     def _install_files(self) -> None:
@@ -178,11 +182,15 @@ def filter_already_published_packages(
 def generate(
     blueprints: list[Blueprint],
     output_directory: Path,
+    configuration_directory: Path,
     debian_repository: str | None = None,
     only_names: list[str] | None = None,
 ) -> list[SourcePackage]:
     # each blueprint can yield multiple source packages, one per supported arch
-    packages = [SourcePackage(b, output_directory) for b in extend(blueprints)]
+    packages = [
+        SourcePackage(b, output_directory, configuration_directory)
+        for b in extend(blueprints)
+    ]
 
     if only_names is not None:
         packages = [p for p in packages if p.blueprint.name in only_names]

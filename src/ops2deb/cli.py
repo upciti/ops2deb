@@ -141,7 +141,11 @@ def default(
     try:
         blueprints = parser.parse(configuration_path)
         packages = generator.generate(
-            blueprints, output_directory, debian_repository, only or None
+            blueprints,
+            output_directory,
+            configuration_path.parent,
+            debian_repository,
+            only or None,
         )
         builder.build([p.package_directory for p in packages], workers_count)
     except Ops2debError as e:
@@ -161,7 +165,13 @@ def generate(
     set_cache_directory(cache_directory)
     try:
         blueprints = parser.parse(configuration_path)
-        generator.generate(blueprints, output_directory, debian_repository, only or None)
+        generator.generate(
+            blueprints,
+            output_directory,
+            configuration_path.parent,
+            debian_repository,
+            only or None,
+        )
     except Ops2debError as e:
         error(e, exit_code)
 
