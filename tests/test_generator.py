@@ -202,3 +202,12 @@ def test__install_files_should_render_cwd_and_debian_variable_in_source_destinat
     blueprint = blueprint_factory(install=["{{cwd}}/test:{{debian}}/test"])
     SourcePackage(blueprint, tmp_path, tmp_path)._install_files()
     assert (tmp_path / "great-app_1.0.0_amd64/debian/test").is_file()
+
+
+def test__init__should_use_absolute_paths(blueprint_factory, tmp_path):
+    blueprint = blueprint_factory()
+    package = SourcePackage(blueprint, tmp_path, tmp_path)
+    assert package.package_directory.is_absolute() is True
+    assert package.debian_directory.is_absolute() is True
+    assert package.source_directory.is_absolute() is True
+    assert package.configuration_directory.is_absolute() is True

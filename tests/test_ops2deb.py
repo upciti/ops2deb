@@ -137,18 +137,6 @@ mock_configuration_with_multi_arch_remote_file_and_404_on_one_file = """\
 """
 
 
-mock_configuration_single_blueprint_without_fetch = """\
-name: cool-app
-version: 1.0.0
-arch: all
-summary: Cool package
-description: |
-  A detailed description of the cool package
-script:
-  - install -m 755 cool-app.sh {{src}}/usr/bin/cool-app
-"""
-
-
 mock_configuration_single_blueprint_with_fetch = """\
 name: great-app
 version: 1.0.0
@@ -299,20 +287,27 @@ def test_ops2deb_generate_should_not_generate_packages_already_published_in_debi
     assert result.exit_code == 0
 
 
-def test_ops2deb_generate_should_run_script_from_current_directory_when_blueprint_has_not_fetch_instruction(  # noqa: E501
-    tmp_path, tmp_working_directory, call_ops2deb
+def test_ops2deb_generate_should_run_script_from_config_directory_when_blueprint_has_not_fetch_instruction(  # noqa: E501
+    tmp_path, call_ops2deb
 ):
+    configuration_without_fetch = """\
+    name: cool-app
+    version: 1.0.0
+    arch: all
+    summary: Cool package
+    description: |
+      A detailed description of the cool package
+    script:
+      - install -m 755 cool-app.sh {{src}}/usr/bin/cool-app
+    """
     (tmp_path / "cool-app.sh").touch()
-    result = call_ops2deb(
-        "generate", configuration=mock_configuration_single_blueprint_without_fetch
-    )
+    result = call_ops2deb("generate", configuration=configuration_without_fetch)
     assert result.exit_code == 0
     assert (tmp_path / "cool-app_1.0.0_all/src/usr/bin/cool-app").is_file()
 
 
 def test_ops2deb_generate_should_honor_only_argument(tmp_path, call_ops2deb):
     result = call_ops2deb("generate", "--only", "great-app")
-    print(result.stdout)
     assert list(tmp_path.glob("*_all")) == [tmp_path / "great-app_1.0.0_all"]
     assert result.exit_code == 0
 
@@ -323,14 +318,31 @@ def test_ops2deb_generate_should_not_crash_when_archive_contains_a_dangling_syml
     result = call_ops2deb(
         "generate", configuration=mock_configuration_with_dangling_symlink_in_archive
     )
-    print(result.stdout)
+    assert result.exit_code == 0
+
+
+def test_ops2deb_generate_should_set_cwd_variable_to_config_directory_when_blueprint_has_a_fetch_and_path_to_config_is_relative(  # noqa: E501
+    tmp_path, call_ops2deb, tmp_working_directory
+):
+    configuration = """\
+    name: great-app
+    version: 1.0.0
+    summary: Great package
+    fetch:
+      url: http://testserver/{{version}}/great-app.tar.gz
+      sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+    script:
+      - mv great-app {{src}}/usr/bin/great-app
+      - cp {{cwd}}/test.conf {{src}}/etc/test.conf
+    """
+    (tmp_path / "test.conf").touch()
+    result = call_ops2deb("generate", "-c", "ops2deb.yml", configuration=configuration)
     assert result.exit_code == 0
 
 
 def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     call_ops2deb("generate")
     result = call_ops2deb("build")
-    print(result.stdout)
     assert result.exit_code == 0
     assert (tmp_path / "great-app_1.0.0-2~ops2deb_all.deb").is_file()
 
@@ -352,7 +364,6 @@ def test_ops2deb_default_should_build_and_generate_packages_when_configuration_i
 
 def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     result = call_ops2deb("update")
-    print(result.stdout)
     configuration = parse(tmp_path / "ops2deb.yml")
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0

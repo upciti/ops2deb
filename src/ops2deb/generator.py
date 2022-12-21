@@ -28,12 +28,12 @@ class SourcePackage:
         self.debian_version = f"{epoch}{blueprint.version}-{blueprint.revision}~ops2deb"
         self.directory_name = f"{blueprint.name}_{blueprint.version}_{blueprint.arch}"
         self.package_directory = (output_directory / self.directory_name).absolute()
+        self.configuration_directory = configuration_directory.absolute()
         self.debian_directory = self.package_directory / "debian"
         self.source_directory = self.package_directory / "src"
         self.fetch_directory = self.package_directory / "fetched"
         self.blueprint = blueprint
         self.remote_file = self.blueprint.render_fetch()
-        self.configuration_directory = configuration_directory
 
     def _render_template(self, template_name: str) -> None:
         template = environment.get_template(f"{template_name}")
@@ -47,7 +47,7 @@ class SourcePackage:
         shutil.rmtree(self.fetch_directory, ignore_errors=True)
         shutil.rmtree(self.source_directory, ignore_errors=True)
         self.source_directory.mkdir(parents=True)
-        for path in ["usr/bin", "usr/share", "usr/lib"]:
+        for path in ["usr/bin", "usr/share", "usr/lib", "etc"]:
             (self.source_directory / path).mkdir(parents=True)
 
     def _populate_with_fetch_result(self, fetch_result: FetchResult) -> None:
@@ -152,11 +152,11 @@ class SourcePackage:
         ]:
             self._render_template(template)
 
-        # if blueprint has no fetch instruction, we stay in the directory from which
-        # ops2deb was called, otherwise we run install and script from the fetch directory
-        cwd = self.fetch_directory if self.blueprint.fetch else Path(".")
-
-        with working_directory(cwd):
+        # if blueprint has no fetch instruction, we walk in the directory where ops2deb
+        # config file is, otherwise we run install and script from the fetch directory
+        with working_directory(
+            self.fetch_directory if self.blueprint.fetch else self.configuration_directory
+        ):
             # copy files / create here documents
             self._install_files()
             # run blueprint script
