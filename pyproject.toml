@@ -40,7 +40,6 @@ pyinstaller = ["pyinstaller"]
 ops2deb = "ops2deb.cli:main"
 
 [tool.poetry.dev-dependencies]
-starlette = "*"
 pytest = "*"
 mypy = "*"
 taskipy = "*"
@@ -53,6 +52,7 @@ types-aiofiles = "*"
 types-PyYAML = "*"
 pytest-asyncio = ">=0.18.0"
 poetry-dynamic-versioning = ">=0.13.0"
+fastapi = "^0.88.0"
 
 [tool.taskipy.tasks]
 check = """
