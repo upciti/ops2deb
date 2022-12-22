@@ -429,7 +429,7 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_op
     assert "revision" not in configuration[1].keys()
 
 
-def test_ops2deb_update_should_fail_gracefully_when_server_error(tmp_path, call_ops2deb):
+def test_ops2deb_update_should_fail_gracefully_when_server_error(call_ops2deb):
     result = call_ops2deb("update", configuration=mock_configuration_with_server_error)
     error = "Server error when requesting http://testserver/1.1.0/bad-app.zip"
     assert error in result.stdout
@@ -437,7 +437,7 @@ def test_ops2deb_update_should_fail_gracefully_when_server_error(tmp_path, call_
 
 
 def test_ops2deb_update_should_fail_gracefully_with_multiarch_blueprint_when_404_error_on_a_file(  # noqa E501
-    tmp_path, call_ops2deb
+    call_ops2deb,
 ):
     result = call_ops2deb(
         "update",

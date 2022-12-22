@@ -3,9 +3,8 @@ import os
 
 import httpx
 import pytest
-from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.responses import PlainTextResponse, Response
+from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse, Response
 
 from ops2deb.parser import Blueprint, RemoteFile
 
@@ -70,21 +69,21 @@ Description: Super package
   A detailed description of the super package
 """
 
-starlette_app = Starlette(debug=True)
+app = FastAPI(debug=True)
 
 
-@starlette_app.route("/dists/stable/Release")
-async def serve_snapshot_apt_release(request: Request):
+@app.get("/dists/stable/Release")
+async def serve_snapshot_apt_release():
     return PlainTextResponse(content=snapshot_apt_Release)
 
 
-@starlette_app.route("/dists/stable/devops/binary-amd64/Packages")
-async def serve_snapshot_apt_devops_binary_amd64_packages(request: Request):
+@app.get("/dists/stable/devops/binary-amd64/Packages")
+async def serve_snapshot_apt_devops_binary_amd64_packages():
     return PlainTextResponse(content=snapshot_apt_devops_binary_amd64_Packages)
 
 
-@starlette_app.route("/dists/stable/secops/binary-amd64/Packages")
-async def serve_snapshot_apt_secops_binary_amd64_packages(request: Request):
+@app.get("/dists/stable/secops/binary-amd64/Packages")
+async def serve_snapshot_apt_secops_binary_amd64_packages():
     return PlainTextResponse(content=snapshot_apt_secops_binary_amd64_Packages)
 
 
@@ -96,9 +95,9 @@ def build_server_response(content: bytes, content_type: str = "application/x-gzi
     )
 
 
-@starlette_app.route("/1.0.0/great-app-armhf.tar.gz")
-@starlette_app.route("/1.1.0/great-app-armhf.tar.gz")
-async def server_great_app_armhf_tar_gz(request: Request):
+@app.get("/1.0.0/great-app-armhf.tar.gz")
+@app.head("/1.1.0/great-app-armhf.tar.gz")
+async def server_great_app_armhf_tar_gz():
     return build_server_response(
         b"""H4sIAAAAAAAAA+3SPQrCQBDF8a09xVxA2Ml+5CJeYEFNgpiE3aTw9iYIYhWrIML/17xiXvGKafI
         lTcc0jmY/dhGjX1PrYD/zxTmjXqNXX1UuGKtaazBid9z0NpcpZRFTuvvQb/S+3f/UqU39TR7DLN"
@@ -106,8 +105,8 @@ async def server_great_app_armhf_tar_gz(request: Request):
     )
 
 
-@starlette_app.route("/1.1.1/great-app-armhf.tar.gz")
-async def server_great_app_armhf_1_1_1_tar_gz(request: Request):
+@app.get("/1.1.1/great-app-armhf.tar.gz")
+async def server_great_app_armhf_1_1_1_tar_gz():
     return build_server_response(
         b"""H4sIAAAAAAAAA+3SPQqEQAyG4ak9RS4gTCSOZ7GcQmQLfxj1/irCspXayCK8T/NBkuIr0qYmznk
         cR/ccvwnB9tSq9L950ODUNJialYU6r1ptI/EPdvpapjkmETd9uqE/ubvav1Q9LBJTI+3+B9m/2w
@@ -115,13 +114,19 @@ async def server_great_app_armhf_1_1_1_tar_gz(request: Request):
     )
 
 
-@starlette_app.route("/1.0.0/great-app.tar.gz")
-@starlette_app.route("/1.1.0/great-app.tar.gz")
-@starlette_app.route("/1.1.1/great-app.tar.gz")
-@starlette_app.route("/1.0.0/great-app-amd64.tar.gz")
-@starlette_app.route("/1.1.0/great-app-amd64.tar.gz")
-@starlette_app.route("/1.1.1/great-app-amd64.tar.gz")
-async def serve_great_app_tar_gz(request: Request):
+@app.get("/1.0.0/great-app.tar.gz")
+@app.head("/1.0.0/great-app.tar.gz")
+@app.get("/1.1.0/great-app.tar.gz")
+@app.head("/1.1.0/great-app.tar.gz")
+@app.get("/1.1.1/great-app.tar.gz")
+@app.head("/1.1.1/great-app.tar.gz")
+@app.get("/1.0.0/great-app-amd64.tar.gz")
+@app.head("/1.0.0/great-app-amd64.tar.gz")
+@app.get("/1.1.0/great-app-amd64.tar.gz")
+@app.head("/1.1.0/great-app-amd64.tar.gz")
+@app.get("/1.1.1/great-app-amd64.tar.gz")
+@app.head("/1.1.1/great-app-amd64.tar.gz")
+async def serve_great_app_tar_gz():
     return build_server_response(
         b"""H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF
         fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf
@@ -129,18 +134,19 @@ async def serve_great_app_tar_gz(request: Request):
     )
 
 
-@starlette_app.route("/1.0.0/super-app")
-async def serve_super_app(request: Request):
+@app.get("/1.0.0/super-app")
+async def serve_super_app():
     return build_server_response(b"aGVsbG8K", content_type="application/octet-stream")
 
 
-@starlette_app.route("/1.1.0/bad-app.zip")
-async def serve_error_500(request: Request):
+@app.get("/1.1.0/bad-app.zip")
+@app.head("/1.1.0/bad-app.zip")
+async def serve_error_500():
     return Response(status_code=500)
 
 
-@starlette_app.route("/1.0.0/dangling-symlink.tar.xz")
-async def serve_dangling_symlink_tar_xz(request: Request):
+@app.get("/1.0.0/dangling-symlink.tar.xz")
+async def serve_dangling_symlink_tar_xz():
     return build_server_response(
         b"""/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4AX/AGFdADIYSiE4i4ddgZh67LcVqfV6kAa92oeZZszM
 2Tg8AMYeZqxKzl9Ypxd5dz3hYKZmYWYxihSJZAW6R+XAe2ce+dJboUIlwezUAwemw+f4mQVxSk0S
@@ -154,7 +160,7 @@ def mock_httpx_client():
 
     def async_client_mock(**kwargs):
         kwargs.pop("transport", None)
-        return real_async_client(app=starlette_app, **kwargs)
+        return real_async_client(app=app, **kwargs)
 
     httpx.AsyncClient = async_client_mock
     yield
