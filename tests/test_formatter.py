@@ -70,3 +70,13 @@ def test_format_blueprint_should_not_remove_field_when_value_is_not_default(
 def test_format_blueprint_should_not_render_templated_values(blueprint_factory):
     blueprint = blueprint_factory(version="{{env('TEST', 0)}}", construct=True)
     assert format_blueprint(blueprint.dict())["version"] == "{{env('TEST', 0)}}"
+
+
+def test_format_blueprint_should_replace_fetch_object_with_string_when_only_key_is_url():
+    raw_blueprint = dict(
+        name="great-app",
+        version="1.0.0",
+        summary="A summary",
+        fetch=dict(url="http://test/app.tar.gz"),
+    )
+    assert format_blueprint(raw_blueprint)["fetch"] == "http://test/app.tar.gz"

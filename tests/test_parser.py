@@ -85,3 +85,17 @@ def test_blueprint_should_raise_when_install_is_a_string_with_more_than_one_sepa
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(install=["invalid::input"])
+
+
+def test_blueprint_should_raise_when_archs_is_used_with_arch(
+    blueprint_factory,
+):
+    with pytest.raises(ValidationError):
+        blueprint_factory(arch="amd64", archs=["amd64"])
+
+
+def test_blueprint_should_not_raise_when_archs_is_used_without_arch(
+    blueprint_factory,
+):
+    with pytest.raises(ValidationError):
+        blueprint_factory(archs=["amd64"])

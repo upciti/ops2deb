@@ -40,3 +40,7 @@ class Ops2debAptError(Ops2debError):
 
 class Ops2debFormatterError(Ops2debError):
     pass
+
+
+class Ops2debLockFileError(Ops2debError):
+    pass

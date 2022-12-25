@@ -6,6 +6,7 @@ import shutil
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 import aiofiles
 import httpx
@@ -14,7 +15,8 @@ import unix_ar
 from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debExtractError, Ops2debFetcherError
-from ops2deb.parser import RemoteFile
+from ops2deb.lockfile import Lock
+from ops2deb.parser import RemoteFile, extend, parse
 from ops2deb.utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
@@ -110,7 +112,7 @@ async def extract_archive(archive_path: Path, extract_path: Path) -> None:
     shutil.move(tmp_extract_path, extract_path)
 
 
-@dataclass(frozen=True)
+@dataclass
 class FetchResult:
     url: str
     sha256: str
@@ -162,8 +164,9 @@ class FetchTask:
 
 
 class Fetcher:
-    def __init__(self, cache_directory_path: Path):
+    def __init__(self, cache_directory_path: Path, lockfile_path: Path):
         self.cache_directory_path = cache_directory_path
+        self.lock = Lock(lockfile_path)
 
     async def _run_tasks(
         self,
@@ -182,10 +185,29 @@ class Fetcher:
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
         return await self._run_tasks([FetchTask(url) for url in urls])
 
-    def fetch_remote_files(
+    def fetch_urls_and_check_hashes(
         self,
-        remote_files: list[RemoteFile],
+        remote_files: Sequence[str | RemoteFile],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        return asyncio.run(
-            self._run_tasks([FetchTask(r.url, r.sha256) for r in remote_files])
-        )
+        tasks: list[FetchTask] = []
+        for remote_file in remote_files:
+            if isinstance(remote_file, str):
+                task = FetchTask(remote_file, self.lock.sha256(remote_file))
+            else:
+                # TODO: For backward compatibility, RemoteFile will soon be removed
+                task = FetchTask(remote_file.url, remote_file.sha256)
+            tasks.append(task)
+        return asyncio.run(self._run_tasks(tasks))
+
+    def update_lockfile(self, configuration_path: Path) -> None:
+        blueprints = extend(parse(configuration_path))
+
+        urls: list[str] = []
+        for blueprint in blueprints:
+            url = blueprint.render_fetch_url()
+            if url is not None and url not in self.lock:
+                urls.append(url)
+
+        results, fetch_errors = asyncio.run(self.fetch_urls(urls))
+        self.lock.add(list(results.values()))
+        self.lock.save()

@@ -1,5 +1,9 @@
 - name: helm
   version: 3.10.1
+  architectures:
+    - amd64
+    - armhf
+    - arm64
   homepage: https://helm.sh/
   summary: The Kubernetes package manager
   description: |-
@@ -7,17 +11,15 @@
     Charts are packages of pre-configured Kubernetes resources.
   depends:
     - kubectl
-  fetch:
-    url: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
-    sha256:
-      amd64: c12d2cd638f2d066fec123d0bd7f010f32c643afdf288d39a4610b1f9cb32af3
-      armhf: 309f56a35185023262b4f20f7315d4e60854b517243444b34f5a458c81b33009
-      arm64: d04b38d439ab8655abb4cb9ccc1efa8a3fe95f3f68af46d9137c6b7985491833
+  fetch: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
   script:
     - mv linux-*/helm {{src}}/usr/bin/
 
 - name: helmfile
   version: 0.144.0
+  architectures:
+    - amd64
+    - arm64
   homepage: https://github.com/roboll/helmfile
   summary: Deploy Kubernetes Helm Charts
   description: |-
@@ -30,11 +32,7 @@
   depends:
     - kubectl
     - helm
-  fetch:
-    url: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_{{goarch}}
-    sha256:
-      amd64: dcf865a715028d3a61e2fec09f2a0beaeb7ff10cde32e096bf94aeb9a6eb4f02
-      arm64: 8461bbb13ba23f4333dc99d96bf7a24c283cd7683e746acf639d80bbd828926a
+  fetch: https://github.com/roboll/helmfile/releases/download/v{{version}}/helmfile_linux_{{goarch}}
   script:
     - install -m 755 helmfile_linux_* {{src}}/usr/bin/helmfile
 
@@ -45,9 +43,7 @@
   description: Istio is an open platform to connect, manage, and secure microservices.
   depends:
     - kubectl
-  fetch:
-    url: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
-    sha256: f5fe82687f3777d6e5c9e4cda0d99bd03ff7aefaa9f10b0e608e0990a6ab000a
+  fetch: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
   script:
     - install -d {{src}}/opt/istio
     - mv * {{src}}/opt/istio/
@@ -60,9 +56,7 @@
   description: |-
     kubectl is a command line client for running commands against Kubernetes
     clusters.
-  fetch:
-    url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
-    sha256: f57e568495c377407485d3eadc27cda25310694ef4ffc480eeea81dea2b60624
+  fetch: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
   install:
     - kubectl:/usr/bin/
 
@@ -73,9 +67,7 @@
   description: |-
     Encrypt your Secret into a SealedSecret, which is safe to store - even to a
     public repository.
-  fetch:
-    url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-{{version}}-linux-amd64.tar.gz
-    sha256: a78aa5c04b24bd3cbc72527a40bc13ae4d15f911e3053da510a68ddcd2cfd27a
+  fetch: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-{{version}}-linux-amd64.tar.gz
   install:
     - kubeseal:/usr/bin/kubeseal
 
@@ -91,9 +83,7 @@
     in that it emits edited text.
   depends:
     - kubectl
-  fetch:
-    url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
-    sha256: 701e3c4bfa14e4c520d481fdf7131f902531bfc002cb5062dcf31263a09c70c9
+  fetch: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
   install:
     - kustomize:/usr/bin/
 
@@ -110,9 +100,7 @@
     Docker API endpoint for blazing fast image pushes
     Advanced features such as LoadBalancer, filesystem mounts, and FeatureGates
     Addons for easily installed Kubernetes applications
-  fetch:
-    url: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
-    sha256: 159bc79f3914dadb7c9f56b6e9d5b73a1c54acb26dca8f1ea84b99ff5da42620
+  fetch: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
   install:
     - minikube-linux-amd64:/usr/bin/minikube
 
@@ -130,8 +118,6 @@
     - build-essential
     - fakeroot
     - debhelper
-  fetch:
-    url: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64
-    sha256: 65e2ab3967dddb99c330d1027bb4e74e04b0eb5942c48f8b9ad38c912363d1d5
+  fetch: https://github.com/upciti/ops2deb/releases/download/{{version}}/ops2deb_linux_amd64
   install:
     - ops2deb_linux_amd64:/usr/bin/ops2deb

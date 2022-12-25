@@ -27,6 +27,8 @@ def format_description(description: str) -> str:
 
 def format_blueprint(blueprint: dict[str, Any]) -> dict[str, Any]:
     blueprint = json.loads(Blueprint.construct(**blueprint).json(exclude_defaults=True))
+    if (blueprint_fetch := blueprint.get("fetch", None)) and len(blueprint_fetch) == 1:
+        blueprint["fetch"] = blueprint_fetch["url"]
     if "description" in blueprint.keys():
         blueprint["description"] = format_description(blueprint["description"])
     keys_to_remove: list[str] = []
