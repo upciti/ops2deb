@@ -16,7 +16,8 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
 from ops2deb.fetcher import Fetcher, FetchResult
-from ops2deb.parser import Blueprint, RemoteFile, load, validate
+from ops2deb.lockfile import Lock
+from ops2deb.parser import Blueprint, load, validate
 from ops2deb.utils import separate_results_from_errors
 
 
@@ -165,7 +166,7 @@ class LatestRelease:
     blueprint_index: int
     blueprint: Blueprint
     version: str
-    fetch_results: dict[str, FetchResult]
+    fetch_results: list[FetchResult]
 
     def update_configuration(
         self, blueprint_dict: dict[str, Any] | list[dict[str, Any]]
@@ -177,16 +178,17 @@ class LatestRelease:
             else blueprint_dict
         )
 
-        new_sha256_object: Any = {}
-        for arch, fetch_result in self.fetch_results.items():
-            if isinstance(self.blueprint.fetch, RemoteFile):
-                new_sha256_object = fetch_result.sha256
-            else:
-                new_sha256_object[arch] = fetch_result.sha256
-
-        raw_blueprint["fetch"]["sha256"] = new_sha256_object
         raw_blueprint["version"] = self.version
         raw_blueprint.pop("revision", None)
+
+        # TODO: remove this when fetch.sha256 support is dropped
+        if not isinstance(raw_blueprint["fetch"], str):
+            raw_blueprint["fetch"].pop("sha256", None)
+            if len(architectures := self.blueprint.supported_architectures()) > 1:
+                raw_blueprint["architectures"] = architectures
+                raw_blueprint.pop("arch", None)
+            if len(raw_blueprint["fetch"]) == 1:
+                raw_blueprint["fetch"] = raw_blueprint["fetch"]["url"]
 
 
 async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
@@ -234,19 +236,19 @@ async def _find_latest_releases(
     blueprints = {i: b for i, b in blueprints.items() if versions[i] != b.version}
 
     # gather the urls of files we need to download to get the new checksums
-    urls: dict[int, dict[str, str]] = defaultdict(dict)
+    urls: dict[int, list[str]] = defaultdict(list)
     for index, blueprint in blueprints.items():
         for arch in blueprint.supported_architectures():
             blueprint = blueprint.copy(update={"arch": arch})
-            urls[index][arch] = str(blueprint.render_fetch_url(versions[index]))
+            urls[index].append(str(blueprint.render_fetch_url(versions[index])))
 
-    url_list = list(itertools.chain(*[u.values() for u in urls.values()]))
+    url_list = list(itertools.chain(*[u for u in urls.values()]))
     results, fetch_errors = await fetcher.fetch_urls(url_list)
 
     # remove blueprint we can't update because we could not fetch associated files
     for failed_url, exception in fetch_errors.items():
         for index, blueprint_urls in urls.items():
-            if failed_url in blueprint_urls.values():
+            if failed_url in blueprint_urls:
                 errors[index] = exception
     blueprints = {i: b for i, b in blueprints.items() if i not in errors.keys()}
 
@@ -257,7 +259,7 @@ async def _find_latest_releases(
                 blueprint_index=index,
                 blueprint=blueprint,
                 version=versions[index],
-                fetch_results={arch: results[url] for arch, url in urls[index].items()},
+                fetch_results=[results[url] for url in urls[index]],
             )
         )
 
@@ -272,6 +274,7 @@ def find_latest_releases(
 
 def update(
     configuration_path: Path,
+    lockfile_path: Path,
     fetcher: Fetcher,
     dry_run: bool = False,
     output_path: Path | None = None,
@@ -289,12 +292,15 @@ def update(
         logger.info("Did not found any updates")
 
     if dry_run is False and releases:
+        lock = Lock(lockfile_path)
         for release in releases:
             release.update_configuration(configuration_dict)
+            lock.add(release.fetch_results)
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
+        lock.save()
 
-        logger.info("Configuration file updated")
+        logger.info("Lockfile and configuration updated")
 
     if output_path is not None:
         lines = [

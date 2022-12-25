@@ -82,6 +82,13 @@ option_configuration: Path = typer.Option(
     help="Path to configuration file.",
 )
 
+option_lockfile: Path = typer.Option(
+    Path("ops2deb.lock.yml"),
+    "--lock",
+    envvar="OPS2DEB_LOCKFILE",
+    help="Path to lockfile.",
+)
+
 option_cache_directory: Path = typer.Option(
     DEFAULT_CACHE_DIRECTORY,
     "--cache-dir",
@@ -131,6 +138,7 @@ def default(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
     configuration_path: Path = option_configuration,
+    lockfile_path: Path = option_lockfile,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
     debian_repository: Optional[str] = option_debian_repository,
@@ -138,7 +146,7 @@ def default(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory)
+        fetcher = Fetcher(cache_directory, lockfile_path)
         blueprints = parser.parse(configuration_path)
         packages = generator.generate(
             fetcher,
@@ -158,13 +166,14 @@ def generate(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
     configuration_path: Path = option_configuration,
+    lockfile_path: Path = option_lockfile,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
     debian_repository: Optional[str] = option_debian_repository,
     only: Optional[List[str]] = option_only,
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory)
+        fetcher = Fetcher(cache_directory, lockfile_path)
         blueprints = parser.parse(configuration_path)
         generator.generate(
             fetcher,
@@ -201,6 +210,7 @@ def update(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
     configuration_path: Path = option_configuration,
+    lockfile_path: Path = option_lockfile,
     cache_directory: Path = option_cache_directory,
     dry_run: bool = typer.Option(
         False, "--dry-run", "-d", help="Don't edit config file."
@@ -220,8 +230,10 @@ def update(
     ),
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory)
-        updater.update(configuration_path, fetcher, dry_run, output_path, skip)
+        fetcher = Fetcher(cache_directory, lockfile_path)
+        updater.update(
+            configuration_path, lockfile_path, fetcher, dry_run, output_path, skip
+        )
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -253,6 +265,21 @@ def format(
 @app.command(help="Output ops2deb version.")
 def version() -> None:
     logger.info(__version__)
+
+
+@app.command(help="Update lockfile.")
+def lock(
+    verbose: bool = option_verbose,
+    exit_code: int = option_exit_code,
+    configuration_path: Path = option_configuration,
+    lockfile_path: Path = option_lockfile,
+    cache_directory: Path = option_cache_directory,
+) -> None:
+    try:
+        fetcher = Fetcher(cache_directory, lockfile_path)
+        fetcher.update_lockfile(configuration_path)
+    except Ops2debError as e:
+        error(e, exit_code)
 
 
 def main() -> None:

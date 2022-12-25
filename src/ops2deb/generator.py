@@ -126,8 +126,8 @@ class SourcePackage:
 
     def generate(self, fetch_results: dict[str, FetchResult]) -> None:
         fetch_result: FetchResult | None = None
-        if self.remote_file is not None:
-            fetch_result = fetch_results.get(self.remote_file.url, None)
+        if (url := self.blueprint.render_fetch_url()) is not None:
+            fetch_result = fetch_results.get(url, None)
             if fetch_result is None:
                 return
 
@@ -202,7 +202,7 @@ def generate(
 
     # run fetch instructions (download, verify, extract) in parallel
     files = [p.remote_file for p in packages if p.remote_file is not None]
-    fetch_results, fetch_errors = fetcher.fetch_remote_files(files)
+    fetch_results, fetch_errors = fetcher.fetch_urls_and_check_hashes(files)
 
     for package in packages:
         package.generate(fetch_results)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError, validator
 from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
@@ -25,12 +25,14 @@ class ArchitectureMap(Base):
 
 class RemoteFile(Base):
     url: AnyHttpUrl = Field(..., description="URL template of the file")
-    sha256: str = Field(..., description="SHA256 checksum of the file")
+    sha256: str = Field(..., description="SHA256 checksum of the file (deprecated)")
 
 
-class MultiArchitectureRemoteFile(Base):
+class MultiArchitectureFetch(Base):
     url: AnyHttpUrl = Field(..., description="URL template of the file")
-    sha256: ArchitectureMap = Field(..., description="SHA256 checksum of each file")
+    sha256: ArchitectureMap | None = Field(
+        None, description="SHA256 checksum of each file (deprecated)"
+    )
     targets: ArchitectureMap | None = Field(
         None,
         description="Architecture to target name map. The URL can be templated with "
@@ -75,6 +77,9 @@ class HereDocument(Base):
 class Blueprint(Base):
     name: str = Field(..., description="Package name")
     version: str = Field(..., description="Package name")
+    architectures: list[Architecture] = Field(
+        default_factory=list, description="Architecture matrix"
+    )
     homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
     revision: int = Field(1, description="Package revision", ge=1)
     epoch: int = Field(0, description="Package epoch", ge=0)
@@ -101,15 +106,21 @@ class Blueprint(Base):
         description="Conflicting packages, for more information read "
         "https://www.debian.org/doc/debian-policy/ch-relationships.html",
     )
-    fetch: RemoteFile | MultiArchitectureRemoteFile | None = Field(
+    fetch: AnyHttpUrl | MultiArchitectureFetch | RemoteFile | None = Field(
         None,
-        description="Describe a file (or a file per architecture) to download before "
-        "running the build script",
+        description="Url of a file (or a file per architecture) to download before "
+        "running build and install instructions",
     )
     install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
     script: list[str] = Field(default_factory=list, description="Build instructions")
 
-    @validator("*", pre=True)
+    @validator("arch", pre=False, always=False)
+    def _archs_cannot_be_used_with_arch(cls, v: Any, values: Any) -> Any:
+        if values["architectures"]:
+            raise ValueError("'architectures' cannot be used with 'arch'")
+        return v
+
+    @validator("name", "version", "summary", "description", "homepage", pre=True)
     def _render_string_attributes(cls, v: Any) -> Any:
         if isinstance(v, str):
             return environment.from_string(v).render()
@@ -118,7 +129,7 @@ class Blueprint(Base):
     def _get_additional_variables(self) -> dict[str, str | None]:
         target = (
             (getattr(self.fetch.targets, self.arch, self.arch) or self.arch)
-            if isinstance(self.fetch, MultiArchitectureRemoteFile)
+            if isinstance(self.fetch, MultiArchitectureFetch)
             else self.arch
         )
         return dict(
@@ -127,11 +138,13 @@ class Blueprint(Base):
             rust_target=DEFAULT_RUST_TARGET_MAP.get(self.arch, None),
         )
 
-    def supported_architectures(self) -> list[str]:
-        if isinstance(self.fetch, MultiArchitectureRemoteFile):
-            return list(self.fetch.sha256.dict(exclude_none=True).keys())
-        else:
-            return [self.arch]
+    def supported_architectures(self) -> Sequence[str]:
+        if self.architectures:
+            return self.architectures
+        elif isinstance(self.fetch, MultiArchitectureFetch):
+            if self.fetch.sha256 is not None:
+                return list(self.fetch.sha256.dict(exclude_none=True).keys())
+        return [self.arch]
 
     def render_string(self, string: str, **kwargs: str | Path | None) -> str:
         version = kwargs.pop("version", None)
@@ -146,15 +159,18 @@ class Blueprint(Base):
     def render_fetch_url(self, version: str | None = None) -> str | None:
         if self.fetch is None:
             return None
-        return self.render_string(self.fetch.url, version=version)
+        url = self.fetch if isinstance(self.fetch, str) else self.fetch.url
+        return self.render_string(url, version=version)
 
-    def render_fetch(self, version: str | None = None) -> RemoteFile | None:
+    def render_fetch(self, version: str | None = None) -> str | RemoteFile | None:
         if self.fetch is None:
             return None
-        if isinstance(self.fetch, MultiArchitectureRemoteFile):
+        if isinstance(self.fetch, MultiArchitectureFetch):
             sha256 = getattr(self.fetch.sha256, self.arch)
-        else:
+        elif isinstance(self.fetch, RemoteFile):
             sha256 = self.fetch.sha256
+        else:
+            return self.render_fetch_url(version=version)
         if sha256 is None:
             return None
         return RemoteFile(url=self.render_fetch_url(version), sha256=sha256)
