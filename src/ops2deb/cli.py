@@ -10,7 +10,7 @@ from typer.core import TyperGroup
 
 from ops2deb import __version__, builder, formatter, generator, logger, parser, updater
 from ops2deb.exceptions import Ops2debError
-from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, set_cache_directory
+from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -74,8 +74,8 @@ option_exit_code: int = typer.Option(
     callback=validate_exit_code,
 )
 
-option_configuration = typer.Option(
-    "ops2deb.yml",
+option_configuration: Path = typer.Option(
+    Path("ops2deb.yml"),
     "--config",
     "-c",
     envvar="OPS2DEB_CONFIG",
@@ -137,10 +137,11 @@ def default(
     only: Optional[List[str]] = option_only,
     workers_count: int = option_workers_count,
 ) -> None:
-    set_cache_directory(cache_directory)
     try:
+        fetcher = Fetcher(cache_directory)
         blueprints = parser.parse(configuration_path)
         packages = generator.generate(
+            fetcher,
             blueprints,
             output_directory,
             configuration_path.parent,
@@ -162,10 +163,11 @@ def generate(
     debian_repository: Optional[str] = option_debian_repository,
     only: Optional[List[str]] = option_only,
 ) -> None:
-    set_cache_directory(cache_directory)
     try:
+        fetcher = Fetcher(cache_directory)
         blueprints = parser.parse(configuration_path)
         generator.generate(
+            fetcher,
             blueprints,
             output_directory,
             configuration_path.parent,
@@ -217,9 +219,9 @@ def update(
         help="Name of blueprint that should not be updated. Can be used multiple times.",
     ),
 ) -> None:
-    set_cache_directory(cache_directory)
     try:
-        updater.update(configuration_path, dry_run, output_path, skip)
+        fetcher = Fetcher(cache_directory)
+        updater.update(configuration_path, fetcher, dry_run, output_path, skip)
     except Ops2debError as e:
         error(e, exit_code)
 

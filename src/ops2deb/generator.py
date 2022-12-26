@@ -8,7 +8,7 @@ from dirsync import sync
 from ops2deb import logger
 from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
 from ops2deb.exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
-from ops2deb.fetcher import FetchResult, fetch_remote_files
+from ops2deb.fetcher import Fetcher, FetchResult
 from ops2deb.parser import Blueprint, HereDocument, SourceDestinationStr, extend
 from ops2deb.templates import environment
 from ops2deb.utils import working_directory
@@ -180,6 +180,7 @@ def filter_already_published_packages(
 
 
 def generate(
+    fetcher: Fetcher,
     blueprints: list[Blueprint],
     output_directory: Path,
     configuration_directory: Path,
@@ -201,7 +202,7 @@ def generate(
 
     # run fetch instructions (download, verify, extract) in parallel
     files = [p.remote_file for p in packages if p.remote_file is not None]
-    fetch_results, fetch_errors = fetch_remote_files(files)
+    fetch_results, fetch_errors = fetcher.fetch_remote_files(files)
 
     for package in packages:
         package.generate(fetch_results)

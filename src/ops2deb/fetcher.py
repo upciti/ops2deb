@@ -6,7 +6,6 @@ import shutil
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
 
 import aiofiles
 import httpx
@@ -19,8 +18,6 @@ from ops2deb.parser import RemoteFile
 from ops2deb.utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
-
-_cache_directory_path = DEFAULT_CACHE_DIRECTORY
 
 
 def _unpack_gz(file_path: str, extract_path: str) -> None:
@@ -121,68 +118,73 @@ class FetchResult:
 
 class FetchTask:
     def __init__(self, url: str, sha256: str | None = None):
-        url_hash = hashlib.sha256(url.encode()).hexdigest()
         self.url = url
-        self.file_name = url.split("/")[-1]
-        self.base_path = _cache_directory_path / url_hash
-        self.download_path = self.base_path / self.file_name
-        self.extract_path = self.base_path / f"{self.file_name}_out"
-        self.checksum_path = self.base_path / f"{self.file_name}.sum"
-        self.expected_hash = sha256
+        self.sha256 = sha256
 
-    async def fetch(self) -> FetchResult:
-        self.base_path.mkdir(exist_ok=True, parents=True)
-        if self.download_path.is_file() is False:
-            await _download_file(self.url, self.download_path)
+    async def fetch(self, cache_directory_path: Path) -> FetchResult:
+        url_hash = hashlib.sha256(self.url.encode()).hexdigest()
+        file_name = self.url.split("/")[-1]
+        base_path = cache_directory_path / url_hash
+        download_path = base_path / file_name
+        extract_path = base_path / f"{file_name}_out"
+        checksum_path = base_path / f"{file_name}.sum"
 
-        if self.checksum_path.is_file() is False:
-            computed_hash = await _hash_file(self.download_path)
-            self.checksum_path.write_text(computed_hash)
+        base_path.mkdir(exist_ok=True, parents=True)
+        if download_path.is_file() is False:
+            await _download_file(self.url, download_path)
+
+        if checksum_path.is_file() is False:
+            computed_hash = await _hash_file(download_path)
+            checksum_path.write_text(computed_hash)
         else:
-            computed_hash = self.checksum_path.read_text()
+            computed_hash = checksum_path.read_text()
 
         storage_path = (
-            self.extract_path
-            if self.expected_hash and is_archive_format_supported(self.download_path)
-            else self.download_path
+            extract_path
+            if self.sha256 and is_archive_format_supported(download_path)
+            else download_path
         )
 
-        if self.expected_hash:
-            if computed_hash != self.expected_hash:
+        if self.sha256:
+            if computed_hash != self.sha256:
                 log_and_raise(
                     Ops2debFetcherError(
-                        f"Wrong checksum for file {self.file_name}. "
-                        f"Expected {self.expected_hash}, got {computed_hash}."
+                        f"Wrong checksum for file {file_name}. "
+                        f"Expected {self.sha256}, got {computed_hash}."
                     )
                 )
-            if self.extract_path.exists() is False and storage_path == self.extract_path:
-                await extract_archive(self.download_path, self.extract_path)
+            if extract_path.exists() is False and storage_path == extract_path:
+                await extract_archive(download_path, extract_path)
 
-        logger.info(f"Done with {self.download_path.name}")
+        logger.info(f"Done with {download_path.name}")
         return FetchResult(computed_hash, storage_path)
 
 
-async def _run_tasks(
-    tasks: list[FetchTask],
-) -> Tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-    if tasks:
-        logger.title(f"Fetching {len(tasks)} files...")
-    results = await asyncio.gather(*[t.fetch() for t in tasks], return_exceptions=True)
-    return separate_results_from_errors(dict(zip([r.url for r in tasks], results)))
+class Fetcher:
+    def __init__(self, cache_directory_path: Path):
+        self.cache_directory_path = cache_directory_path
 
+    async def _run_tasks(
+        self,
+        tasks: list[FetchTask],
+    ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
+        if tasks:
+            logger.title(f"Fetching {len(tasks)} files...")
+        results = await asyncio.gather(
+            *[t.fetch(self.cache_directory_path) for t in tasks], return_exceptions=True
+        )
+        return separate_results_from_errors(dict(zip([r.url for r in tasks], results)))
 
-def set_cache_directory(path: Path) -> None:
-    global _cache_directory_path
-    _cache_directory_path = path
+    async def fetch_urls(
+        self,
+        urls: list[str],
+    ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
+        return await self._run_tasks([FetchTask(url) for url in urls])
 
-
-async def fetch_urls(
-    urls: list[str],
-) -> Tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-    return await _run_tasks([FetchTask(url) for url in urls])
-
-
-def fetch_remote_files(
-    remote_files: list[RemoteFile],
-) -> Tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-    return asyncio.run(_run_tasks([FetchTask(r.url, r.sha256) for r in remote_files]))
+    def fetch_remote_files(
+        self,
+        remote_files: list[RemoteFile],
+    ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
+        return asyncio.run(
+            self._run_tasks([FetchTask(r.url, r.sha256) for r in remote_files])
+        )
