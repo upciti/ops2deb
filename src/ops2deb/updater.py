@@ -32,9 +32,8 @@ class BaseUpdateStrategy:
         self.client = client
 
     async def _try_version(self, blueprint: Blueprint, version: str) -> bool:
-        if not (remote_file := blueprint.render_fetch(version=version)):
+        if not (url := blueprint.render_fetch_url(version=version)):
             return False
-        url = remote_file.url
         logger.debug(f"{self.__class__.__name__} - {blueprint.name} - Trying {url}")
         try:
             response = await self.client.head(url)
@@ -115,10 +114,10 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
 
     @classmethod
     def _get_github_repo_api_base_url(cls, blueprint: Blueprint) -> str:
-        if (fetch := blueprint.render_fetch()) is None:
+        if (url := blueprint.render_fetch_url()) is None:
             raise ValueError(f"Blueprint {blueprint.name} has no fetch instruction")
-        if (match := re.match(cls.github_url_re, fetch.url)) is None:
-            raise ValueError(f"URL {fetch.url} is not supported")
+        if (match := re.match(cls.github_url_re, url)) is None:
+            raise ValueError(f"URL {url} is not supported")
         return f"{cls.github_base_api_url}/repos/{match['owner']}/{match['name']}"
 
     async def _get_latest_github_release(self, blueprint: Blueprint) -> dict[str, str]:
@@ -181,9 +180,9 @@ class LatestRelease:
         new_sha256_object: Any = {}
         for arch, fetch_result in self.fetch_results.items():
             if isinstance(self.blueprint.fetch, RemoteFile):
-                new_sha256_object = fetch_result.sha256_sum
+                new_sha256_object = fetch_result.sha256
             else:
-                new_sha256_object[arch] = fetch_result.sha256_sum
+                new_sha256_object[arch] = fetch_result.sha256
 
         raw_blueprint["fetch"]["sha256"] = new_sha256_object
         raw_blueprint["version"] = self.version
@@ -239,8 +238,7 @@ async def _find_latest_releases(
     for index, blueprint in blueprints.items():
         for arch in blueprint.supported_architectures():
             blueprint = blueprint.copy(update={"arch": arch})
-            remote_file = cast(RemoteFile, blueprint.render_fetch(versions[index]))
-            urls[index][arch] = str(remote_file.url)
+            urls[index][arch] = str(blueprint.render_fetch_url(versions[index]))
 
     url_list = list(itertools.chain(*[u.values() for u in urls.values()]))
     results, fetch_errors = await fetcher.fetch_urls(url_list)

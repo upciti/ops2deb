@@ -112,7 +112,8 @@ async def extract_archive(archive_path: Path, extract_path: Path) -> None:
 
 @dataclass(frozen=True)
 class FetchResult:
-    sha256_sum: str
+    url: str
+    sha256: str
     storage_path: Path
 
 
@@ -157,7 +158,7 @@ class FetchTask:
                 await extract_archive(download_path, extract_path)
 
         logger.info(f"Done with {download_path.name}")
-        return FetchResult(computed_hash, storage_path)
+        return FetchResult(self.url, computed_hash, storage_path)
 
 
 class Fetcher:
