@@ -143,6 +143,11 @@ class Blueprint(Base):
             **(self._get_additional_variables() | kwargs),
         )
 
+    def render_fetch_url(self, version: str | None = None) -> str | None:
+        if self.fetch is None:
+            return None
+        return self.render_string(self.fetch.url, version=version)
+
     def render_fetch(self, version: str | None = None) -> RemoteFile | None:
         if self.fetch is None:
             return None
@@ -152,8 +157,7 @@ class Blueprint(Base):
             sha256 = self.fetch.sha256
         if sha256 is None:
             return None
-        url = self.render_string(self.fetch.url, version=version)
-        return RemoteFile(url=url, sha256=sha256)
+        return RemoteFile(url=self.render_fetch_url(version), sha256=sha256)
 
 
 class Configuration(Base):

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Optional
 
 import pytest
@@ -202,11 +203,15 @@ mock_configuration_with_dangling_symlink_in_archive = """\
 """
 
 
+@pytest.fixture
+def configuration_path(tmp_path) -> Path:
+    return tmp_path / "ops2deb.yml"
+
+
 @pytest.fixture(scope="function")
-def call_ops2deb(tmp_path, mock_httpx_client):
+def call_ops2deb(tmp_path, mock_httpx_client, configuration_path):
     def _invoke(*args, configuration: Optional[str] = None, write: bool = True):
         runner = CliRunner()
-        configuration_path = tmp_path / "ops2deb.yml"
         if write is True:
             configuration_path.write_text(configuration or mock_valid_configuration)
         os.environ.update(
@@ -234,7 +239,6 @@ def test_ops2deb_purge_should_delete_files_in_cache(tmp_path, call_ops2deb):
 
 def test_ops2deb_generate_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     result = call_ops2deb("generate")
-    print(result.stdout)
     assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
     assert (tmp_path / "super-app_1.0.0_all/debian/copyright").is_file()
@@ -247,7 +251,6 @@ def test_ops2deb_generate_should_succeed_with_valid_multi_arch_fetch_configurati
     result = call_ops2deb(
         "generate", configuration=mock_configuration_with_multi_arch_remote_file
     )
-    print(result.stdout)
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_armhf/src/usr/bin/great-app").is_file()
     assert result.exit_code == 0
@@ -280,7 +283,6 @@ def test_ops2deb_generate_should_not_generate_packages_already_published_in_debi
     tmp_path, call_ops2deb
 ):
     result = call_ops2deb("generate", "-r", "http://deb.wakemeops.com stable")
-    print(result.stdout)
     assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
     assert (tmp_path / "super-app_1.0.0_all/debian/control").is_file() is False
@@ -313,7 +315,7 @@ def test_ops2deb_generate_should_honor_only_argument(tmp_path, call_ops2deb):
 
 
 def test_ops2deb_generate_should_not_crash_when_archive_contains_a_dangling_symlink(
-    tmp_path, call_ops2deb
+    call_ops2deb,
 ):
     result = call_ops2deb(
         "generate", configuration=mock_configuration_with_dangling_symlink_in_archive
@@ -362,9 +364,11 @@ def test_ops2deb_default_should_build_and_generate_packages_when_configuration_i
     assert (tmp_path / "great-app_1.0.0-2~ops2deb_all.deb").is_file()
 
 
-def test_ops2deb_update_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
+def test_ops2deb_update_should_succeed_with_valid_configuration(
+    configuration_path, call_ops2deb
+):
     result = call_ops2deb("update")
-    configuration = parse(tmp_path / "ops2deb.yml")
+    configuration = parse(configuration_path)
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
     assert configuration[1].version == "1.1.1"
@@ -399,21 +403,23 @@ def test_ops2deb_update_should_create_empty_summary_when_called_with_output_file
 
 
 def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
-    tmp_path, call_ops2deb
+    configuration_path, call_ops2deb
 ):
     result = call_ops2deb(
         "update", configuration=mock_configuration_single_blueprint_with_fetch
     )
-    configuration = parse(tmp_path / "ops2deb.yml")
+    configuration = parse(configuration_path)
     assert result.exit_code == 0
     assert configuration[0].version == "1.1.1"
 
 
-def test_ops2deb_update_should_succeed_with_multi_arch_fetch(tmp_path, call_ops2deb):
+def test_ops2deb_update_should_succeed_with_multi_arch_fetch(
+    configuration_path, call_ops2deb
+):
     result = call_ops2deb(
         "update", configuration=mock_configuration_with_multi_arch_remote_file
     )
-    configuration = parse(tmp_path / "ops2deb.yml")
+    configuration = parse(configuration_path)
     assert result.exit_code == 0
     assert configuration[0].version == "1.1.1"
     sha256_armhf = "cf9a3f702d3532d50c5a864285ba60b2d067aea427a770f7267761f69657d746"
@@ -422,9 +428,11 @@ def test_ops2deb_update_should_succeed_with_multi_arch_fetch(tmp_path, call_ops2
     assert configuration[0].fetch.sha256.amd64 == sha256_amd64
 
 
-def test_ops2deb_update_should_reset_blueprint_revision_to_one(tmp_path, call_ops2deb):
+def test_ops2deb_update_should_reset_blueprint_revision_to_one(
+    configuration_path, call_ops2deb
+):
     call_ops2deb("update")
-    configuration = load(tmp_path / "ops2deb.yml", yaml)
+    configuration = load(configuration_path, yaml)
     assert "revision" not in configuration[0].keys()
     assert "revision" not in configuration[1].keys()
 
@@ -449,30 +457,30 @@ def test_ops2deb_update_should_fail_gracefully_with_multiarch_blueprint_when_404
 
 
 def test_ops2deb_update_should_skip_blueprints_when_skip_option_is_used(
-    tmp_path, call_ops2deb
+    configuration_path, call_ops2deb
 ):
     result = call_ops2deb("update", "--skip", "great-app", "-s", "super-app")
     assert result.exit_code == 0
-    assert (tmp_path / "ops2deb.yml").read_text() == mock_valid_configuration
+    assert configuration_path.read_text() == mock_valid_configuration
 
 
-def test_ops2deb_format_should_be_idempotent(tmp_path, call_ops2deb):
+def test_ops2deb_format_should_be_idempotent(configuration_path, call_ops2deb):
     call_ops2deb("format", configuration=mock_configuration_not_properly_formatted)
-    formatted_configuration = (tmp_path / "ops2deb.yml").read_text()
+    formatted_configuration = configuration_path.read_text()
     call_ops2deb("format", write=False)
-    assert formatted_configuration == (tmp_path / "ops2deb.yml").read_text()
+    assert formatted_configuration == configuration_path.read_text()
 
 
 def test_ops2deb_format_should_not_modify_already_formatted_configuration(
-    tmp_path, call_ops2deb
+    configuration_path, call_ops2deb
 ):
     result = call_ops2deb("format")
     assert result.exit_code == 0
-    assert (tmp_path / "ops2deb.yml").read_text() == mock_valid_configuration
+    assert configuration_path.read_text() == mock_valid_configuration
 
 
 def test_ops2deb_format_should_exit_with_error_code_when_file_gets_reformatted(
-    tmp_path, call_ops2deb
+    call_ops2deb,
 ):
     result = call_ops2deb(
         "format", configuration=mock_configuration_not_properly_formatted
