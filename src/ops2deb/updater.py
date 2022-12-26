@@ -15,7 +15,7 @@ from semver.version import Version
 from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
-from ops2deb.fetcher import FetchResult, fetch_urls
+from ops2deb.fetcher import Fetcher, FetchResult
 from ops2deb.parser import Blueprint, RemoteFile, load, validate
 from ops2deb.utils import separate_results_from_errors
 
@@ -215,7 +215,7 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
 
 
 async def _find_latest_releases(
-    blueprint_list: list[Blueprint], skip_names: list[str] | None = None
+    blueprint_list: list[Blueprint], fetcher: Fetcher, skip_names: list[str] | None = None
 ) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
     skip_names = skip_names or []
     blueprints = {
@@ -243,7 +243,7 @@ async def _find_latest_releases(
             urls[index][arch] = str(remote_file.url)
 
     url_list = list(itertools.chain(*[u.values() for u in urls.values()]))
-    results, fetch_errors = await fetch_urls(url_list)
+    results, fetch_errors = await fetcher.fetch_urls(url_list)
 
     # remove blueprint we can't update because we could not fetch associated files
     for failed_url, exception in fetch_errors.items():
@@ -267,13 +267,14 @@ async def _find_latest_releases(
 
 
 def find_latest_releases(
-    blueprint_list: list[Blueprint], skip_names: list[str] | None = None
+    blueprint_list: list[Blueprint], fetcher: Fetcher, skip_names: list[str] | None = None
 ) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
-    return asyncio.run(_find_latest_releases(blueprint_list, skip_names))
+    return asyncio.run(_find_latest_releases(blueprint_list, fetcher, skip_names))
 
 
 def update(
     configuration_path: Path,
+    fetcher: Fetcher,
     dry_run: bool = False,
     output_path: Path | None = None,
     skip_names: list[str] | None = None,
@@ -285,7 +286,7 @@ def update(
     blueprints = validate(configuration_dict)
 
     logger.title("Looking for new releases...")
-    releases, errors = find_latest_releases(blueprints, skip_names)
+    releases, errors = find_latest_releases(blueprints, fetcher, skip_names)
     if not releases:
         logger.info("Did not found any updates")
 

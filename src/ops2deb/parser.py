@@ -152,11 +152,7 @@ class Blueprint(Base):
             sha256 = self.fetch.sha256
         if sha256 is None:
             return None
-        url = self.render_string(
-            self.fetch.url,
-            version=version,
-            sha256=sha256,
-        )
+        url = self.render_string(self.fetch.url, version=version)
         return RemoteFile(url=url, sha256=sha256)
 
 
