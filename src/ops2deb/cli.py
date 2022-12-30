@@ -85,6 +85,7 @@ option_configuration: Path = typer.Option(
 option_lockfile: Path = typer.Option(
     Path("ops2deb.lock.yml"),
     "--lock",
+    "-k",
     envvar="OPS2DEB_LOCKFILE",
     help="Path to lockfile.",
 )

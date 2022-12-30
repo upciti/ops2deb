@@ -80,3 +80,15 @@ def test_format_blueprint_should_replace_fetch_object_with_string_when_only_key_
         fetch=dict(url="http://test/app.tar.gz"),
     )
     assert format_blueprint(raw_blueprint)["fetch"] == "http://test/app.tar.gz"
+
+
+def test_format_blueprint_should_replace_field_arch_by_architecture():
+    raw_blueprint = dict(
+        name="great-app",
+        version="1.0.0",
+        arch="all",
+        summary="A summary",
+    )
+    formatted_blueprint = format_blueprint(raw_blueprint)
+    assert formatted_blueprint["architecture"] == "all"
+    assert "arch" not in formatted_blueprint

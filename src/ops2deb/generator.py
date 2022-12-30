@@ -26,7 +26,9 @@ class SourcePackage:
     ):
         epoch = f"{blueprint.epoch}:" if blueprint.epoch else ""
         self.debian_version = f"{epoch}{blueprint.version}-{blueprint.revision}~ops2deb"
-        self.directory_name = f"{blueprint.name}_{blueprint.version}_{blueprint.arch}"
+        self.directory_name = (
+            f"{blueprint.name}_{blueprint.version}_{blueprint.architecture}"
+        )
         self.package_directory = (output_directory / self.directory_name).absolute()
         self.configuration_directory = configuration_directory.absolute()
         self.debian_directory = self.package_directory / "debian"
@@ -171,7 +173,9 @@ def filter_already_published_packages(
     for package in packages:
         if (
             DebianRepositoryPackage(
-                package.blueprint.name, package.debian_version, package.blueprint.arch
+                package.blueprint.name,
+                package.debian_version,
+                package.blueprint.architecture,
             )
             not in already_published_packages
         ):

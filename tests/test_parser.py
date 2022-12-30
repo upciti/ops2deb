@@ -15,14 +15,14 @@ def mock_blueprint(blueprint_factory):
     )
 
 
-def test_supported_architectures_should_return_lists_of_archs_from_fetch_sha256(
+def test_supported_architectures_should_return_lists_of_architectures_from_fetch_sha256(
     mock_blueprint,
 ):
     assert mock_blueprint.supported_architectures() == ["amd64", "armhf"]
 
 
-def test_render_string_target_should_default_to_blueprint_arch(mock_blueprint):
-    blueprint = mock_blueprint.copy(update={"arch": "armhf"})
+def test_render_string_target_should_default_to_blueprint_architecture(mock_blueprint):
+    blueprint = mock_blueprint.copy(update={"architecture": "armhf"})
     assert blueprint.render_string("{{target}}") == "armhf"
 
 
@@ -87,15 +87,22 @@ def test_blueprint_should_raise_when_install_is_a_string_with_more_than_one_sepa
         blueprint_factory(install=["invalid::input"])
 
 
-def test_blueprint_should_raise_when_archs_is_used_with_arch(
+def test_blueprint_should_raise_when_architectures_is_used_with_arch(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
-        blueprint_factory(arch="amd64", archs=["amd64"])
+        blueprint_factory(arch="amd64", architectures=["amd64"])
 
 
-def test_blueprint_should_not_raise_when_archs_is_used_without_arch(
+def test_blueprint_should_raise_when_architectures_is_used_with_architecture(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
-        blueprint_factory(archs=["amd64"])
+        blueprint_factory(architecture="amd64", architectures=["amd64"])
+
+
+def test_blueprint_should_not_raise_when_architectures_is_used_without_architecture(
+    blueprint_factory,
+):
+    with pytest.raises(ValidationError):
+        blueprint_factory(architectures=["amd64"])
