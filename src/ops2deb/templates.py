@@ -23,7 +23,7 @@ Standards-Version: 3.9.6
 {%- if package.homepage %}{{ '\n' }}Homepage: {{ package.homepage }}{% endif %}
 
 Package: {{ package.name }}
-Architecture: {{ package.arch }}
+Architecture: {{ package.architecture }}
 {%- if package.provides %}{{ '\n' }}Provides: {{ package.provides|sort|join(', ') }}{% endif %}
 {%- if package.depends %}{{ '\n' }}Depends: {{ package.depends|sort|join(', ') }}{% endif %}
 {%- if package.recommends %}{{ '\n' }}Recommends: {{ package.recommends|sort|join(', ') }}{% endif %}

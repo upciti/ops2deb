@@ -37,9 +37,9 @@ async def _download_repository_release_file(
 
 
 async def _download_repository_packages_file(
-    client: httpx.AsyncClient, distribution: str, component: str, arch: str
+    client: httpx.AsyncClient, distribution: str, component: str, architecture: str
 ) -> bytes:
-    url = f"/dists/{distribution}/{component}/binary-{arch}/Packages"
+    url = f"/dists/{distribution}/{component}/binary-{architecture}/Packages"
     logger.debug(f"Downloading {url}...")
     try:
         async with client.stream("GET", url) as response:

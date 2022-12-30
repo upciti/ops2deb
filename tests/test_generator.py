@@ -125,7 +125,7 @@ def test_generate_should_produce_identical_control_file_snapshot(
 ):
     fetcher = Fetcher(tmp_path, tmp_path / "ops2deb.lock.yml")
     generate(fetcher, [blueprint], tmp_path, tmp_path)
-    control_file = tmp_path / f"great-app_1.0.0_{blueprint.arch}/debian/control"
+    control_file = tmp_path / f"great-app_1.0.0_{blueprint.architecture}/debian/control"
     assert control_file.read_text() == control
 
 

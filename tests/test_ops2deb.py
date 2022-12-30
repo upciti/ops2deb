@@ -16,8 +16,8 @@ yaml = ruamel.yaml.YAML(typ="safe")
 mock_valid_configuration = """\
 - name: awesome-metapackage
   version: "{{env('CI_COMMIT_TAG', '1.0.0')}}"
+  architecture: all
   epoch: 1
-  arch: all
   summary: Awesome metapackage
   description: A detailed description of the awesome metapackage.
   depends:
@@ -25,8 +25,8 @@ mock_valid_configuration = """\
 
 - name: great-app
   version: 1.0.0
+  architecture: all
   revision: 2
-  arch: all
   summary: Great package
   fetch: http://testserver/{{version}}/great-app.tar.gz
   script:
@@ -34,7 +34,7 @@ mock_valid_configuration = """\
 
 - name: super-app
   version: 1.0.0
-  arch: all
+  architecture: all
   summary: Super package
   description: |-
     A detailed description of the super package
@@ -80,7 +80,7 @@ mock_up_to_date_configuration = """\
 - name: great-app
   version: 1.1.1
   revision: 2
-  arch: all
+  architecture: all
   summary: Great package
   description: A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app.tar.gz
@@ -91,7 +91,7 @@ mock_up_to_date_configuration = """\
 mock_configuration_with_invalid_archive_checksum = """\
 - name: bad-app
   version: 1.0.0
-  arch: all
+  architecture: all
   summary: Bad package
   description: |
     A detailed description of the bad package
@@ -105,7 +105,7 @@ mock_configuration_with_invalid_archive_checksum = """\
 mock_configuration_with_archive_not_found = """\
 - name: bad-app
   version: 1.0.0
-  arch: all
+  architecture: all
   summary: Bad package
   description: |
     A detailed description of the bad package
@@ -143,7 +143,7 @@ mock_configuration_single_blueprint_with_fetch = """\
 name: great-app
 version: 1.0.0
 revision: 2
-arch: all
+architecture: all
 summary: Great package
 description: A detailed description of the great package.
 fetch: http://testserver/{{version}}/great-app.tar.gz
@@ -156,7 +156,7 @@ mock_configuration_not_properly_formatted = """\
   summary: Great package
   revision: 2
   version: 1.0.0
-  arch: all
+  architecture: all
   description: |
     A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app.tar.gz
@@ -306,7 +306,7 @@ def test_ops2deb_generate_should_run_script_from_config_directory_when_blueprint
     configuration_without_fetch = """\
     name: cool-app
     version: 1.0.0
-    arch: all
+    architecture: all
     summary: Cool package
     description: |
       A detailed description of the cool package

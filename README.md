@@ -98,7 +98,7 @@ Ops2deb can be used to create [metapackages](https://www.debian.org/blends/hamra
 ```yaml
 name: allthethings
 version: 0.1.9
-arch: all
+architecture: all
 summary: install various devops tools
 description: Some great description.
 depends:
@@ -205,20 +205,20 @@ script:
 
 Written in YAML and composed of a single blueprint object or a list of blueprints objects. A blueprint is defined by the following:
 
-| Field         | Meaning                                                                                                                                     | Default |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `name`        | Component name, e.g. `kustomize`.                                                                                                           |         |
-| `version`     | Application release to package.                                                                                                             |         |
-| `homepage`    | Upstream project homepage.                                                                                                                  | `None`  |
-| `arch`        | Package architecture.                                                                                                                       | `amd64` |
-| `revision`    | Package revistion.                                                                                                                          | `1`     |
-| `summary`     | Package short description.                                                                                                                  |         |
-| `description` | Package full description.                                                                                                                   |         |
-| `fetch`       | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically. | `Null`  |
-| `script`      | List of build instructions templated with jinja2 and intepreted with the default `shell`.                                                   | `[]`    |
-| `depends`     | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                                                           | `[]`    |
-| `recommends`  | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`    |
-| `conflicts`   | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`    |
+| Field          | Meaning                                                                                                                                     | Default |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `name`         | Component name, e.g. `kustomize`.                                                                                                           |         |
+| `version`      | Application release to package.                                                                                                             |         |
+| `homepage`     | Upstream project homepage.                                                                                                                  | `None`  |
+| `architecture` | Package architecture.                                                                                                                       | `amd64` |
+| `revision`     | Package revistion.                                                                                                                          | `1`     |
+| `summary`      | Package short description.                                                                                                                  |         |
+| `description`  | Package full description.                                                                                                                   |         |
+| `fetch`        | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically. | `Null`  |
+| `script`       | List of build instructions templated with jinja2 and intepreted with the default `shell`.                                                   | `[]`    |
+| `depends`      | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                                                           | `[]`    |
+| `recommends`   | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`    |
+| `conflicts`    | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`    |
 
 ## Development
 

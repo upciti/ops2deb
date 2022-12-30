@@ -186,6 +186,7 @@ class LatestRelease:
             raw_blueprint["fetch"].pop("sha256", None)
             if len(architectures := self.blueprint.supported_architectures()) > 1:
                 raw_blueprint["architectures"] = architectures
+                raw_blueprint.pop("architecture", None)
                 raw_blueprint.pop("arch", None)
             if len(raw_blueprint["fetch"]) == 1:
                 raw_blueprint["fetch"] = raw_blueprint["fetch"]["url"]
@@ -238,8 +239,8 @@ async def _find_latest_releases(
     # gather the urls of files we need to download to get the new checksums
     urls: dict[int, list[str]] = defaultdict(list)
     for index, blueprint in blueprints.items():
-        for arch in blueprint.supported_architectures():
-            blueprint = blueprint.copy(update={"arch": arch})
+        for architecture in blueprint.supported_architectures():
+            blueprint = blueprint.copy(update={"architecture": architecture})
             urls[index].append(str(blueprint.render_fetch_url(versions[index])))
 
     url_list = list(itertools.chain(*[u for u in urls.values()]))
