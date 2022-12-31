@@ -59,7 +59,9 @@ class Lock:
         now = datetime.now(tz=timezone.utc).isoformat()[:-13] + "Z"
         self._entries.update(
             {
-                entry.url: LockEntry(url=entry.url, sha256=entry.sha256, timestamp=now)
+                str(entry.url): LockEntry(
+                    url=str(entry.url), sha256=entry.sha256, timestamp=now
+                )
                 for entry in entries
             }
         )

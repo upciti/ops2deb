@@ -11,6 +11,7 @@ from typer.core import TyperGroup
 from ops2deb import __version__, builder, formatter, generator, logger, parser, updater
 from ops2deb.exceptions import Ops2debError
 from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
+from ops2deb.migrate import migrate_configuration_file
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -279,6 +280,19 @@ def lock(
     try:
         fetcher = Fetcher(cache_directory, lockfile_path)
         fetcher.update_lockfile(configuration_path)
+    except Ops2debError as e:
+        error(e, exit_code)
+
+
+@app.command(help="Move file sha256 hashes to dedicated lockfile")
+def migrate(
+    verbose: bool = option_verbose,
+    exit_code: int = option_exit_code,
+    configuration_path: Path = option_configuration,
+    lockfile_path: Path = option_lockfile,
+) -> None:
+    try:
+        migrate_configuration_file(configuration_path, lockfile_path)
     except Ops2debError as e:
         error(e, exit_code)
 
