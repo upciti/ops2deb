@@ -49,6 +49,7 @@ In a test directory run:
 
 ```shell
 curl https://raw.githubusercontent.com/upciti/ops2deb/main/ops2deb.yml
+ops2deb lock # generate lockfile where downloaded file hashes are stored
 ops2deb  # equivalent to ops2deb generate && ops2deb build
 ```
 
@@ -78,15 +79,17 @@ For more information about existing subcommands and options run `ops2deb --help`
 
 ### Packaging `kubectl`
 
+The `fetch` field tells ops2deb to download a file. `ops2deb` will check the hash
+of downloaded files against a lockfile. To generate/update this lockfile, run
+`ops2dbe lock`. By default, the lockfile is named `ops2deb.lock.yml`.
+
 ```yaml
 name: kubectl
 version: 1.20.1
 summary: command line client for controlling a Kubernetes cluster
 description: |
   kubectl is a command line client for running commands against Kubernetes clusters.
-fetch:
-  url: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
-  sha256: 3f4b52a8072013e4cd34c9ea07e3c0c4e0350b227e00507fb1ae44a9adbf6785
+fetch: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
 install:
   - kubectl:/usr/bin/
 ```
@@ -138,6 +141,10 @@ If the maintainers of the application you wish to package publish releases for m
 ```yaml
 name: helm
 version: 3.7.2
+architectures:
+  - amd64
+  - armhf
+  - arm64
 homepage: https://helm.sh/
 summary: Kubernetes package manager
 description: |-
@@ -145,12 +152,7 @@ description: |-
   Charts are packages of pre-configured Kubernetes resources.
 depends:
   - kubectl
-fetch:
-  url: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
-  sha256:
-    amd64: 4ae30e48966aba5f807a4e140dad6736ee1a392940101e4d79ffb4ee86200a9e
-    armhf: ab73727f1c00903aff010a3557ab4366a1a13ce2d243c9cb191e703fbb76c915
-    arm64: b0214eabbb64791f563bd222d17150ce39bf4e2f5de49f49fdb456ce9ae8162f
+fetch: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
 script:
   - mv linux-*/helm {{src}}/usr/bin/
 ```
@@ -164,6 +166,9 @@ You can also define your own architure maps using the `fetch.targets` field and 
 ```yaml
 name: bottom
 version: 0.6.6
+architectures:
+  - amd64
+  - armhf
 homepage: https://clementtsang.github.io/bottom
 revision: 2
 summary: cross-platform graphical process/system monitor
@@ -173,9 +178,6 @@ description: |-
   Inspired by gtop, gotop, and htop.
 fetch:
   url: https://github.com/ClementTsang/bottom/releases/download/{{version}}/bottom_{{target}}.tar.gz
-  sha256:
-    amd64: 37ed4570d881f52784ed4780430c1f8c0d9132167e61306071d3ba09c49c0ca0
-    armhf: 7f3fb6d80de982b9ae3d7b4dfdfb640e838ba89ac0e7ff6d23ffffb1eae3b66c
   targets:
     amd64: x86_64-unknown-linux-gnu
     armhf: armv7-unknown-linux-gnueabihf
@@ -185,7 +187,7 @@ install:
 
 ### Using environment variables
 
-You can use `{{env("VARIABLE", "a_default")}}` in all fields except `fetch.sha256` and `fetch.targets.*`.
+You can use `{{env("VARIABLE", "a_default")}}` in all fields except `fetch.targets.*`.
 The example below uses environment variables set by Gitlab CI:
 
 ```yaml
@@ -205,20 +207,21 @@ script:
 
 Written in YAML and composed of a single blueprint object or a list of blueprints objects. A blueprint is defined by the following:
 
-| Field          | Meaning                                                                                                                                     | Default |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `name`         | Component name, e.g. `kustomize`.                                                                                                           |         |
-| `version`      | Application release to package.                                                                                                             |         |
-| `homepage`     | Upstream project homepage.                                                                                                                  | `None`  |
-| `architecture` | Package architecture.                                                                                                                       | `amd64` |
-| `revision`     | Package revistion.                                                                                                                          | `1`     |
-| `summary`      | Package short description.                                                                                                                  |         |
-| `description`  | Package full description.                                                                                                                   |         |
-| `fetch`        | A binary to download, and a `sha256` checksum. `tar.gz`, `tar.xz`, `tar` and `zip` (requires `unzip`) archives are extracted automatically. | `Null`  |
-| `script`       | List of build instructions templated with jinja2 and intepreted with the default `shell`.                                                   | `[]`    |
-| `depends`      | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                                                           | `[]`    |
-| `recommends`   | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.                                            | `[]`    |
-| `conflicts`    | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                                                         | `[]`    |
+| Field          | Meaning                                                                                              | Default |
+| -------------- | ---------------------------------------------------------------------------------------------------- | ------- |
+| `name`         | Component name, e.g. `kustomize`.                                                                    |         |
+| `version`      | Application release to package.                                                                      |         |
+| `homepage`     | Upstream project homepage.                                                                           | `None`  |
+| `architecture` | Package architecture.                                                                                | `amd64` |
+| `revision`     | Package revistion.                                                                                   | `1`     |
+| `summary`      | Package short description.                                                                           |         |
+| `description`  | Package full description.                                                                            |         |
+| `fetch`        | A file to download. `tar.gz`, `tar.xz`, `tar`, `zip` and `deb` archives are extracted automatically. | `Null`  |
+| `depends`      | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                    | `[]`    |
+| `recommends`   | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.     | `[]`    |
+| `conflicts`    | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                  | `[]`    |
+| `install`      | List of here-documents and files/directories to add to the debian package.                           | `[]`    |
+| `script`       | List of build instructions templated with jinja2 and intepreted with the default `shell`.            | `[]`    |
 
 ## Development
 
