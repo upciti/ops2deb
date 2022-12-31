@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from textwrap import wrap
-from typing import Any, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import yaml
 
@@ -42,7 +42,10 @@ def format_blueprint(blueprint: dict[str, Any]) -> dict[str, Any]:
     return blueprint
 
 
-def format(configuration_path: Path) -> None:
+def format(
+    configuration_path: Path,
+    additional_blueprint_formatting: Optional[Callable[[dict[str, Any]], None]] = None,
+) -> None:
     configuration_dict = load(configuration_path)
     validate(configuration_dict)
 
@@ -55,6 +58,10 @@ def format(configuration_path: Path) -> None:
 
     # sort blueprints by name, version and revision
     raw_blueprints = sort_blueprints(raw_blueprints)
+
+    if additional_blueprint_formatting is not None:
+        for blueprint in raw_blueprints:
+            additional_blueprint_formatting(blueprint)
 
     # wrap descriptions, remove default values, remove empty lists
     raw_blueprints = [format_blueprint(b) for b in raw_blueprints]

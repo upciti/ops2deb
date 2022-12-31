@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from typing import Optional
 
 import pytest
 import ruamel.yaml
@@ -210,7 +209,7 @@ def configuration_path(tmp_path) -> Path:
 def call_ops2deb(
     tmp_path, mock_httpx_client, configuration_path, lockfile_path, mock_lockfile
 ):
-    def _invoke(*args, configuration: Optional[str] = None, write: bool = True):
+    def _invoke(*args, configuration: str | None = None, write: bool = True):
         runner = CliRunner()
         if write is True:
             configuration_path.write_text(configuration or mock_valid_configuration)
@@ -536,8 +535,25 @@ def test_ops2deb_lock_should_succeed_with_valid_multi_arch_fetch(call_ops2deb):
     assert result.exit_code == 0
 
 
+def test_ops2deb_migrate_should_not_do_anything_when_configuration_has_no_hashes(
+    call_ops2deb, configuration_path
+):
+    result = call_ops2deb("migrate")
+    assert configuration_path.read_text() == mock_valid_configuration
+    assert result.exit_code == 0
+
+
+def test_ops2deb_migrate_should_remove_hashes_from_config_file_and_create_lockfile(
+    call_ops2deb, configuration_path, lockfile_path
+):
+    result = call_ops2deb("migrate", configuration=mock_valid_deprecated_configuration)
+    assert "sha256" not in configuration_path.read_text()
+    assert lockfile_path.exists()
+    assert result.exit_code == 77
+
+
 @pytest.mark.parametrize(
-    "subcommand", ["update", "generate", "format", "validate", "lock"]
+    "subcommand", ["update", "generate", "format", "validate", "lock", "migrate"]
 )
 def test_ops2deb_should_exit_with_error_code_when_configuration_file_is_invalid(
     call_ops2deb, subcommand
