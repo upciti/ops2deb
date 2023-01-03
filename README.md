@@ -14,6 +14,23 @@ Are you tired of checking if your favorite devops tools are up-to-date? Are you 
 but can be used to package any portable application. In short, it consumes a configuration file and outputs `.deb` packages.
 `ops2deb` can also track new releases of upstream applications and automatically bump application versions in its configuration file.
 
+- [Installation](#installation)
+  - [With <a href="https://docs.wakemeops.com" rel="nofollow">wakemeops</a>](#with-wakemeops)
+  - [With <a href="https://github.com/pipxproject/pipx">pipx</a>](#with-pipx)
+- [Dependencies](#dependencies)
+- [Getting started](#getting-started)
+- [Usage examples](#usage-examples)
+  - [Packaging kubectl](#packaging-kubectl)
+  - [Creating a metapackage](#creating-a-metapackage)
+  - [Packaging ops2deb with ops2deb](#packaging-ops2deb-with-ops2deb)
+  - [Building packages for multiple architectures at once](#building-packages-for-multiple-architectures-at-once)
+  - [Using environment variables](#using-environment-variables)
+- [Configuration file](#configuration-file)
+- [Development](#development)
+- [Important notes](#important-notes)
+- [Migration guides](#migration-guides)
+  - [Migrating to v1](#migrating-to-v1)
+
 ## Installation
 
 ### With [wakemeops](https://docs.wakemeops.com)
@@ -271,3 +288,14 @@ script:
 ```
 
 You will loose your files... To make sure that you won't mess with your system, run it within a container.
+
+## Migration guides
+
+### Migrating to v1
+
+Lockfile `ops2deb.lock.yml` was introduced in ops2deb v1.0.0, before that downloaded file hashes where stored in the configuration file, in the blueprint `fetch` object.
+
+To migrate from ops2deb < 1.0.0 to ops2deb >= 1.0.0:
+
+- Install ops2deb 1.0.0
+- Run `ops2deb migrate`
