@@ -13,7 +13,7 @@ Architecture = Literal["all", "amd64", "arm64", "armhf"]
 class Base(BaseModel):
     class Config:
         extra = "forbid"
-        allow_mutation = False
+        frozen = True
         anystr_strip_whitespace = True
 
 

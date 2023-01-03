@@ -359,6 +359,23 @@ def test_ops2deb_generate_should_set_cwd_variable_to_config_directory_when_bluep
     assert result.exit_code == 0
 
 
+def test_ops2deb_generate_should_not_crash_when_two_blueprints_download_the_same_file(
+    tmp_path, call_ops2deb, tmp_working_directory
+):
+    configuration = """\
+    - name: great-app-1
+      version: 1.0.0
+      summary: Great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    - name: great-app-2
+      version: 1.0.0
+      summary: Great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+    result = call_ops2deb("generate", configuration=configuration)
+    assert result.exit_code == 0
+
+
 def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
     call_ops2deb("generate")
     result = call_ops2deb("build")

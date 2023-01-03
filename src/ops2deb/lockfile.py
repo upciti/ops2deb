@@ -57,18 +57,15 @@ class Lock:
 
     def add(self, entries: Sequence[UrlAndHash]) -> None:
         now = datetime.now(tz=timezone.utc).isoformat()[:-13] + "Z"
-        self._entries.update(
-            {
-                str(entry.url): LockEntry(
+        for entry in entries:
+            if (url := str(entry.url)) not in self._entries:
+                self._entries[url] = LockEntry(
                     url=str(entry.url), sha256=entry.sha256, timestamp=now
                 )
-                for entry in entries
-            }
-        )
 
     def remove(self, urls: Sequence[str]) -> None:
         for url in urls:
-            self._entries.pop(url)
+            self._entries.pop(url, None)
 
     def save(self) -> None:
         if not self._entries:
