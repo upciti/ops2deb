@@ -9,8 +9,9 @@ from ops2deb.parser import RemoteFile, extend, parse
 def migrate_blueprint(blueprint: dict[str, Any]) -> None:
     if blueprint_fetch := blueprint.get("fetch", None):
         if isinstance(blueprint_fetch, dict):
-            blueprint["fetch"] = blueprint_fetch["url"]
-            if blueprint_sha256 := blueprint_fetch.get("sha256", None):
+            if "targets" not in blueprint_fetch:
+                blueprint["fetch"] = blueprint_fetch["url"]
+            if blueprint_sha256 := blueprint_fetch.pop("sha256", None):
                 if isinstance(blueprint_sha256, dict):
                     blueprint["architectures"] = list(blueprint_sha256.keys())
 
