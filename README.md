@@ -137,6 +137,7 @@ Hence for the following blueprint to succeed, you have to run ops2deb from the r
 ```yaml
 name: ops2deb
 version: 0.15.0
+homepage: https://github.com/upciti/ops2deb
 summary: debian packaging tool for portable applications
 description: |-
   Ops2deb is primarily designed to easily generate Debian packages for portable
@@ -144,7 +145,6 @@ description: |-
   described using a simple configuration file format. Ops2deb can track new
   releases of upstream applications and automatically bump application versions
   in its configuration file.
-homepage: https://github.com/upciti/ops2deb
 script:
   - poetry install -E pyinstaller
   - poetry run task single_binary_application
@@ -164,11 +164,11 @@ matrix:
     - armhf
     - arm64
 version: 3.7.2
+homepage: https://helm.sh/
 summary: Kubernetes package manager
 description: |-
   Tool for managing Kubernetes charts.
   Charts are packages of pre-configured Kubernetes resources.
-homepage: https://helm.sh/
 depends:
   - kubectl
 fetch: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
@@ -190,12 +190,12 @@ matrix:
     - armhf
 version: 0.6.6
 revision: 2
+homepage: https://clementtsang.github.io/bottom
 summary: cross-platform graphical process/system monitor
 description: |-
   A cross-platform graphical process/system monitor with a customizable interface
   and a multitude of features. Supports Linux, macOS, and Windows.
   Inspired by gtop, gotop, and htop.
-homepage: https://clementtsang.github.io/bottom
 fetch:
   url: https://github.com/ClementTsang/bottom/releases/download/{{version}}/bottom_{{target}}.tar.gz
   targets:
@@ -213,12 +213,12 @@ The example below uses environment variables set by Gitlab CI:
 ```yaml
 name: "{{env('CI_PROJECT_NAME')}}"
 version: "{{env('CI_COMMIT_TAG', '0')}}"
+homepage: "{{env('CI_PROJECT_URL')}}"
 summary: awesome application for doing things
 description: |-
   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
   incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
   nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-homepage: "{{env('CI_PROJECT_URL')}}"
 script:
   - install -m 755 build/x86_64-unknown-linux-gnu/release/install/great-app {{src}}/usr/bin/
 ```
@@ -230,19 +230,20 @@ Written in YAML and composed of a single blueprint object or a list of blueprint
 | Field          | Meaning                                                                                              | Default |
 | -------------- | ---------------------------------------------------------------------------------------------------- | ------- |
 | `name`         | Component name, e.g. `kustomize`.                                                                    |         |
+| `matrix`       | Generate multiple packages from a single blueprint.                                                  | `None`  |
 | `version`      | Application release to package.                                                                      |         |
-| `homepage`     | Upstream project homepage.                                                                           | `None`  |
-| `architecture` | Package architecture.                                                                                | `amd64` |
 | `revision`     | Package revistion.                                                                                   | `1`     |
+| `epoch`        | Package epoch.                                                                                       | `0`     |
+| `architecture` | Package architecture.                                                                                | `amd64` |
+| `homepage`     | Upstream project homepage.                                                                           | `None`  |
 | `summary`      | Package short description.                                                                           |         |
 | `description`  | Package full description.                                                                            |         |
-| `fetch`        | A file to download. `tar.gz`, `tar.xz`, `tar`, `zip` and `deb` archives are extracted automatically. | `None`  |
 | `depends`      | List of package dependencies. Corresponds to `Depends` entry in `debian/control`.                    | `[]`    |
 | `recommends`   | List of package recommended dependencies. Corresponds to `Recommends` entry in `debian/control`.     | `[]`    |
 | `conflicts`    | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                  | `[]`    |
+| `fetch`        | A file to download. `tar.gz`, `tar.xz`, `tar`, `zip` and `deb` archives are extracted automatically. | `None`  |
 | `install`      | List of here-documents and files/directories to add to the debian package.                           | `[]`    |
 | `script`       | List of build instructions templated with jinja2 and intepreted with the default `shell`.            | `[]`    |
-| `matrix`       | Generate multiple packages from a single blueprint.                                                  | `None`  |
 
 ## Development
 

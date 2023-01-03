@@ -5,11 +5,11 @@
       - armhf
       - arm64
   version: 3.10.3
+  homepage: https://helm.sh/
   summary: The Kubernetes package manager
   description: |-
     Tool for managing Kubernetes charts.
     Charts are packages of pre-configured Kubernetes resources.
-  homepage: https://helm.sh/
   depends:
     - kubectl
   fetch: https://get.helm.sh/helm-v{{version}}-linux-{{goarch}}.tar.gz
@@ -22,6 +22,7 @@
       - amd64
       - arm64
   version: 0.144.0
+  homepage: https://github.com/roboll/helmfile
   summary: Deploy Kubernetes Helm Charts
   description: |-
     Helmfile is a declarative spec for deploying helm charts. It lets you...
@@ -30,7 +31,6 @@
     control.
     - Apply CI/CD to configuration changes.
     - Periodically sync to avoid skew in environments.
-  homepage: https://github.com/roboll/helmfile
   depends:
     - kubectl
     - helm
@@ -40,9 +40,9 @@
 
 - name: istioctl
   version: 1.16.1
+  homepage: https://istio.io/
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
-  homepage: https://istio.io/
   depends:
     - kubectl
   fetch: https://github.com/istio/istio/releases/download/{{version}}/istio-{{version}}-linux-amd64.tar.gz
@@ -53,28 +53,29 @@
 
 - name: kubectl
   version: 1.26.0
+  homepage: https://github.com/kubernetes/kubectl
   summary: Command line client for controlling a Kubernetes cluster
   description: |-
     kubectl is a command line client for running commands against Kubernetes
     clusters.
-  homepage: https://github.com/kubernetes/kubectl
   fetch: https://storage.googleapis.com/kubernetes-release/release/v{{version}}/bin/linux/amd64/kubectl
   install:
     - kubectl:/usr/bin/
 
 - name: kubeseal
   version: 0.19.3
+  homepage: https://github.com/bitnami-labs/sealed-secrets
   summary: Secret management solution for k8s
   description: |-
     Encrypt your Secret into a SealedSecret, which is safe to store - even to a
     public repository.
-  homepage: https://github.com/bitnami-labs/sealed-secrets
   fetch: https://github.com/bitnami-labs/sealed-secrets/releases/download/v{{version}}/kubeseal-{{version}}-linux-amd64.tar.gz
   install:
     - kubeseal:/usr/bin/kubeseal
 
 - name: kustomize
   version: 4.5.7
+  homepage: https://kustomize.io/
   summary: Kubernetes native configuration management
   description: |-
     kustomize lets you customize raw, template-free YAML files for multiple
@@ -82,7 +83,6 @@
     targets kubernetes; it understands and can patch kubernetes style API objects.
     It's like make, in that what it does is declared in a file, and it's like sed,
     in that it emits edited text.
-  homepage: https://kustomize.io/
   depends:
     - kubectl
   fetch: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
@@ -91,6 +91,7 @@
 
 - name: minikube
   version: 1.28.0
+  homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
   description: |-
     Focus on helping application developers and new Kubernetes users.
@@ -101,13 +102,13 @@
     Docker API endpoint for blazing fast image pushes
     Advanced features such as LoadBalancer, filesystem mounts, and FeatureGates
     Addons for easily installed Kubernetes applications
-  homepage: https://minikube.sigs.k8s.io/
   fetch: https://storage.googleapis.com/minikube/releases/v{{version}}/minikube-linux-amd64
   install:
     - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
   version: 0.36.1
+  homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-
     Ops2deb is primarily designed to easily generate Debian packages for portable
@@ -115,7 +116,6 @@
     described using a simple configuration file format. Ops2deb can track new
     releases of upstream applications and automatically bump application versions
     in its configuration file.
-  homepage: https://github.com/upciti/ops2deb
   recommends:
     - build-essential
     - fakeroot

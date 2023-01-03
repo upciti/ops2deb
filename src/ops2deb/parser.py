@@ -90,9 +90,9 @@ class Blueprint(Base):
     epoch: int = Field(0, description="Package epoch", ge=0)
     architecture: Architecture = Field("amd64", description="Package architecture")
     arch: Architecture = Field("amd64", description="Package architecture (deprecated)")
+    homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field("", description="Package description")
-    homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
     build_depends: list[str] = Field(
         default_factory=list, description="Package build dependencies"
     )

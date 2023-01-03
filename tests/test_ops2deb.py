@@ -26,6 +26,7 @@ mock_valid_configuration = """\
   version: 1.0.0
   revision: 2
   architecture: all
+  homepage: https://geat-app.io
   summary: Great package
   fetch: http://testserver/{{version}}/great-app.tar.gz
   script:
