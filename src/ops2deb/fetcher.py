@@ -181,16 +181,16 @@ class Fetcher:
 
     async def fetch_urls(
         self,
-        urls: list[str],
+        urls: Sequence[str],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        return await self._run_tasks([FetchTask(url) for url in urls])
+        return await self._run_tasks([FetchTask(url) for url in set(urls)])
 
     def fetch_urls_and_check_hashes(
         self,
         remote_files: Sequence[str | RemoteFile],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
         tasks: list[FetchTask] = []
-        for remote_file in remote_files:
+        for remote_file in set(remote_files):
             if isinstance(remote_file, str):
                 task = FetchTask(remote_file, self.lock.sha256(remote_file))
             else:
