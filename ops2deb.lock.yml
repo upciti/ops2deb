@@ -1,18 +1,18 @@
-- url: https://get.helm.sh/helm-v3.10.1-linux-amd64.tar.gz
-  sha256: c12d2cd638f2d066fec123d0bd7f010f32c643afdf288d39a4610b1f9cb32af3
-  timestamp: 2022-12-29 13:14:57+00:00
-- url: https://get.helm.sh/helm-v3.10.1-linux-arm.tar.gz
-  sha256: 309f56a35185023262b4f20f7315d4e60854b517243444b34f5a458c81b33009
-  timestamp: 2022-12-29 13:14:57+00:00
-- url: https://get.helm.sh/helm-v3.10.1-linux-arm64.tar.gz
-  sha256: d04b38d439ab8655abb4cb9ccc1efa8a3fe95f3f68af46d9137c6b7985491833
-  timestamp: 2022-12-29 13:14:57+00:00
-- url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.1/kubeseal-0.19.1-linux-amd64.tar.gz
-  sha256: a78aa5c04b24bd3cbc72527a40bc13ae4d15f911e3053da510a68ddcd2cfd27a
-  timestamp: 2022-12-29 13:14:57+00:00
-- url: https://github.com/istio/istio/releases/download/1.15.3/istio-1.15.3-linux-amd64.tar.gz
-  sha256: f5fe82687f3777d6e5c9e4cda0d99bd03ff7aefaa9f10b0e608e0990a6ab000a
-  timestamp: 2022-12-29 13:14:57+00:00
+- url: https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz
+  sha256: 950439759ece902157cf915b209b8d694e6f675eaab5099fb7894f30eeaee9a2
+  timestamp: 2023-01-03 15:48:50+00:00
+- url: https://get.helm.sh/helm-v3.10.3-linux-arm.tar.gz
+  sha256: dca718eb68c72c51fc7157c4c2ebc8ce7ac79b95fc9355c5427ded99e913ec4c
+  timestamp: 2023-01-03 15:48:50+00:00
+- url: https://get.helm.sh/helm-v3.10.3-linux-arm64.tar.gz
+  sha256: 260cda5ff2ed5d01dd0fd6e7e09bc80126e00d8bdc55f3269d05129e32f6f99d
+  timestamp: 2023-01-03 15:48:50+00:00
+- url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.3/kubeseal-0.19.3-linux-amd64.tar.gz
+  sha256: f6c420d38f84008deffd040f0bbc527b08c2b70bdb373ab4e0598f64510af566
+  timestamp: 2023-01-03 15:48:50+00:00
+- url: https://github.com/istio/istio/releases/download/1.16.1/istio-1.16.1-linux-amd64.tar.gz
+  sha256: e5f6efc11c5dde58592478e1976b3c8e7bb9993cf22c57ac8a63003288baafdf
+  timestamp: 2023-01-03 15:48:50+00:00
 - url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v4.5.7/kustomize_v4.5.7_linux_amd64.tar.gz
   sha256: 701e3c4bfa14e4c520d481fdf7131f902531bfc002cb5062dcf31263a09c70c9
   timestamp: 2022-12-29 13:14:57+00:00
@@ -22,12 +22,12 @@
 - url: https://github.com/roboll/helmfile/releases/download/v0.144.0/helmfile_linux_arm64
   sha256: 8461bbb13ba23f4333dc99d96bf7a24c283cd7683e746acf639d80bbd828926a
   timestamp: 2022-12-29 13:14:57+00:00
-- url: https://github.com/upciti/ops2deb/releases/download/0.35.0/ops2deb_linux_amd64
-  sha256: 65e2ab3967dddb99c330d1027bb4e74e04b0eb5942c48f8b9ad38c912363d1d5
-  timestamp: 2022-12-29 13:14:57+00:00
-- url: https://storage.googleapis.com/kubernetes-release/release/v1.25.3/bin/linux/amd64/kubectl
-  sha256: f57e568495c377407485d3eadc27cda25310694ef4ffc480eeea81dea2b60624
-  timestamp: 2022-12-29 13:14:57+00:00
-- url: https://storage.googleapis.com/minikube/releases/v1.27.1/minikube-linux-amd64
-  sha256: 159bc79f3914dadb7c9f56b6e9d5b73a1c54acb26dca8f1ea84b99ff5da42620
-  timestamp: 2022-12-29 13:14:57+00:00
+- url: https://github.com/upciti/ops2deb/releases/download/0.36.1/ops2deb_linux_amd64
+  sha256: a396c3174141a7c658ae0a7baed366a1dd6e6e2defb009147d8fa9cdd3859ff9
+  timestamp: 2023-01-03 15:48:50+00:00
+- url: https://storage.googleapis.com/kubernetes-release/release/v1.26.0/bin/linux/amd64/kubectl
+  sha256: b6769d8ac6a0ed0f13b307d289dc092ad86180b08f5b5044af152808c04950ae
+  timestamp: 2023-01-03 15:48:50+00:00
+- url: https://storage.googleapis.com/minikube/releases/v1.28.0/minikube-linux-amd64
+  sha256: 58cead5ece9815a61d4be253a07b2385f8cf373d9e1eba5c9783444e4e9e2d8e
+  timestamp: 2023-01-03 15:48:50+00:00

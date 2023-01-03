@@ -499,6 +499,15 @@ def test_ops2deb_update_should_skip_blueprints_when_skip_option_is_used(
     assert configuration_path.read_text() == mock_valid_configuration
 
 
+def test_ops2deb_update_should_remove_dangling_urls_from_lockfile_when_a_version_is_bumped(  # noqa: E501
+    call_ops2deb, configuration_path, lockfile_path
+):
+    result = call_ops2deb("update")
+    assert result.exit_code == 0
+    assert "http://testserver/1.0.0/great-app.tar.gz" not in lockfile_path.read_text()
+    assert "http://testserver/1.1.1/great-app.tar.gz" in lockfile_path.read_text()
+
+
 def test_ops2deb_format_should_be_idempotent(configuration_path, call_ops2deb):
     call_ops2deb("format", configuration=mock_configuration_not_properly_formatted)
     formatted_configuration = configuration_path.read_text()
