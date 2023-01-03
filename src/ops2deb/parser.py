@@ -174,17 +174,16 @@ class Blueprint(Base):
         return self.render_string(url, version=version)
 
     def render_fetch(self, version: str | None = None) -> str | RemoteFile | None:
-        if self.fetch is None:
-            return None
+        url = self.render_fetch_url(version=version)
+        sha256 = None
         if isinstance(self.fetch, MultiArchitectureFetch):
-            sha256 = getattr(self.fetch.sha256, self.architecture)
+            if self.fetch.sha256 is not None:
+                sha256 = getattr(self.fetch.sha256, self.architecture, None)
         elif isinstance(self.fetch, RemoteFile):
             sha256 = self.fetch.sha256
-        else:
-            return self.render_fetch_url(version=version)
-        if sha256 is None:
-            return None
-        return RemoteFile(url=self.render_fetch_url(version), sha256=sha256)
+        if sha256 and url:
+            return RemoteFile(url=self.render_fetch_url(version), sha256=sha256)
+        return url
 
 
 class Configuration(Base):

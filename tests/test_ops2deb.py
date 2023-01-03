@@ -188,7 +188,10 @@ mock_configuration_with_multi_arch_remote_file = """\
   version: 1.0.0
   summary: Great package
   description: A detailed description of the great package.
-  fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
+  fetch:
+    url: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
+    targets:
+      armhf: armhf
   script:
   - mv great-app {{src}}/usr/bin/great-app
 """
