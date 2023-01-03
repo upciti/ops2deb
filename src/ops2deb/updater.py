@@ -216,6 +216,14 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
     raise Ops2debUpdaterError(error)
 
 
+def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> list[str]:
+    urls: list[str] = []
+    for architecture in blueprint.supported_architectures():
+        blueprint = blueprint.copy(update={"architecture": architecture})
+        urls.append(str(blueprint.render_fetch_url(version)))
+    return urls
+
+
 async def _find_latest_releases(
     blueprint_list: list[Blueprint], fetcher: Fetcher, skip_names: list[str] | None = None
 ) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
@@ -239,9 +247,7 @@ async def _find_latest_releases(
     # gather the urls of files we need to download to get the new checksums
     urls: dict[int, list[str]] = defaultdict(list)
     for index, blueprint in blueprints.items():
-        for architecture in blueprint.supported_architectures():
-            blueprint = blueprint.copy(update={"architecture": architecture})
-            urls[index].append(str(blueprint.render_fetch_url(versions[index])))
+        urls[index] = _blueprint_fetch_urls(blueprint, versions[index])
 
     url_list = list(itertools.chain(*[u for u in urls.values()]))
     results, fetch_errors = await fetcher.fetch_urls(url_list)
@@ -297,6 +303,7 @@ def update(
         for release in releases:
             release.update_configuration(configuration_dict)
             lock.add(release.fetch_results)
+            lock.remove(_blueprint_fetch_urls(release.blueprint))
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
         lock.save()

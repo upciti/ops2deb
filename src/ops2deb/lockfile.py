@@ -66,6 +66,10 @@ class Lock:
             }
         )
 
+    def remove(self, urls: Sequence[str]) -> None:
+        for url in urls:
+            self._entries.pop(url)
+
     def save(self) -> None:
         if not self._entries:
             return

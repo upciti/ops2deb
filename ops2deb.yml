@@ -1,5 +1,5 @@
 - name: helm
-  version: 3.10.1
+  version: 3.10.3
   architectures:
     - amd64
     - armhf
@@ -37,7 +37,7 @@
     - install -m 755 helmfile_linux_* {{src}}/usr/bin/helmfile
 
 - name: istioctl
-  version: 1.15.3
+  version: 1.16.1
   homepage: https://istio.io/
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
@@ -50,7 +50,7 @@
     - ln -s /opt/istio/istio-{{version}}/bin/istioctl {{src}}/usr/bin/istioctl
 
 - name: kubectl
-  version: 1.25.3
+  version: 1.26.0
   homepage: https://github.com/kubernetes/kubectl
   summary: Command line client for controlling a Kubernetes cluster
   description: |-
@@ -61,7 +61,7 @@
     - kubectl:/usr/bin/
 
 - name: kubeseal
-  version: 0.19.1
+  version: 0.19.3
   homepage: https://github.com/bitnami-labs/sealed-secrets
   summary: Secret management solution for k8s
   description: |-
@@ -88,7 +88,7 @@
     - kustomize:/usr/bin/
 
 - name: minikube
-  version: 1.27.1
+  version: 1.28.0
   homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
   description: |-
@@ -105,7 +105,7 @@
     - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
-  version: 0.35.0
+  version: 0.36.1
   homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-
