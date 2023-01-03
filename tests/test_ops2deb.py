@@ -15,8 +15,8 @@ yaml = ruamel.yaml.YAML(typ="safe")
 mock_valid_configuration = """\
 - name: awesome-metapackage
   version: "{{env('CI_COMMIT_TAG', '1.0.0')}}"
-  architecture: all
   epoch: 1
+  architecture: all
   summary: Awesome metapackage
   description: A detailed description of the awesome metapackage.
   depends:
@@ -24,8 +24,8 @@ mock_valid_configuration = """\
 
 - name: great-app
   version: 1.0.0
-  architecture: all
   revision: 2
+  architecture: all
   summary: Great package
   fetch: http://testserver/{{version}}/great-app.tar.gz
   script:
@@ -126,12 +126,13 @@ mock_configuration_with_server_error = """\
 
 mock_configuration_with_multi_arch_remote_file_and_404_on_one_file = """\
 - name: great-app
-  summary: Great package
+  matrix:
+    architectures:
+    - amd64
+    - armhf
+    - arm64
   version: 1.0.0
-  architectures:
-  - amd64
-  - armhf
-  - arm64
+  summary: Great package
   description: A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
   script:
@@ -179,24 +180,16 @@ mock_configuration_with_deprecated_multi_arch_remote_file = """\
 
 mock_configuration_with_multi_arch_remote_file = """\
 - name: great-app
-  summary: Great package
+  matrix:
+    architectures:
+    - amd64
+    - armhf
   version: 1.0.0
-  architectures:
-  - amd64
-  - armhf
+  summary: Great package
   description: A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
   script:
   - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_invalid_configuration_yaml_error = """\
-- name: awesome-metapackage
-    version: 1.0.0
-"""
-
-mock_invalid_configuration_validation_error = """\
-- name: awesome-metapackage
 """
 
 
@@ -581,14 +574,27 @@ def test_ops2deb_migrate_should_remove_hashes_from_config_file_and_create_lockfi
 @pytest.mark.parametrize(
     "subcommand", ["update", "generate", "format", "validate", "lock", "migrate"]
 )
-def test_ops2deb_should_exit_with_error_code_when_configuration_file_is_invalid(
+def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_invalid_yaml(
     call_ops2deb, subcommand
 ):
-    result = call_ops2deb(subcommand, configuration=mock_invalid_configuration_yaml_error)
+    configuration_with_yaml_error = """\
+    - name: awesome-metapackage
+        version: 1.0.0
+    """
+    result = call_ops2deb(subcommand, configuration=configuration_with_yaml_error)
     assert "Invalid YAML file." in result.stdout
     assert result.exit_code == 77
-    result = call_ops2deb(
-        subcommand, configuration=mock_invalid_configuration_validation_error
-    )
+
+
+@pytest.mark.parametrize(
+    "subcommand", ["update", "generate", "format", "validate", "lock", "migrate"]
+)
+def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_validation_error(
+    call_ops2deb, subcommand
+):
+    configuration_with_validation_error = """\
+    - name: awesome-metapackage
+    """
+    result = call_ops2deb(subcommand, configuration=configuration_with_validation_error)
     assert "Invalid configuration file." in result.stdout
     assert result.exit_code == 77

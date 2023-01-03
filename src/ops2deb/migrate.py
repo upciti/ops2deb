@@ -13,7 +13,7 @@ def migrate_blueprint(blueprint: dict[str, Any]) -> None:
                 blueprint["fetch"] = blueprint_fetch["url"]
             if blueprint_sha256 := blueprint_fetch.pop("sha256", None):
                 if isinstance(blueprint_sha256, dict):
-                    blueprint["architectures"] = list(blueprint_sha256.keys())
+                    blueprint["matrix"] = {"architectures": list(blueprint_sha256.keys())}
 
 
 def migrate_configuration_file(configuration_path: Path, lockfile_path: Path) -> None:

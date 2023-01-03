@@ -74,19 +74,25 @@ class HereDocument(Base):
         return self.path
 
 
+class Matrix(Base):
+    architectures: list[Architecture] = Field(
+        default_factory=list, description="List of architectures"
+    )
+
+
 class Blueprint(Base):
     name: str = Field(..., description="Package name")
-    version: str = Field(..., description="Package name")
-    architectures: list[Architecture] = Field(
-        default_factory=list, description="Architecture matrix"
+    matrix: Matrix | None = Field(
+        None, description="Generate multiple packages from one a single blueprint"
     )
-    architecture: Architecture = Field("amd64", description="Package architecture")
-    homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
+    version: str = Field(..., description="Package name")
     revision: int = Field(1, description="Package revision", ge=1)
     epoch: int = Field(0, description="Package epoch", ge=0)
+    architecture: Architecture = Field("amd64", description="Package architecture")
     arch: Architecture = Field("amd64", description="Package architecture (deprecated)")
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field("", description="Package description")
+    homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
     build_depends: list[str] = Field(
         default_factory=list, description="Package build dependencies"
     )
@@ -117,7 +123,7 @@ class Blueprint(Base):
 
     @validator("arch", "architecture", pre=False, always=False)
     def _archs_cannot_be_used_with_arch(cls, v: Any, values: Any) -> Any:
-        if values["architectures"]:
+        if values["matrix"] and values["matrix"]["architectures"]:
             raise ValueError("'architectures' cannot be used with 'architecture'")
         values["architecture"] = v
         return v
@@ -143,9 +149,9 @@ class Blueprint(Base):
             rust_target=DEFAULT_RUST_TARGET_MAP.get(self.architecture, None),
         )
 
-    def supported_architectures(self) -> Sequence[str]:
-        if self.architectures:
-            return self.architectures
+    def architectures(self) -> Sequence[str]:
+        if self.matrix and self.matrix.architectures:
+            return self.matrix.architectures
         elif isinstance(self.fetch, MultiArchitectureFetch):
             if self.fetch.sha256 is not None:
                 return list(self.fetch.sha256.dict(exclude_none=True).keys())
@@ -188,7 +194,7 @@ class Configuration(Base):
 def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
     extended_list: list[Blueprint] = []
     for blueprint in blueprints:
-        for arch in blueprint.supported_architectures():
+        for arch in blueprint.architectures():
             extended_list.append(blueprint.copy(update={"architecture": arch}))
     return extended_list
 

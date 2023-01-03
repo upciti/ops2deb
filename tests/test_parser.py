@@ -18,7 +18,7 @@ def mock_blueprint(blueprint_factory):
 def test_supported_architectures_should_return_lists_of_architectures_from_fetch_sha256(
     mock_blueprint,
 ):
-    assert mock_blueprint.supported_architectures() == ["amd64", "armhf"]
+    assert mock_blueprint.architectures() == ["amd64", "armhf"]
 
 
 def test_render_string_target_should_default_to_blueprint_architecture(mock_blueprint):
