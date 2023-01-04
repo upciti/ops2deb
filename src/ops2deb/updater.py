@@ -236,13 +236,15 @@ async def _find_latest_releases(
 
     async with client_factory() as client:
         tasks = [_find_latest_version(client, b) for b in blueprints.values()]
-        tasks_results = await asyncio.gather(*tasks)
+        tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
         versions, errors = separate_results_from_errors(
             dict(zip(blueprints.keys(), tasks_results))
         )
 
     # remove blueprints where the current version is still the latest
-    blueprints = {i: b for i, b in blueprints.items() if versions[i] != b.version}
+    blueprints = {
+        i: blueprints[i] for i, v in versions.items() if v != blueprints[i].version
+    }
 
     # gather the urls of files we need to download to get the new checksums
     urls: dict[int, list[str]] = defaultdict(list)

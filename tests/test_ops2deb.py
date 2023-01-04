@@ -114,16 +114,6 @@ mock_configuration_with_archive_not_found = """\
     - mv great-app {{src}}/usr/bin/great-app
 """
 
-mock_configuration_with_server_error = """\
-- name: bad-app
-  version: 1.0.0
-  summary: Bad package
-  description: |
-    A detailed description of the bad package
-  fetch: http://testserver/{{version}}/bad-app.zip
-  script:
-    - mv bad-app {{src}}/usr/bin/bad-app
-"""
 
 mock_configuration_with_multi_arch_remote_file_and_404_on_one_file = """\
 - name: great-app
@@ -486,10 +476,25 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(
     assert "revision" not in configuration[1].keys()
 
 
-def test_ops2deb_update_should_fail_gracefully_when_server_error(call_ops2deb):
-    result = call_ops2deb("update", configuration=mock_configuration_with_server_error)
+def test_ops2deb_update_should_fail_gracefully_when_server_error(
+    call_ops2deb, configuration_path
+):
+    configuration_with_server_error = """\
+    - name: bad-app
+      version: 1.0.0
+      summary: Bad package
+      fetch: http://testserver/{{version}}/bad-app.zip
+
+    - name: great-app
+      version: 1.0.0
+      summary: Great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    result = call_ops2deb("update", configuration=configuration_with_server_error)
     error = "Server error when requesting http://testserver/1.1.0/bad-app.zip"
     assert error in result.stdout
+    assert parse(configuration_path)[1].version == "1.1.1"
     assert result.exit_code == 77
 
 
