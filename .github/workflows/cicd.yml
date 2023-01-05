@@ -76,7 +76,7 @@ jobs:
           mv dist/ops2deb ops2deb_linux_amd64
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ops2deb_linux_amd64
           path: ops2deb_linux_amd64
@@ -88,7 +88,7 @@ jobs:
           poetry run poetry build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: distributions
           path: dist/*
