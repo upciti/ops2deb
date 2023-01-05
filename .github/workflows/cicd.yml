@@ -169,7 +169,7 @@ jobs:
 
       - name: Docker meta for slim images
         id: metaslim
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
           images: ghcr.io/upciti/ops2deb
           flavor: suffix=-slim,onlatest=true
@@ -194,7 +194,7 @@ jobs:
 
       - name: Docker meta for big images
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
           images: ghcr.io/upciti/ops2deb
           tags: |
