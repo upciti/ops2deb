@@ -30,7 +30,7 @@ Architecture: {{ package.architecture }}
 {%- if package.replaces %}{{ '\n' }}Replaces: {{ package.replaces|sort|join(', ') }}{% endif %}
 {%- if package.conflicts %}{{ '\n' }}Conflicts: {{ package.conflicts|sort|join(', ') }}{% endif %}
 Description: {{ package.summary }}
-{% if package.description %}{% for line in package.description.split('\n') %} {{ line or '.' }}{{ '\n' if not loop.last else '' }}{% endfor %}{% endif %}
+{% if package.description %}{% for line in package.description.split('\n') %} {{ line or '.' }}{{ '\n' if not loop.last else '' }}{% endfor %}\n{% endif -%}
 
 """
 
