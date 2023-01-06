@@ -94,7 +94,7 @@ Description: My great app
 blueprint_4 = Blueprint(
     name="great-app",
     version="1.0.0",
-    summary="My great app",
+    summary="My great app without a description",
 )
 
 
@@ -106,8 +106,7 @@ Standards-Version: 3.9.6
 
 Package: great-app
 Architecture: amd64
-Description: My great app
-
+Description: My great app without a description
 """
 
 
@@ -120,7 +119,7 @@ Description: My great app
         (blueprint_4, control_4),
     ],
 )
-def test_generate_should_produce_identical_control_file_snapshot(
+def test_generate_should_produce_same_control_file_content_as_the_snapshot(
     tmp_path, blueprint, control
 ):
     fetcher = Fetcher(tmp_path, tmp_path / "ops2deb.lock.yml")
