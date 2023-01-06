@@ -106,3 +106,17 @@ def test_blueprint_should_not_raise_when_architectures_is_used_without_architect
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(architectures=["amd64"])
+
+
+@pytest.mark.parametrize("revision", ["1", "10", "1test+test~test"])
+def test_blueprint_should_not_raise_when_revision_is_a_valid_string(
+    revision, blueprint_factory
+):
+    blueprint_factory(revision=revision)
+
+
+def test_blueprint_should_raise_when_revision_begins_with_a_0(
+    blueprint_factory,
+):
+    with pytest.raises(ValidationError):
+        blueprint_factory(revision="0")
