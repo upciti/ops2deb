@@ -86,7 +86,9 @@ class Blueprint(Base):
         None, description="Generate multiple packages from one a single blueprint"
     )
     version: str = Field(..., description="Package name")
-    revision: int = Field(1, description="Package revision", ge=1)
+    revision: str = Field(
+        "1", regex=r"^[1-9][a-z0-9+~]*$", description="Package revision"
+    )
     epoch: int = Field(0, description="Package epoch", ge=0)
     architecture: Architecture = Field("amd64", description="Package architecture")
     arch: Architecture = Field("amd64", description="Package architecture (deprecated)")

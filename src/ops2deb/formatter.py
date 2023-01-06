@@ -12,7 +12,7 @@ from ops2deb.utils import PrettyYAMLDumper
 
 def sort_blueprints(blueprints: list[dict[str, Any]]) -> list[dict[str, Any]]:
     def key(blueprint: dict[str, Any]) -> Tuple[str, str, int]:
-        return blueprint["name"], blueprint["version"], blueprint.get("revision", 1)
+        return blueprint["name"], blueprint["version"], blueprint.get("revision", "1")
 
     return sorted(blueprints, key=key)
 

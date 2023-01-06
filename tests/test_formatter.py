@@ -55,7 +55,7 @@ def test_format_blueprint_should_remove_default_values():
     )
     blueprint = Blueprint(**raw_blueprint)
     raw_blueprint_with_defaults = json.loads(blueprint.json())
-    assert "revision" in raw_blueprint_with_defaults
+    assert raw_blueprint_with_defaults["revision"] == "1"
     assert format_blueprint(raw_blueprint_with_defaults) == raw_blueprint
 
 
