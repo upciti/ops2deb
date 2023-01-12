@@ -181,16 +181,6 @@ class LatestRelease:
         raw_blueprint["version"] = self.version
         raw_blueprint.pop("revision", None)
 
-        # TODO: remove this when fetch.sha256 support is dropped
-        if not isinstance(raw_blueprint["fetch"], str):
-            raw_blueprint["fetch"].pop("sha256", None)
-            if len(architectures := self.blueprint.architectures()) > 1:
-                raw_blueprint["matrix"] = {"architectures": architectures}
-                raw_blueprint.pop("architecture", None)
-                raw_blueprint.pop("arch", None)
-            if len(raw_blueprint["fetch"]) == 1:
-                raw_blueprint["fetch"] = raw_blueprint["fetch"]["url"]
-
 
 async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
     strategies = [GithubUpdateStrategy(client), GenericUpdateStrategy(client)]

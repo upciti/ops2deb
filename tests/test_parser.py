@@ -7,15 +7,15 @@ from pydantic import ValidationError
 @pytest.fixture
 def mock_blueprint(blueprint_factory):
     return blueprint_factory(
+        matrix=dict(architectures=["amd64", "armhf"]),
         fetch=dict(
             url="http://{{goarch}}/{{rust_target}}/{{target}}",
-            sha256=dict(amd64="deadbeef", armhf="deadbeef"),
             targets=dict(amd64="x86_64"),
-        )
+        ),
     )
 
 
-def test_supported_architectures_should_return_lists_of_architectures_from_fetch_sha256(
+def test_supported_architectures_should_return_lists_of_architectures_matrix(
     mock_blueprint,
 ):
     assert mock_blueprint.architectures() == ["amd64", "armhf"]
@@ -41,9 +41,11 @@ def test_render_string_should_evaluate_goarch_and_rust_targets_and_target(
     assert blueprint.render_string(template) == result
 
 
-def test_render_fetch_should_evaluate_goarch_and_rust_targets_and_target(mock_blueprint):
+def test_render_fetch_url_should_evaluate_goarch_and_rust_targets_and_target(
+    mock_blueprint,
+):
     blueprint = mock_blueprint
-    assert blueprint.render_fetch().url == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
+    assert blueprint.render_fetch_url() == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
 
 
 def test_blueprint_should_evaluate_env_jinja_function_when_used_in_string_attributes(
@@ -85,13 +87,6 @@ def test_blueprint_should_raise_when_install_is_a_string_with_more_than_one_sepa
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(install=["invalid::input"])
-
-
-def test_blueprint_should_raise_when_architectures_is_used_with_arch(
-    blueprint_factory,
-):
-    with pytest.raises(ValidationError):
-        blueprint_factory(arch="amd64", architectures=["amd64"])
 
 
 def test_blueprint_should_raise_when_architectures_is_used_with_architecture(

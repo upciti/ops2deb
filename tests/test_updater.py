@@ -67,10 +67,7 @@ async def test_generic_update_strategy_should_find_expected_blueprint_release(
     blueprint_factory, app_factory, versions, expected_result
 ):
     blueprint = blueprint_factory(
-        fetch={
-            "url": "http://test/releases/{{version}}/some-app.tar.gz",
-            "sha256": "deadbeef",
-        }
+        fetch="http://test/releases/{{version}}/some-app.tar.gz",
     )
     app = app_factory(versions)
     async with AsyncClient(app=app) as client:
@@ -89,7 +86,7 @@ async def test_github_update_strategy_should_find_expected_blueprint_release(
     blueprint_factory, github_app_factory, fetch_url, tag_name
 ):
     app = github_app_factory(tag_name)
-    blueprint = blueprint_factory(fetch={"url": fetch_url, "sha256": "deadbeef"})
+    blueprint = blueprint_factory(fetch=fetch_url)
     async with AsyncClient(app=app) as client:
         update_strategy = GithubUpdateStrategy(client)
         assert await update_strategy(blueprint) == "2.3.0"
@@ -100,7 +97,7 @@ async def test_github_update_strategy_should_not_return_an_older_version_than_cu
 ):
     app = github_app_factory("0.1.0", versions=["1.0.0"])
     url = "https://github.com/owner/name/releases/{{version}}/some-app.tar.gz"
-    blueprint = blueprint_factory(fetch={"url": url, "sha256": "deadbeef"})
+    blueprint = blueprint_factory(fetch=url)
     async with AsyncClient(app=app) as client:
         update_strategy = GithubUpdateStrategy(client)
         assert await update_strategy(blueprint) == "1.0.0"
@@ -111,7 +108,7 @@ async def test_github_update_strategy_should_fail_gracefully_when_asset_not_foun
 ):
     app = github_app_factory("someapp-v2.3.0")
     url = "https://github.com/owner/name/releases/someapp-v{{version}}/some-app.tar.gz"
-    blueprint = blueprint_factory(fetch={"url": url, "sha256": "deadbeef"})
+    blueprint = blueprint_factory(fetch=url)
     async with AsyncClient(app=app) as client:
         with pytest.raises(Ops2debUpdaterError) as e:
             await GithubUpdateStrategy(client)(blueprint)

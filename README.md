@@ -300,7 +300,7 @@ You will loose your files... To make sure that you won't mess with your system, 
 
 Lockfile `ops2deb.lock.yml` was introduced in ops2deb v1.0.0, before that downloaded file hashes where stored in the configuration file, in the blueprint `fetch` object.
 
-To migrate from ops2deb < 1.0.0 to ops2deb >= 1.0.0:
+To migrate from ops2deb <= 1.0.3 to ops2deb > 1.0.3:
 
-- Install ops2deb 1.0.0
+- Install ops2deb 1.0.3
 - Run `ops2deb migrate`
