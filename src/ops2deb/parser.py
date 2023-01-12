@@ -127,9 +127,7 @@ class Blueprint(Base):
     def _version_must_be_set(cls, values: Any) -> Any:
         matrix = values.get("matrix", None)
         if (not matrix or not matrix.versions) and not values.get("version"):
-            raise ValueError(
-                "You must either use a versions matrix or set the version field"
-            )
+            raise ValueError("Version field is required when versions matrix is not used")
         if matrix and matrix.versions:
             values["version"] = matrix.versions[-1]
         return values

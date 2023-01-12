@@ -7,7 +7,7 @@ from ops2deb.parser import Blueprint
 
 
 @pytest.fixture
-def mock_blueprint(blueprint_factory):
+def blueprint(blueprint_factory):
     return blueprint_factory(
         matrix=dict(architectures=["amd64", "armhf"]),
         fetch=dict(
@@ -17,12 +17,12 @@ def mock_blueprint(blueprint_factory):
     )
 
 
-def test_architectures_should_return_lists_of_architectures(mock_blueprint):
-    assert mock_blueprint.architectures() == ["amd64", "armhf"]
+def test_architectures_should_return_lists_of_architectures(blueprint):
+    assert blueprint.architectures() == ["amd64", "armhf"]
 
 
-def test_render_string_target_should_default_to_blueprint_architecture(mock_blueprint):
-    blueprint = mock_blueprint.copy(update={"architecture": "armhf"})
+def test_render_string_target_should_default_to_blueprint_architecture(blueprint):
+    blueprint = blueprint.copy(update={"architecture": "armhf"})
     assert blueprint.render_string("{{target}}") == "armhf"
 
 
@@ -35,16 +35,14 @@ def test_render_string_target_should_default_to_blueprint_architecture(mock_blue
     ],
 )
 def test_render_string_should_evaluate_goarch_and_rust_targets_and_target(
-    template, result, mock_blueprint
+    template, result, blueprint
 ):
-    blueprint = mock_blueprint
     assert blueprint.render_string(template) == result
 
 
 def test_render_fetch_url_should_evaluate_goarch_and_rust_targets_and_target(
-    mock_blueprint,
+    blueprint,
 ):
-    blueprint = mock_blueprint
     assert blueprint.render_fetch_url() == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
 
 
@@ -137,4 +135,4 @@ def test_blueprint_should_raise_when_versions_matrix_not_used_and_version_field_
             name="great-app",
             summary="My great app",
         )
-    assert result.match("You must either use a versions matrix or set the version field")
+    assert result.match("Version field is required when versions matrix is not used")
