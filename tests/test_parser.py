@@ -3,6 +3,8 @@ import os
 import pytest
 from pydantic import ValidationError
 
+from ops2deb.parser import Blueprint
+
 
 @pytest.fixture
 def mock_blueprint(blueprint_factory):
@@ -15,9 +17,7 @@ def mock_blueprint(blueprint_factory):
     )
 
 
-def test_supported_architectures_should_return_lists_of_architectures_matrix(
-    mock_blueprint,
-):
+def test_architectures_should_return_lists_of_architectures(mock_blueprint):
     assert mock_blueprint.architectures() == ["amd64", "armhf"]
 
 
@@ -110,8 +110,31 @@ def test_blueprint_should_not_raise_when_revision_is_a_valid_string(
     blueprint_factory(revision=revision)
 
 
-def test_blueprint_should_raise_when_revision_begins_with_a_0(
+def test_blueprint_should_raise_when_revision_begins_with_a_0(blueprint_factory):
+    with pytest.raises(ValidationError):
+        blueprint_factory(revision="0")
+
+
+def test_blueprint_should_raise_when_versions_is_used_with_version(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
-        blueprint_factory(revision="0")
+        blueprint_factory(version="1.0.0", versions=["1.0.0"])
+
+
+def test_blueprint_should_set_version_when_versions_matrix_is_used():
+    blueprint = Blueprint(
+        matrix=dict(versions=["1.0.0", "1.0.1"]),
+        name="great-app",
+        summary="My great app",
+    )
+    assert blueprint.version == "1.0.1"
+
+
+def test_blueprint_should_raise_when_versions_matrix_not_used_and_version_field_not_set():
+    with pytest.raises(ValidationError) as result:
+        Blueprint(
+            name="great-app",
+            summary="My great app",
+        )
+    assert result.match("You must either use a versions matrix or set the version field")

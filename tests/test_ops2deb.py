@@ -141,6 +141,18 @@ mock_configuration_with_multi_arch_remote_file = """\
   - mv great-app {{src}}/usr/bin/great-app
 """
 
+mock_configuration_with_version_matrix = """\
+- name: great-app
+  matrix:
+    versions:
+    - 1.0.0
+    - 1.0.1
+  summary: Great package
+  fetch: http://testserver/{{version}}/great-app.tar.gz
+  script:
+  - mv great-app {{src}}/usr/bin/great-app
+"""
+
 
 @pytest.fixture
 def configuration_path(tmp_path) -> Path:
@@ -338,6 +350,19 @@ def test_ops2deb_update_should_succeed_with_valid_configuration(
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
     assert configuration[1].version == "1.1.1"
+    assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
+
+
+def test_ops2deb_update_should_succeed_with_version_matrix(
+    configuration_path, lockfile_path, call_ops2deb
+):
+    result = call_ops2deb("update", configuration=mock_configuration_with_version_matrix)
+    configuration = parse(configuration_path)
+    lock = Lock(lockfile_path)
+    sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
+    assert "great-app can be bumped from 1.0.1 to 1.1.1" in result.stdout
+    assert result.exit_code == 0
+    assert configuration[0].matrix.versions == ["1.0.0", "1.0.1", "1.1.1"]
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
 
 

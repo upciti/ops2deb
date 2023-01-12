@@ -1,7 +1,15 @@
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
-from pydantic import AnyHttpUrl, BaseModel, Field, ValidationError, validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    Field,
+    ValidationError,
+    root_validator,
+    validator,
+)
+from pydantic.fields import ModelField
 from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
 
 from ops2deb.exceptions import Ops2debParserError
@@ -70,6 +78,7 @@ class Matrix(Base):
     architectures: list[Architecture] = Field(
         default_factory=list, description="List of architectures"
     )
+    versions: list[str] = Field(default_factory=list, description="List of versions")
 
 
 class Blueprint(Base):
@@ -77,7 +86,7 @@ class Blueprint(Base):
     matrix: Matrix | None = Field(
         None, description="Generate multiple packages from one a single blueprint"
     )
-    version: str = Field(..., description="Package name")
+    version: str = Field("", description="Package name")
     revision: str = Field(
         "1", regex=r"^[1-9][a-z0-9+~]*$", description="Package revision"
     )
@@ -114,10 +123,23 @@ class Blueprint(Base):
     install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
     script: list[str] = Field(default_factory=list, description="Build instructions")
 
-    @validator("architecture", pre=False, always=False)
-    def _architectures_cannot_be_used_with_architecture(cls, v: Any, values: Any) -> Any:
-        if values["matrix"] and values["matrix"]["architectures"]:
-            raise ValueError("'architectures' cannot be used with 'architecture'")
+    @root_validator(pre=False)
+    def _version_must_be_set(cls, values: Any) -> Any:
+        matrix = values.get("matrix", None)
+        if (not matrix or not matrix.versions) and not values.get("version"):
+            raise ValueError(
+                "You must either use a versions matrix or set the version field"
+            )
+        if matrix and matrix.versions:
+            values["version"] = matrix.versions[-1]
+        return values
+
+    @validator("architecture", "version", pre=True, always=False)
+    def _check_arch_and_version(cls, v: Any, values: Any, field: ModelField) -> Any:
+        if (matrix := values["matrix"]) is not None:
+            getter = getattr if isinstance(matrix, Matrix) else lambda x, y: x[y]
+            if getter(matrix, f"{field.name}s"):
+                raise ValueError(f"'{field.name}s' cannot be used with '{field.name}'")
         return v
 
     @validator("name", "version", "summary", "description", "homepage", pre=True)
@@ -146,6 +168,11 @@ class Blueprint(Base):
             return self.matrix.architectures
         return [self.architecture]
 
+    def versions(self) -> Sequence[str]:
+        if self.matrix and self.matrix.versions:
+            return self.matrix.versions
+        return [self.version]
+
     def render_string(self, string: str, **kwargs: str | Path | None) -> str:
         version = kwargs.pop("version", None)
         version = version or self.version
@@ -171,7 +198,10 @@ def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
     extended_list: list[Blueprint] = []
     for blueprint in blueprints:
         for arch in blueprint.architectures():
-            extended_list.append(blueprint.copy(update={"architecture": arch}))
+            for version in blueprint.versions():
+                extended_list.append(
+                    blueprint.copy(update={"architecture": arch, "version": version})
+                )
     return extended_list
 
 

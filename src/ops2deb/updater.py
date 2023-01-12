@@ -178,8 +178,16 @@ class LatestRelease:
             else blueprint_dict
         )
 
-        raw_blueprint["version"] = self.version
+        if self.blueprint.matrix and self.blueprint.matrix.versions:
+            raw_blueprint["matrix"]["versions"].append(self.version)
+        else:
+            raw_blueprint["version"] = self.version
         raw_blueprint.pop("revision", None)
+
+    def update_lock(self, lock: Lock) -> None:
+        lock.add(self.fetch_results)
+        if self.blueprint.matrix is None or not self.blueprint.matrix.versions:
+            lock.remove(_blueprint_fetch_urls(self.blueprint))
 
 
 async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
@@ -190,7 +198,7 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
     for update_strategy in strategies:
         try:
             version = await update_strategy(blueprint)
-            if version != blueprint.version:
+            if version not in blueprint.versions():
                 logger.info(
                     f"{blueprint.name} can be bumped "
                     f"from {blueprint.version} to {version}"
@@ -302,8 +310,8 @@ def update(
         lock = Lock(lockfile_path)
         for release in releases:
             release.update_configuration(configuration_dict)
-            lock.add(release.fetch_results)
-            lock.remove(_blueprint_fetch_urls(release.blueprint))
+            release.update_lock(lock)
+
         with configuration_path.open("w") as output:
             yaml.dump(configuration_dict, output)
         lock.save()
