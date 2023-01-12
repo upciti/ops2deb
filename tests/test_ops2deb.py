@@ -429,8 +429,18 @@ def test_ops2deb_update_should_skip_blueprints_when_skip_option_is_used(
     assert configuration_path.read_text() == mock_valid_configuration
 
 
+def test_ops2deb_update_should_only_update_blueprints_listed_with_only_option(
+    configuration_path, call_ops2deb
+):
+    result = call_ops2deb("update", "--only", "great-app")
+    configuration = parse(configuration_path)
+    assert result.exit_code == 0
+    assert configuration[1].version == "1.1.1"
+    assert configuration[2].version == "1.0.0"
+
+
 def test_ops2deb_update_should_remove_dangling_urls_from_lockfile_when_a_version_is_bumped(  # noqa: E501
-    call_ops2deb, configuration_path, lockfile_path
+    call_ops2deb, lockfile_path
 ):
     result = call_ops2deb("update")
     assert result.exit_code == 0
