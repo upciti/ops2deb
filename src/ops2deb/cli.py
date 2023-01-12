@@ -229,11 +229,12 @@ def update(
         envvar="OPS2DEB_SKIP_BLUEPRINTS",
         help="Name of blueprint that should not be updated. Can be used multiple times.",
     ),
+    only: Optional[List[str]] = option_only,
 ) -> None:
     try:
         fetcher = Fetcher(cache_directory, lockfile_path)
         updater.update(
-            configuration_path, lockfile_path, fetcher, dry_run, output_path, skip
+            configuration_path, lockfile_path, fetcher, dry_run, output_path, skip, only
         )
     except Ops2debError as e:
         error(e, exit_code)

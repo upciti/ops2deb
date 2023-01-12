@@ -215,14 +215,16 @@ def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> l
 
 
 async def _find_latest_releases(
-    blueprint_list: list[Blueprint], fetcher: Fetcher, skip_names: list[str] | None = None
+    blueprint_list: list[Blueprint],
+    fetcher: Fetcher,
+    skip_names: list[str] | None,
+    only_names: list[str] | None,
 ) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
-    skip_names = skip_names or []
-    blueprints = {
-        index: blueprint
-        for index, blueprint in enumerate(blueprint_list)
-        if blueprint.fetch is not None and blueprint.name not in skip_names
-    }
+    blueprints = {i: b for i, b in enumerate(blueprint_list) if b.fetch is not None}
+    if skip_names:
+        blueprints = {i: b for i, b in blueprints.items() if b.name not in skip_names}
+    if only_names:
+        blueprints = {i: b for i, b in blueprints.items() if b.name in only_names}
 
     async with client_factory() as client:
         tasks = [_find_latest_version(client, b) for b in blueprints.values()]
@@ -266,9 +268,14 @@ async def _find_latest_releases(
 
 
 def find_latest_releases(
-    blueprint_list: list[Blueprint], fetcher: Fetcher, skip_names: list[str] | None = None
+    blueprint_list: list[Blueprint],
+    fetcher: Fetcher,
+    skip_names: list[str] | None,
+    only_names: list[str] | None,
 ) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
-    return asyncio.run(_find_latest_releases(blueprint_list, fetcher, skip_names))
+    return asyncio.run(
+        _find_latest_releases(blueprint_list, fetcher, skip_names, only_names)
+    )
 
 
 def update(
@@ -278,6 +285,7 @@ def update(
     dry_run: bool = False,
     output_path: Path | None = None,
     skip_names: list[str] | None = None,
+    only_names: list[str] | None = None,
 ) -> None:
     yaml = ruamel.yaml.YAML(typ="rt")
     yaml.Emitter = FixIndentEmitter
@@ -286,7 +294,7 @@ def update(
     blueprints = validate(configuration_dict)
 
     logger.title("Looking for new releases...")
-    releases, errors = find_latest_releases(blueprints, fetcher, skip_names)
+    releases, errors = find_latest_releases(blueprints, fetcher, skip_names, only_names)
     if not releases:
         logger.info("Did not found any updates")
 
