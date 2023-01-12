@@ -16,7 +16,7 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debExtractError, Ops2debFetcherError
 from ops2deb.lockfile import Lock
-from ops2deb.parser import RemoteFile, extend, parse
+from ops2deb.parser import extend, parse
 from ops2deb.utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
@@ -187,16 +187,11 @@ class Fetcher:
 
     def fetch_urls_and_check_hashes(
         self,
-        remote_files: Sequence[str | RemoteFile],
+        urls: Sequence[str],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
         tasks: list[FetchTask] = []
-        for remote_file in set(remote_files):
-            if isinstance(remote_file, str):
-                task = FetchTask(remote_file, self.lock.sha256(remote_file))
-            else:
-                # TODO: For backward compatibility, RemoteFile will soon be removed
-                task = FetchTask(remote_file.url, remote_file.sha256)
-            tasks.append(task)
+        for urls in set(urls):
+            tasks.append(FetchTask(urls, self.lock.sha256(urls)))
         return asyncio.run(self._run_tasks(tasks))
 
     def update_lockfile(self, configuration_path: Path) -> None:

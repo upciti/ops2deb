@@ -10,7 +10,7 @@ blueprint_1 = Blueprint(
     version="1.0.0",
     homepage="http://great-app.io",
     revision="3",
-    arch="all",
+    architecture="all",
     summary="My great app",
     description="A detailed description of the super package",
     build_depends=["build-dep-1", "build-dep-2"],
@@ -43,7 +43,7 @@ blueprint_2 = Blueprint(
     name="great-app",
     version="1.0.0",
     revision="3",
-    arch="all",
+    architecture="all",
     summary="My great app",
     description="A detailed description of the super package.\n"
     "This description has two lines.",

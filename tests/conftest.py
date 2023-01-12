@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse, Response
 
-from ops2deb.parser import Blueprint, RemoteFile
+from ops2deb.parser import Blueprint
 
 app = FastAPI(debug=True)
 
@@ -126,6 +126,7 @@ async def server_great_app_armhf_1_1_1_tar_gz():
 @app.head("/1.1.0/great-app-amd64.tar.gz")
 @app.get("/1.1.1/great-app-amd64.tar.gz")
 @app.head("/1.1.1/great-app-amd64.tar.gz")
+@app.get("/1.0.0/wrong_checksum-app.tar.gz")
 async def serve_great_app_tar_gz():
     return build_server_response(
         b"""H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF
@@ -177,7 +178,7 @@ def tmp_working_directory(tmp_path):
         os.chdir(previous_cwd)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def blueprint_factory():
     blueprint = Blueprint(
         name="great-app",
@@ -185,18 +186,16 @@ def blueprint_factory():
         homepage="http://great-app.io",
         summary="My great app",
         description="Detailed description of the great app.",
-        fetch=RemoteFile(
-            url="http://great-app.io/releases/{{version}}/great-app.tar.gz",
-            sha256="deadbeef",
-        ),
+        fetch="http://great-app.io/releases/{{version}}/great-app.tar.gz",
         script=["cp great-app_linux_{{arch}}_{{version}} {{src}}/usr/bin/great-app"],
     )
 
     def _blueprint_factory(construct: bool = False, **kwargs):
+        blueprint_dict = blueprint.dict(exclude_defaults=True) | kwargs
         if construct is False:
-            return Blueprint(**(blueprint.dict() | kwargs))
+            return Blueprint(**blueprint_dict)
         else:
-            return Blueprint.construct(**(blueprint.dict() | kwargs))
+            return Blueprint.construct(**blueprint_dict)
 
     return _blueprint_factory
 
@@ -226,6 +225,9 @@ def mock_lockfile(lockfile_path) -> None:
       timestamp: 2022-12-29 13:14:57+00:00
     - url: http://testserver/1.0.0/super-app
       sha256: 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
+      timestamp: 2022-12-29 13:14:57+00:00
+    - url: http://testserver/1.0.0/wrong_checksum-app.tar.gz
+      sha256: deadbeaf
       timestamp: 2022-12-29 13:14:57+00:00
     """
     lockfile_path.write_text(dedent(lockfile_content))

@@ -35,7 +35,7 @@ class SourcePackage:
         self.source_directory = self.package_directory / "src"
         self.fetch_directory = self.package_directory / "fetched"
         self.blueprint = blueprint
-        self.remote_file = self.blueprint.render_fetch()
+        self.fetch_url = self.blueprint.render_fetch_url()
 
     def _render_template(self, template_name: str) -> None:
         template = environment.get_template(f"{template_name}")
@@ -205,8 +205,8 @@ def generate(
         packages = filter_already_published_packages(packages, debian_repository)
 
     # run fetch instructions (download, verify, extract) in parallel
-    files = [p.remote_file for p in packages if p.remote_file is not None]
-    fetch_results, fetch_errors = fetcher.fetch_urls_and_check_hashes(files)
+    urls = [p.fetch_url for p in packages if p.fetch_url is not None]
+    fetch_results, fetch_errors = fetcher.fetch_urls_and_check_hashes(urls)
 
     for package in packages:
         package.generate(fetch_results)

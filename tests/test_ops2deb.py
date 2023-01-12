@@ -47,35 +47,6 @@ mock_valid_configuration = """\
     - mv super-app {{src}}/usr/bin/super-app
 """
 
-mock_valid_deprecated_configuration = """\
-- name: great-app
-  version: 1.0.0
-  revision: 2
-  arch: all
-  summary: Great package
-  fetch:
-    url: http://testserver/{{version}}/great-app.tar.gz
-    sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
-  script:
-    - mv great-app {{src}}/usr/bin/great-app
-
-- name: super-app
-  version: 1.0.0
-  arch: all
-  summary: Super package
-  description: |-
-    A detailed description of the super package
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  fetch:
-    url: http://testserver/{{version}}/super-app
-    sha256: 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
-  install:
-    - path: debian/copyright
-      content: 2021 John Doe. All rights reserved.
-  script:
-    - mv super-app {{src}}/usr/bin/super-app
-"""
-
 mock_up_to_date_configuration = """\
 - name: great-app
   version: 1.1.1
@@ -95,9 +66,7 @@ mock_configuration_with_invalid_archive_checksum = """\
   summary: Bad package
   description: |
     A detailed description of the bad package
-  fetch:
-    url: http://testserver/{{version}}/great-app.tar.gz
-    sha256: deadbeef
+  fetch: http://testserver/1.0.0/wrong_checksum-app.tar.gz
   script:
     - mv great-app {{src}}/usr/bin/great-app
 """
@@ -151,20 +120,6 @@ mock_configuration_not_properly_formatted = """\
   description: |
     A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app.tar.gz
-  script:
-  - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_with_deprecated_multi_arch_remote_file = """\
-- name: great-app
-  summary: Great package
-  version: 1.0.0
-  description: A detailed description of the great package.
-  fetch:
-    url: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
-    sha256:
-      amd64: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
-      armhf: abb864290dedcd1e06857f33bf03b0875d485c06fce80f86944e6565080b8fb5
   script:
   - mv great-app {{src}}/usr/bin/great-app
 """
@@ -224,30 +179,20 @@ def test_ops2deb_purge_should_delete_files_in_cache(tmp_path, call_ops2deb):
     assert (cache_dir / "test").exists() is False
 
 
-@pytest.mark.parametrize(
-    "configuration", [mock_valid_configuration, mock_valid_deprecated_configuration]
-)
-def test_ops2deb_generate_should_succeed_with_valid_configuration(
-    configuration, tmp_path, call_ops2deb
-):
-    result = call_ops2deb("generate", configuration=configuration)
+def test_ops2deb_generate_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
+    result = call_ops2deb("generate", configuration=mock_valid_configuration)
     assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
     assert (tmp_path / "super-app_1.0.0_all/debian/copyright").is_file()
     assert result.exit_code == 0
 
 
-@pytest.mark.parametrize(
-    "configuration",
-    [
-        mock_configuration_with_multi_arch_remote_file,
-        mock_configuration_with_deprecated_multi_arch_remote_file,
-    ],
-)
 def test_ops2deb_generate_should_succeed_with_valid_multi_arch_fetch_configuration(
-    configuration, tmp_path, call_ops2deb
+    tmp_path, call_ops2deb
 ):
-    result = call_ops2deb("generate", configuration=configuration)
+    result = call_ops2deb(
+        "generate", configuration=mock_configuration_with_multi_arch_remote_file
+    )
     assert result.exit_code == 0
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/bin/great-app").is_file()
     assert (tmp_path / "great-app_1.0.0_armhf/src/usr/bin/great-app").is_file()
@@ -264,7 +209,7 @@ def test_ops2deb_generate_should_fail_with_invalid_checksum(call_ops2deb):
     result = call_ops2deb(
         "generate", configuration=mock_configuration_with_invalid_archive_checksum
     )
-    assert "Wrong checksum for file great-app.tar.gz" in result.stdout
+    assert "Wrong checksum for file wrong_checksum-app.tar.gz" in result.stdout
     assert result.exit_code == 77
 
 
@@ -334,9 +279,7 @@ def test_ops2deb_generate_should_set_cwd_variable_to_config_directory_when_bluep
     name: great-app
     version: 1.0.0
     summary: Great package
-    fetch:
-      url: http://testserver/{{version}}/great-app.tar.gz
-      sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+    fetch: http://testserver/{{version}}/great-app.tar.gz
     script:
       - mv great-app {{src}}/usr/bin/great-app
       - cp {{cwd}}/test.conf {{src}}/etc/test.conf
@@ -398,20 +341,6 @@ def test_ops2deb_update_should_succeed_with_valid_configuration(
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
 
 
-def test_ops2deb_update_should_succeed_with_valid_deprecated_configuration(
-    configuration_path, lockfile_path, call_ops2deb
-):
-    result = call_ops2deb("update", configuration=mock_valid_deprecated_configuration)
-    configuration = parse(configuration_path)
-    lock = Lock(lockfile_path)
-    sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
-    assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
-    assert result.exit_code == 0
-    assert configuration[0].version == "1.1.1"
-    assert configuration[0].fetch == "http://testserver/{{version}}/great-app.tar.gz"
-    assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
-
-
 def test_ops2deb_update_should_create_summary_when_called_with_output_file(
     tmp_path, call_ops2deb
 ):
@@ -447,24 +376,6 @@ def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
     configuration = parse(configuration_path)
     assert result.exit_code == 0
     assert configuration[0].version == "1.1.1"
-
-
-def test_ops2deb_update_should_succeed_with_deprecated_multi_arch_fetch(
-    call_ops2deb, configuration_path, lockfile_path
-):
-    result = call_ops2deb(
-        "update", configuration=mock_configuration_with_deprecated_multi_arch_remote_file
-    )
-    configuration = parse(configuration_path)
-    lock = Lock(lockfile_path)
-    assert result.exit_code == 0
-    assert configuration[0].version == "1.1.1"
-    url = "http://testserver/{{version}}/great-app-{{arch}}.tar.gz"
-    assert configuration[0].fetch == url
-    sha256_armhf = "cf9a3f702d3532d50c5a864285ba60b2d067aea427a770f7267761f69657d746"
-    assert lock.sha256("http://testserver/1.1.1/great-app-armhf.tar.gz") == sha256_armhf
-    sha256_amd64 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
-    assert lock.sha256("http://testserver/1.1.1/great-app-amd64.tar.gz") == sha256_amd64
 
 
 def test_ops2deb_update_should_reset_blueprint_revision_to_one(
@@ -563,25 +474,8 @@ def test_ops2deb_lock_should_succeed_with_valid_multi_arch_fetch(call_ops2deb):
     assert result.exit_code == 0
 
 
-def test_ops2deb_migrate_should_not_do_anything_when_configuration_has_no_hashes(
-    call_ops2deb, configuration_path
-):
-    result = call_ops2deb("migrate")
-    assert configuration_path.read_text() == mock_valid_configuration
-    assert result.exit_code == 0
-
-
-def test_ops2deb_migrate_should_remove_hashes_from_config_file_and_create_lockfile(
-    call_ops2deb, configuration_path, lockfile_path
-):
-    result = call_ops2deb("migrate", configuration=mock_valid_deprecated_configuration)
-    assert "sha256" not in configuration_path.read_text()
-    assert lockfile_path.exists()
-    assert result.exit_code == 77
-
-
 @pytest.mark.parametrize(
-    "subcommand", ["update", "generate", "format", "validate", "lock", "migrate"]
+    "subcommand", ["update", "generate", "format", "validate", "lock"]
 )
 def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_invalid_yaml(
     call_ops2deb, subcommand
@@ -596,7 +490,7 @@ def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_invalid
 
 
 @pytest.mark.parametrize(
-    "subcommand", ["update", "generate", "format", "validate", "lock", "migrate"]
+    "subcommand", ["update", "generate", "format", "validate", "lock"]
 )
 def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_validation_error(
     call_ops2deb, subcommand

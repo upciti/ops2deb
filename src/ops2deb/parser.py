@@ -23,16 +23,8 @@ class ArchitectureMap(Base):
     arm64: str | None = None
 
 
-class RemoteFile(Base):
-    url: AnyHttpUrl = Field(..., description="URL template of the file")
-    sha256: str = Field(..., description="SHA256 checksum of the file (deprecated)")
-
-
 class MultiArchitectureFetch(Base):
     url: AnyHttpUrl = Field(..., description="URL template of the file")
-    sha256: ArchitectureMap | None = Field(
-        None, description="SHA256 checksum of each file (deprecated)"
-    )
     targets: ArchitectureMap | None = Field(
         None,
         description="Architecture to target name map. The URL can be templated with "
@@ -91,7 +83,6 @@ class Blueprint(Base):
     )
     epoch: int = Field(0, description="Package epoch", ge=0)
     architecture: Architecture = Field("amd64", description="Package architecture")
-    arch: Architecture = Field("amd64", description="Package architecture (deprecated)")
     homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field("", description="Package description")
@@ -115,7 +106,7 @@ class Blueprint(Base):
         description="Conflicting packages, for more information read "
         "https://www.debian.org/doc/debian-policy/ch-relationships.html",
     )
-    fetch: AnyHttpUrl | MultiArchitectureFetch | RemoteFile | None = Field(
+    fetch: AnyHttpUrl | MultiArchitectureFetch | None = Field(
         None,
         description="Url of a file (or a file per architecture) to download before "
         "running build and install instructions",
@@ -123,11 +114,10 @@ class Blueprint(Base):
     install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
     script: list[str] = Field(default_factory=list, description="Build instructions")
 
-    @validator("arch", "architecture", pre=False, always=False)
-    def _archs_cannot_be_used_with_arch(cls, v: Any, values: Any) -> Any:
+    @validator("architecture", pre=False, always=False)
+    def _architectures_cannot_be_used_with_architecture(cls, v: Any, values: Any) -> Any:
         if values["matrix"] and values["matrix"]["architectures"]:
             raise ValueError("'architectures' cannot be used with 'architecture'")
-        values["architecture"] = v
         return v
 
     @validator("name", "version", "summary", "description", "homepage", pre=True)
@@ -154,9 +144,6 @@ class Blueprint(Base):
     def architectures(self) -> Sequence[str]:
         if self.matrix and self.matrix.architectures:
             return self.matrix.architectures
-        elif isinstance(self.fetch, MultiArchitectureFetch):
-            if self.fetch.sha256 is not None:
-                return list(self.fetch.sha256.dict(exclude_none=True).keys())
         return [self.architecture]
 
     def render_string(self, string: str, **kwargs: str | Path | None) -> str:
@@ -174,18 +161,6 @@ class Blueprint(Base):
             return None
         url = self.fetch if isinstance(self.fetch, str) else self.fetch.url
         return self.render_string(url, version=version)
-
-    def render_fetch(self, version: str | None = None) -> str | RemoteFile | None:
-        url = self.render_fetch_url(version=version)
-        sha256 = None
-        if isinstance(self.fetch, MultiArchitectureFetch):
-            if self.fetch.sha256 is not None:
-                sha256 = getattr(self.fetch.sha256, self.architecture, None)
-        elif isinstance(self.fetch, RemoteFile):
-            sha256 = self.fetch.sha256
-        if sha256 and url:
-            return RemoteFile(url=self.render_fetch_url(version), sha256=sha256)
-        return url
 
 
 class Configuration(Base):
