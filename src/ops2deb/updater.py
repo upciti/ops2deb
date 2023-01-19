@@ -217,8 +217,7 @@ async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) 
 def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> list[str]:
     urls: list[str] = []
     for architecture in blueprint.architectures():
-        blueprint = blueprint.copy(update={"architecture": architecture})
-        urls.append(str(blueprint.render_fetch_url(version)))
+        urls.append(str(blueprint.render_fetch_url(version, architecture)))
     return urls
 
 

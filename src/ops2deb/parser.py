@@ -1,5 +1,6 @@
+from itertools import product
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, cast
 
 from pydantic import (
     AnyHttpUrl,
@@ -161,31 +162,42 @@ class Blueprint(Base):
             rust_target=DEFAULT_RUST_TARGET_MAP.get(self.architecture, None),
         )
 
-    def architectures(self) -> Sequence[str]:
+    def architectures(self) -> list[str]:
         if self.matrix and self.matrix.architectures:
-            return self.matrix.architectures
+            return cast(list[str], self.matrix.architectures)
         return [self.architecture]
 
-    def versions(self) -> Sequence[str]:
+    def versions(self) -> list[str]:
         if self.matrix and self.matrix.versions:
             return self.matrix.versions
         return [self.version]
 
     def render_string(self, string: str, **kwargs: str | Path | None) -> str:
+        architecture = kwargs.pop("architecture", None)
+        architecture = architecture or self.architecture
         version = kwargs.pop("version", None)
         version = version or self.version
         return environment.from_string(string).render(
             name=self.name,
-            arch=self.architecture,
+            arch=architecture,
             version=version,
             **(self._get_additional_variables() | kwargs),
         )
 
-    def render_fetch_url(self, version: str | None = None) -> str | None:
+    def render_fetch_url(
+        self, version: str | None = None, architecture: str | None = None
+    ) -> str | None:
         if self.fetch is None:
             return None
         url = self.fetch if isinstance(self.fetch, str) else self.fetch.url
-        return self.render_string(url, version=version)
+        return self.render_string(url, version=version, architecture=architecture)
+
+    def render_fetch_urls(self) -> list[str]:
+        urls = []
+        for architecture, version in product(self.architectures(), self.versions()):
+            if url := self.render_fetch_url(version=version, architecture=architecture):
+                urls.append(url)
+        return urls
 
 
 class Configuration(Base):

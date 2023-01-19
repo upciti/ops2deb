@@ -34,8 +34,8 @@ class SourcePackage:
         self.debian_directory = self.package_directory / "debian"
         self.source_directory = self.package_directory / "src"
         self.fetch_directory = self.package_directory / "fetched"
+        self.fetch_url = blueprint.render_fetch_url()
         self.blueprint = blueprint
-        self.fetch_url = self.blueprint.render_fetch_url()
 
     def _render_template(self, template_name: str) -> None:
         template = environment.get_template(f"{template_name}")
@@ -128,9 +128,10 @@ class SourcePackage:
 
     def generate(self, fetch_results: dict[str, FetchResult]) -> None:
         fetch_result: FetchResult | None = None
-        if (url := self.blueprint.render_fetch_url()) is not None:
-            fetch_result = fetch_results.get(url, None)
+        if self.fetch_url is not None:
+            fetch_result = fetch_results.get(self.fetch_url, None)
             if fetch_result is None:
+                # we failed to download the archive needed to build this package
                 return
 
         logger.title(f"Generating source package {self.directory_name}...")
@@ -191,7 +192,7 @@ def generate(
     debian_repository: str | None = None,
     only_names: list[str] | None = None,
 ) -> list[SourcePackage]:
-    # each blueprint can yield multiple source packages, one per supported arch
+    # each blueprint can yield multiple source packages
     packages = [
         SourcePackage(b, output_directory, configuration_directory)
         for b in extend(blueprints)
