@@ -3,9 +3,11 @@ import os
 import pytest
 from pydantic import ValidationError
 
+from ops2deb.parser import Blueprint
+
 
 @pytest.fixture
-def mock_blueprint(blueprint_factory):
+def blueprint(blueprint_factory):
     return blueprint_factory(
         matrix=dict(architectures=["amd64", "armhf"]),
         fetch=dict(
@@ -15,14 +17,12 @@ def mock_blueprint(blueprint_factory):
     )
 
 
-def test_supported_architectures_should_return_lists_of_architectures_matrix(
-    mock_blueprint,
-):
-    assert mock_blueprint.architectures() == ["amd64", "armhf"]
+def test_architectures_should_return_lists_of_architectures(blueprint):
+    assert blueprint.architectures() == ["amd64", "armhf"]
 
 
-def test_render_string_target_should_default_to_blueprint_architecture(mock_blueprint):
-    blueprint = mock_blueprint.copy(update={"architecture": "armhf"})
+def test_render_string_target_should_default_to_blueprint_architecture(blueprint):
+    blueprint = blueprint.copy(update={"architecture": "armhf"})
     assert blueprint.render_string("{{target}}") == "armhf"
 
 
@@ -35,16 +35,14 @@ def test_render_string_target_should_default_to_blueprint_architecture(mock_blue
     ],
 )
 def test_render_string_should_evaluate_goarch_and_rust_targets_and_target(
-    template, result, mock_blueprint
+    template, result, blueprint
 ):
-    blueprint = mock_blueprint
     assert blueprint.render_string(template) == result
 
 
 def test_render_fetch_url_should_evaluate_goarch_and_rust_targets_and_target(
-    mock_blueprint,
+    blueprint,
 ):
-    blueprint = mock_blueprint
     assert blueprint.render_fetch_url() == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
 
 
@@ -110,8 +108,31 @@ def test_blueprint_should_not_raise_when_revision_is_a_valid_string(
     blueprint_factory(revision=revision)
 
 
-def test_blueprint_should_raise_when_revision_begins_with_a_0(
+def test_blueprint_should_raise_when_revision_begins_with_a_0(blueprint_factory):
+    with pytest.raises(ValidationError):
+        blueprint_factory(revision="0")
+
+
+def test_blueprint_should_raise_when_versions_is_used_with_version(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
-        blueprint_factory(revision="0")
+        blueprint_factory(version="1.0.0", versions=["1.0.0"])
+
+
+def test_blueprint_should_set_version_when_versions_matrix_is_used():
+    blueprint = Blueprint(
+        matrix=dict(versions=["1.0.0", "1.0.1"]),
+        name="great-app",
+        summary="My great app",
+    )
+    assert blueprint.version == "1.0.1"
+
+
+def test_blueprint_should_raise_when_versions_matrix_not_used_and_version_field_not_set():
+    with pytest.raises(ValidationError) as result:
+        Blueprint(
+            name="great-app",
+            summary="My great app",
+        )
+    assert result.match("Version field is required when versions matrix is not used")

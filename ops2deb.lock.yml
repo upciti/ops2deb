@@ -7,6 +7,15 @@
 - url: https://get.helm.sh/helm-v3.10.3-linux-arm64.tar.gz
   sha256: 260cda5ff2ed5d01dd0fd6e7e09bc80126e00d8bdc55f3269d05129e32f6f99d
   timestamp: 2023-01-03 15:48:50+00:00
+- url: https://get.helm.sh/helm-v3.9.0-linux-amd64.tar.gz
+  sha256: 1484ffb0c7a608d8069470f48b88d729e88c41a1b6602f145231e8ea7b43b50a
+  timestamp: 2023-01-12 16:23:31+00:00
+- url: https://get.helm.sh/helm-v3.9.0-linux-arm.tar.gz
+  sha256: bcdc6c68dacfabeeb6963dc2e6761e2e87026ffd9ea1cde266ee36841e7c6e6a
+  timestamp: 2023-01-12 16:23:31+00:00
+- url: https://get.helm.sh/helm-v3.9.0-linux-arm64.tar.gz
+  sha256: 5c0aa709c5aaeedd190907d70f9012052c1eea7dff94bffe941b879a33873947
+  timestamp: 2023-01-12 16:23:31+00:00
 - url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.3/kubeseal-0.19.3-linux-amd64.tar.gz
   sha256: f6c420d38f84008deffd040f0bbc527b08c2b70bdb373ab4e0598f64510af566
   timestamp: 2023-01-03 15:48:50+00:00

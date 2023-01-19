@@ -4,7 +4,9 @@
       - amd64
       - armhf
       - arm64
-  version: 3.10.3
+    versions:
+      - 3.9.0
+      - 3.10.3
   homepage: https://helm.sh/
   summary: The Kubernetes package manager
   description: |-
