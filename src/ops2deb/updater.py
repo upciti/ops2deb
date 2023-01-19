@@ -5,7 +5,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Tuple, cast
+from typing import Any, OrderedDict, Tuple, cast
 
 import httpx
 import ruamel.yaml
@@ -163,31 +163,9 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
 
 @dataclass(frozen=True)
 class LatestRelease:
-    blueprint_index: int
     blueprint: Blueprint
     version: str
-    fetch_results: list[FetchResult]
-
-    def update_configuration(
-        self, blueprint_dict: dict[str, Any] | list[dict[str, Any]]
-    ) -> None:
-        # configuration file can be a list of blueprints or a single blueprint
-        raw_blueprint = (
-            blueprint_dict[self.blueprint_index]
-            if isinstance(blueprint_dict, list)
-            else blueprint_dict
-        )
-
-        if self.blueprint.matrix and self.blueprint.matrix.versions:
-            raw_blueprint["matrix"]["versions"].append(self.version)
-        else:
-            raw_blueprint["version"] = self.version
-        raw_blueprint.pop("revision", None)
-
-    def update_lock(self, lock: Lock) -> None:
-        lock.add(self.fetch_results)
-        if self.blueprint.matrix is None or not self.blueprint.matrix.versions:
-            lock.remove(_blueprint_fetch_urls(self.blueprint))
+    fetched: list[FetchResult]
 
 
 async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
@@ -222,33 +200,33 @@ def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> l
 
 
 async def _find_latest_releases(
-    blueprint_list: list[Blueprint],
+    blueprints: list[Blueprint],
     fetcher: Fetcher,
     skip_names: list[str] | None,
     only_names: list[str] | None,
-) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
-    blueprints = {i: b for i, b in enumerate(blueprint_list) if b.fetch is not None}
+) -> Tuple[list[LatestRelease], list[Ops2debError]]:
+    blueprints = [b for b in blueprints if b.fetch is not None]
     if skip_names:
-        blueprints = {i: b for i, b in blueprints.items() if b.name not in skip_names}
+        blueprints = [b for b in blueprints if b.name not in skip_names]
     if only_names:
-        blueprints = {i: b for i, b in blueprints.items() if b.name in only_names}
+        blueprints = [b for b in blueprints if b.name in only_names]
 
     async with client_factory() as client:
-        tasks = [_find_latest_version(client, b) for b in blueprints.values()]
+        tasks = [_find_latest_version(client, b) for b in blueprints]
         tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
         versions, errors = separate_results_from_errors(
-            dict(zip(blueprints.keys(), tasks_results))
+            dict(zip([b.index for b in blueprints], tasks_results))
         )
 
     # remove blueprints where the current version is still the latest
-    blueprints = {
-        i: blueprints[i] for i, v in versions.items() if v != blueprints[i].version
-    }
+    blueprints = [b for b in blueprints if versions.get(b.index, b.version) != b.version]
 
     # gather the urls of files we need to download to get the new checksums
     urls: dict[int, list[str]] = defaultdict(list)
-    for index, blueprint in blueprints.items():
-        urls[index] = _blueprint_fetch_urls(blueprint, versions[index])
+    for blueprint in blueprints:
+        urls[blueprint.index] = _blueprint_fetch_urls(
+            blueprint, versions[blueprint.index]
+        )
 
     url_list = list(itertools.chain(*[u for u in urls.values()]))
     results, fetch_errors = await fetcher.fetch_urls(url_list)
@@ -258,31 +236,74 @@ async def _find_latest_releases(
         for index, blueprint_urls in urls.items():
             if failed_url in blueprint_urls:
                 errors[index] = exception
-    blueprints = {i: b for i, b in blueprints.items() if i not in errors.keys()}
+                blueprints.pop(index)
 
     latest_releases: list[LatestRelease] = []
-    for index, blueprint in blueprints.items():
+    for blueprint in blueprints:
         latest_releases.append(
             LatestRelease(
-                blueprint_index=index,
                 blueprint=blueprint,
-                version=versions[index],
-                fetch_results=[results[url] for url in urls[index]],
+                version=versions[blueprint.index],
+                fetched=[results[url] for url in urls[blueprint.index]],
             )
         )
 
-    return latest_releases, errors
+    return latest_releases, list(fetch_errors.values()) + list(errors.values())
 
 
 def find_latest_releases(
-    blueprint_list: list[Blueprint],
+    blueprints: list[Blueprint],
     fetcher: Fetcher,
     skip_names: list[str] | None,
     only_names: list[str] | None,
-) -> Tuple[list[LatestRelease], dict[int, Ops2debError]]:
-    return asyncio.run(
-        _find_latest_releases(blueprint_list, fetcher, skip_names, only_names)
+) -> Tuple[list[LatestRelease], list[Ops2debError]]:
+    return asyncio.run(_find_latest_releases(blueprints, fetcher, skip_names, only_names))
+
+
+def _update_configuration(
+    release: LatestRelease,
+    blueprint_dict: OrderedDict[str, Any] | list[OrderedDict[str, Any]],
+    max_versions: int,
+) -> list[str]:
+    removed_versions: list[str] = []
+
+    # configuration file can be a list of blueprints or a single blueprint
+    raw_blueprint = (
+        blueprint_dict[release.blueprint.index]
+        if isinstance(blueprint_dict, list)
+        else blueprint_dict
     )
+
+    if max_versions == 1:
+        if release.blueprint.matrix and release.blueprint.matrix.versions:
+            removed_versions = raw_blueprint["matrix"].pop("versions")
+        else:
+            removed_versions = [raw_blueprint["version"]]
+        raw_blueprint["version"] = release.version
+        raw_blueprint.pop("revision", None)
+    else:
+        if (count := len(release.blueprint.versions())) - max_versions >= 0:
+            versions = raw_blueprint["matrix"]["versions"]
+            raw_blueprint["matrix"]["versions"] = versions[-(max_versions - 1) :]
+            removed_versions = versions[: count - max_versions + 1]
+        if "matrix" not in raw_blueprint:
+            raw_blueprint["matrix"] = {}
+            raw_blueprint.move_to_end("matrix", last=False)
+            raw_blueprint.move_to_end("name", last=False)
+        if "versions" not in raw_blueprint["matrix"]:
+            raw_blueprint["matrix"]["versions"] = [release.blueprint.version]
+        raw_blueprint["matrix"]["versions"].append(release.version)
+        raw_blueprint.pop("version", None)
+
+    return removed_versions
+
+
+def _update_lockfile(
+    release: LatestRelease, lock: Lock, removed_versions: list[str]
+) -> None:
+    lock.add(release.fetched)
+    for version in removed_versions:
+        lock.remove(_blueprint_fetch_urls(release.blueprint, version))
 
 
 def update(
@@ -293,6 +314,7 @@ def update(
     output_path: Path | None = None,
     skip_names: list[str] | None = None,
     only_names: list[str] | None = None,
+    max_versions: int = 1,
 ) -> None:
     yaml = ruamel.yaml.YAML(typ="rt")
     yaml.Emitter = FixIndentEmitter
@@ -302,27 +324,37 @@ def update(
 
     logger.title("Looking for new releases...")
     releases, errors = find_latest_releases(blueprints, fetcher, skip_names, only_names)
+
+    summary: list[str] = []
+    lock = Lock(lockfile_path)
+
+    for release in releases:
+        removed_versions = _update_configuration(
+            release, configuration_dict, max_versions
+        )
+        if max_versions == 1:
+            line = (
+                f"Updated {release.blueprint.name} from "
+                f"{release.blueprint.version} to {release.version}"
+            )
+        else:
+            line = f"Added {release.blueprint.name} v{release.version}"
+            if removed_versions:
+                line += f" and removed {', '.join([f'v{v}' for v in removed_versions])}"
+        _update_lockfile(release, lock, removed_versions)
+        summary.append(line)
+
     if not releases:
         logger.info("Did not found any updates")
-
-    if dry_run is False and releases:
-        lock = Lock(lockfile_path)
-        for release in releases:
-            release.update_configuration(configuration_dict)
-            release.update_lock(lock)
-
-        with configuration_path.open("w") as output:
-            yaml.dump(configuration_dict, output)
-        lock.save()
-
-        logger.info("Lockfile and configuration updated")
+    else:
+        if dry_run is False:
+            with configuration_path.open("w") as output:
+                yaml.dump(configuration_dict, output)
+            lock.save()
+            logger.info("Lockfile and configuration updated")
 
     if output_path is not None:
-        lines = [
-            f"Updated {r.blueprint.name} from {r.blueprint.version} to {r.version}"
-            for r in releases
-        ]
-        output_path.write_text("\n".join(lines + [""]))
+        output_path.write_text("\n".join(summary + [""]))
 
     if errors:
         raise Ops2debUpdaterError(f"{len(errors)} failures occurred")

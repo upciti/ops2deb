@@ -230,11 +230,21 @@ def update(
         help="Name of blueprint that should not be updated. Can be used multiple times.",
     ),
     only: Optional[List[str]] = option_only,
+    max_versions: int = typer.Option(
+        1, "-m", "--max-versions", envvar="OPS2DEB_MAX_VERSIONS"
+    ),
 ) -> None:
     try:
         fetcher = Fetcher(cache_directory, lockfile_path)
         updater.update(
-            configuration_path, lockfile_path, fetcher, dry_run, output_path, skip, only
+            configuration_path,
+            lockfile_path,
+            fetcher,
+            dry_run,
+            output_path,
+            skip,
+            only,
+            max_versions,
         )
     except Ops2debError as e:
         error(e, exit_code)

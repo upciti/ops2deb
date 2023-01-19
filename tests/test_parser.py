@@ -46,6 +46,22 @@ def test_render_fetch_url_should_evaluate_goarch_and_rust_targets_and_target(
     assert blueprint.render_fetch_url() == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
 
 
+def test_render_fetch_urls_should_return_one_url_per_arch_per_version():
+    blueprint = Blueprint(
+        name="great-app",
+        summary="summary",
+        matrix=dict(architectures=["amd64", "armhf"], versions=["1.0.0", "1.1.1"]),
+        fetch="http://{{version}}/{{goarch}}/app.tar.gz",
+    )
+    urls = [
+        "http://1.0.0/amd64/app.tar.gz",
+        "http://1.1.1/amd64/app.tar.gz",
+        "http://1.0.0/arm/app.tar.gz",
+        "http://1.1.1/arm/app.tar.gz",
+    ]
+    assert blueprint.render_fetch_urls() == urls
+
+
 def test_blueprint_should_evaluate_env_jinja_function_when_used_in_string_attributes(
     blueprint_factory,
 ):
