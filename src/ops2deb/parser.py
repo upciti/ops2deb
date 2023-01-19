@@ -6,6 +6,7 @@ from pydantic import (
     AnyHttpUrl,
     BaseModel,
     Field,
+    PrivateAttr,
     ValidationError,
     root_validator,
     validator,
@@ -124,6 +125,8 @@ class Blueprint(Base):
     install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
     script: list[str] = Field(default_factory=list, description="Build instructions")
 
+    _index: int = PrivateAttr()
+
     @root_validator(pre=False)
     def _version_must_be_set(cls, values: Any) -> Any:
         matrix = values.get("matrix", None)
@@ -135,7 +138,7 @@ class Blueprint(Base):
 
     @validator("architecture", "version", pre=True, always=False)
     def _check_arch_and_version(cls, v: Any, values: Any, field: ModelField) -> Any:
-        if (matrix := values["matrix"]) is not None:
+        if (matrix := values.get("matrix", None)) is not None:
             getter = getattr if isinstance(matrix, Matrix) else lambda x, y: x[y]
             if getter(matrix, f"{field.name}s"):
                 raise ValueError(f"'{field.name}s' cannot be used with '{field.name}'")
@@ -147,19 +150,16 @@ class Blueprint(Base):
             return environment.from_string(v).render()
         return v
 
-    def _get_additional_variables(self) -> dict[str, str | None]:
+    def _get_additional_variables(self, architecture: str) -> dict[str, str | None]:
         target = (
-            (
-                getattr(self.fetch.targets, self.architecture, self.architecture)
-                or self.architecture
-            )
+            (getattr(self.fetch.targets, architecture, architecture) or architecture)
             if isinstance(self.fetch, MultiArchitectureFetch)
-            else self.architecture
+            else architecture
         )
         return dict(
             target=target,
-            goarch=DEFAULT_GOARCH_MAP.get(self.architecture, None),
-            rust_target=DEFAULT_RUST_TARGET_MAP.get(self.architecture, None),
+            goarch=DEFAULT_GOARCH_MAP.get(architecture, None),
+            rust_target=DEFAULT_RUST_TARGET_MAP.get(architecture, None),
         )
 
     def architectures(self) -> list[str]:
@@ -173,15 +173,15 @@ class Blueprint(Base):
         return [self.version]
 
     def render_string(self, string: str, **kwargs: str | Path | None) -> str:
-        architecture = kwargs.pop("architecture", None)
+        architecture: Any = kwargs.pop("architecture", None)
         architecture = architecture or self.architecture
-        version = kwargs.pop("version", None)
+        version: Any = kwargs.pop("version", None)
         version = version or self.version
         return environment.from_string(string).render(
             name=self.name,
             arch=architecture,
             version=version,
-            **(self._get_additional_variables() | kwargs),
+            **(self._get_additional_variables(architecture) | kwargs),
         )
 
     def render_fetch_url(
@@ -199,6 +199,10 @@ class Blueprint(Base):
                 urls.append(url)
         return urls
 
+    @property
+    def index(self) -> int:
+        return self._index
+
 
 class Configuration(Base):
     __root__: list[Blueprint] | Blueprint
@@ -207,11 +211,10 @@ class Configuration(Base):
 def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
     extended_list: list[Blueprint] = []
     for blueprint in blueprints:
-        for arch in blueprint.architectures():
-            for version in blueprint.versions():
-                extended_list.append(
-                    blueprint.copy(update={"architecture": arch, "version": version})
-                )
+        for arch, version in product(blueprint.architectures(), blueprint.versions()):
+            extended_list.append(
+                blueprint.copy(update={"architecture": arch, "version": version})
+            )
     return extended_list
 
 
@@ -237,6 +240,8 @@ def validate(
         raise Ops2debParserError(f"Invalid configuration file.\n{e}")
     if isinstance(blueprints, Blueprint):
         blueprints = [blueprints]
+    for index, blueprint in enumerate(blueprints):
+        blueprint._index = index
     return blueprints
 
 

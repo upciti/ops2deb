@@ -220,6 +220,9 @@ def mock_lockfile(lockfile_path) -> None:
     - url: http://testserver/1.0.0/great-app.tar.gz
       sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
       timestamp: 2022-12-29 13:14:57+00:00
+    - url: http://testserver/1.1.0/great-app.tar.gz
+      sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
+      timestamp: 2022-12-29 13:14:57+00:00
     - url: http://testserver/1.0.0/not-found.zip
       sha256: 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
       timestamp: 2022-12-29 13:14:57+00:00
