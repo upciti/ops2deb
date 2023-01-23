@@ -16,7 +16,7 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debExtractError, Ops2debFetcherError
 from ops2deb.lockfile import Lock
-from ops2deb.parser import parse
+from ops2deb.parser import ConfigurationFile
 from ops2deb.utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
@@ -196,7 +196,7 @@ class Fetcher:
 
     def update_lockfile(self, configuration_path: Path) -> None:
         urls: list[str] = []
-        for blueprint in parse(configuration_path):
+        for blueprint in ConfigurationFile(configuration_path).blueprints:
             urls += blueprint.render_fetch_urls()
         results, fetch_errors = asyncio.run(self.fetch_urls(urls))
         self.lock.add(list(results.values()))

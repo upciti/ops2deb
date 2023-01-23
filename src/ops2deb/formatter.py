@@ -1,16 +1,16 @@
 import json
 from pathlib import Path
 from textwrap import wrap
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional, OrderedDict, Tuple
 
 import yaml
 
 from ops2deb.exceptions import Ops2debFormatterError
-from ops2deb.parser import Blueprint, load, validate
+from ops2deb.parser import Blueprint, ConfigurationFile
 from ops2deb.utils import PrettyYAMLDumper
 
 
-def sort_blueprints(blueprints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def sort_blueprints(blueprints: list[OrderedDict[str, Any]]) -> list[dict[str, Any]]:
     def key(blueprint: dict[str, Any]) -> Tuple[str, str, int]:
         try:
             version = blueprint["matrix"]["versions"][-1]
@@ -50,18 +50,10 @@ def format(
     configuration_path: Path,
     additional_blueprint_formatting: Optional[Callable[[dict[str, Any]], None]] = None,
 ) -> None:
-    configuration_dict = load(configuration_path)
-    validate(configuration_dict)
-
-    # configuration file can be a list of blueprints or a single blueprint
-    raw_blueprints = (
-        configuration_dict
-        if isinstance(configuration_dict, list)
-        else [configuration_dict]
-    )
+    configuration = ConfigurationFile(configuration_path)
 
     # sort blueprints by name, version and revision
-    raw_blueprints = sort_blueprints(raw_blueprints)
+    raw_blueprints = sort_blueprints(configuration.aslist())
 
     if additional_blueprint_formatting is not None:
         for blueprint in raw_blueprints:
@@ -86,6 +78,11 @@ def format(
         if line.startswith(b"- "):
             new_yaml_dump_lines.append(b"")
         new_yaml_dump_lines.append(line)
+
+    # re-add lockfile path if present
+    if (lockfile_path := configuration.lockfile_path) is not None:
+        new_yaml_dump_lines.insert(0, f"# lockfile={lockfile_path}".encode())
+        new_yaml_dump_lines.insert(1, b"")
 
     # save formatted configuration file
     original_configuration_content = configuration_path.read_bytes()

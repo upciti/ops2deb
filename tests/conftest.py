@@ -201,6 +201,11 @@ def blueprint_factory():
 
 
 @pytest.fixture
+def configuration_path(tmp_path) -> Path:
+    return tmp_path / "ops2deb.yml"
+
+
+@pytest.fixture
 def lockfile_path(tmp_path) -> Path:
     return tmp_path / "ops2deb.lock.yml"
 

@@ -1,6 +1,8 @@
+import re
+from functools import lru_cache
 from itertools import product
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal, OrderedDict, cast
 
 from pydantic import (
     AnyHttpUrl,
@@ -16,6 +18,7 @@ from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
 
 from ops2deb.exceptions import Ops2debParserError
 from ops2deb.jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
+from ops2deb.utils import FixIndentEmitter
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
 
@@ -208,6 +211,55 @@ class Configuration(Base):
     __root__: list[Blueprint] | Blueprint
 
 
+class ConfigurationFile:
+    def __init__(self, configuration_path: Path, yaml: YAML | None = None) -> None:
+        self.yaml: YAML = yaml or YAML()
+        self.yaml.Emitter = FixIndentEmitter
+        self.path = configuration_path
+        self._dict = self._load()
+        self.blueprints = self._validate()
+        self.lockfile_path = self._parse_lockfile_path()
+
+    @lru_cache
+    def aslist(self) -> list[OrderedDict[str, Any]]:
+        return self._dict if isinstance(self._dict, list) else [self._dict]
+
+    def save(self) -> None:
+        with self.path.open("w") as output:
+            self.yaml.dump(self._dict, output)
+
+    def _load(self) -> Any:
+        try:
+            return self.yaml.load(self.path.open("r"))
+        except YAMLError as e:
+            raise Ops2debParserError(f"Invalid YAML file.\n{e}")
+        except FileNotFoundError:
+            raise Ops2debParserError(f"File not found: {self.path.absolute()}")
+        except IsADirectoryError:
+            raise Ops2debParserError(
+                f"Path points to a directory: {self.path.absolute()}"
+            )
+
+    def _validate(self) -> list[Blueprint]:
+        try:
+            blueprints = Configuration.parse_obj(self._dict).__root__
+        except ValidationError as e:
+            raise Ops2debParserError(f"Invalid configuration file.\n{e}")
+        if isinstance(blueprints, Blueprint):
+            blueprints = [blueprints]
+        for index, blueprint in enumerate(blueprints):
+            blueprint._index = index
+        return blueprints
+
+    def _parse_lockfile_path(self) -> Path | None:
+        lockfile_path_re = re.compile(r"^# lockfile=(.+)$")
+        with self.path.open() as file:
+            first_line = file.readline().strip()
+        if (match := lockfile_path_re.match(first_line)) is not None:
+            return Path(match.group(1))
+        return None
+
+
 def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
     extended_list: list[Blueprint] = []
     for blueprint in blueprints:
@@ -216,34 +268,3 @@ def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
                 blueprint.copy(update={"architecture": arch, "version": version})
             )
     return extended_list
-
-
-def load(configuration_path: Path, yaml: YAML = YAML()) -> Any:
-    try:
-        return yaml.load(configuration_path.open("r"))
-    except YAMLError as e:
-        raise Ops2debParserError(f"Invalid YAML file.\n{e}")
-    except FileNotFoundError:
-        raise Ops2debParserError(f"File not found: {configuration_path.absolute()}")
-    except IsADirectoryError:
-        raise Ops2debParserError(
-            f"Path points to a directory: {configuration_path.absolute()}"
-        )
-
-
-def validate(
-    configuration_dict: list[dict[str, Any]] | dict[str, Any]
-) -> list[Blueprint]:
-    try:
-        blueprints = Configuration.parse_obj(configuration_dict).__root__
-    except ValidationError as e:
-        raise Ops2debParserError(f"Invalid configuration file.\n{e}")
-    if isinstance(blueprints, Blueprint):
-        blueprints = [blueprints]
-    for index, blueprint in enumerate(blueprints):
-        blueprint._index = index
-    return blueprints
-
-
-def parse(configuration_path: Path) -> list[Blueprint]:
-    return validate(load(configuration_path))
