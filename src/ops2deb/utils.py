@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Iterator, Tuple, TypeVar
 
 import yaml
+from ruamel.yaml.emitter import Emitter
 
 from ops2deb import logger
 from ops2deb.exceptions import Ops2debError
@@ -53,3 +54,9 @@ class PrettyYAMLDumper(yaml.dumper.SafeDumper):
         style = '"' if style == "'" else style
         style = "|" if self.analysis.multiline else style
         return style
+
+
+class FixIndentEmitter(Emitter):
+    def expect_block_sequence(self) -> None:
+        self.increase_indent(flow=False, indentless=False)
+        self.state = self.expect_first_block_sequence_item

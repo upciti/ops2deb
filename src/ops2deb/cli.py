@@ -8,9 +8,10 @@ import click
 import typer
 from typer.core import TyperGroup
 
-from ops2deb import __version__, builder, formatter, generator, logger, parser, updater
+from ops2deb import __version__, builder, formatter, generator, logger, updater
 from ops2deb.exceptions import Ops2debError
 from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
+from ops2deb.parser import ConfigurationFile
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -147,11 +148,11 @@ def default(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory, lockfile_path)
-        blueprints = parser.parse(configuration_path)
+        configuration = ConfigurationFile(configuration_path)
+        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         packages = generator.generate(
             fetcher,
-            blueprints,
+            configuration.blueprints,
             output_directory,
             configuration_path.parent,
             debian_repository,
@@ -174,11 +175,11 @@ def generate(
     only: Optional[List[str]] = option_only,
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory, lockfile_path)
-        blueprints = parser.parse(configuration_path)
+        configuration = ConfigurationFile(configuration_path)
+        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         generator.generate(
             fetcher,
-            blueprints,
+            configuration.blueprints,
             output_directory,
             configuration_path.parent,
             debian_repository,
@@ -235,10 +236,10 @@ def update(
     ),
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory, lockfile_path)
+        configuration = ConfigurationFile(configuration_path)
+        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         updater.update(
-            configuration_path,
-            lockfile_path,
+            configuration,
             fetcher,
             dry_run,
             output_path,
@@ -257,7 +258,7 @@ def validate(
     configuration_path: Path = option_configuration,
 ) -> None:
     try:
-        parser.parse(configuration_path)
+        ConfigurationFile(configuration_path)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -288,7 +289,8 @@ def lock(
     cache_directory: Path = option_cache_directory,
 ) -> None:
     try:
-        fetcher = Fetcher(cache_directory, lockfile_path)
+        configuration = ConfigurationFile(configuration_path)
+        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         fetcher.update_lockfile(configuration_path)
     except Ops2debError as e:
         error(e, exit_code)

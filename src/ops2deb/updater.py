@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Any, OrderedDict, Tuple, cast
 
 import httpx
-import ruamel.yaml
-from ruamel.yaml.emitter import Emitter
 from semver.version import Version
 
 from ops2deb import logger
@@ -17,15 +15,8 @@ from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
 from ops2deb.fetcher import Fetcher, FetchResult
 from ops2deb.lockfile import Lock
-from ops2deb.parser import Blueprint, load, validate
+from ops2deb.parser import Blueprint, ConfigurationFile
 from ops2deb.utils import separate_results_from_errors
-
-
-# fixme: move this somewhere else, this code is also duplicated in formatter.py
-class FixIndentEmitter(Emitter):
-    def expect_block_sequence(self) -> None:
-        self.increase_indent(flow=False, indentless=False)
-        self.state = self.expect_first_block_sequence_item
 
 
 class BaseUpdateStrategy:
@@ -262,17 +253,11 @@ def find_latest_releases(
 
 def _update_configuration(
     release: LatestRelease,
-    blueprint_dict: OrderedDict[str, Any] | list[OrderedDict[str, Any]],
+    raw_blueprints: list[OrderedDict[str, Any]],
     max_versions: int,
 ) -> list[str]:
     removed_versions: list[str] = []
-
-    # configuration file can be a list of blueprints or a single blueprint
-    raw_blueprint = (
-        blueprint_dict[release.blueprint.index]
-        if isinstance(blueprint_dict, list)
-        else blueprint_dict
-    )
+    raw_blueprint = raw_blueprints[release.blueprint.index]
 
     if max_versions == 1:
         if release.blueprint.matrix and release.blueprint.matrix.versions:
@@ -281,6 +266,10 @@ def _update_configuration(
             removed_versions = [raw_blueprint["version"]]
         raw_blueprint["version"] = release.version
         raw_blueprint.pop("revision", None)
+        raw_blueprint.move_to_end("version", last=False)
+        if "matrix" in raw_blueprint:
+            raw_blueprint.move_to_end("matrix", last=False)
+        raw_blueprint.move_to_end("name", last=False)
     else:
         if (count := len(release.blueprint.versions())) - max_versions >= 0:
             versions = raw_blueprint["matrix"]["versions"]
@@ -307,8 +296,7 @@ def _update_lockfile(
 
 
 def update(
-    configuration_path: Path,
-    lockfile_path: Path,
+    configuration: ConfigurationFile,
     fetcher: Fetcher,
     dry_run: bool = False,
     output_path: Path | None = None,
@@ -316,21 +304,16 @@ def update(
     only_names: list[str] | None = None,
     max_versions: int = 1,
 ) -> None:
-    yaml = ruamel.yaml.YAML(typ="rt")
-    yaml.Emitter = FixIndentEmitter
-
-    configuration_dict = load(configuration_path, yaml)
-    blueprints = validate(configuration_dict)
-
     logger.title("Looking for new releases...")
+    blueprints = configuration.blueprints
     releases, errors = find_latest_releases(blueprints, fetcher, skip_names, only_names)
 
     summary: list[str] = []
-    lock = Lock(lockfile_path)
+    lock = fetcher.lock
 
     for release in releases:
         removed_versions = _update_configuration(
-            release, configuration_dict, max_versions
+            release, configuration.aslist(), max_versions
         )
         if max_versions == 1:
             line = (
@@ -348,8 +331,7 @@ def update(
         logger.info("Did not found any updates")
     else:
         if dry_run is False:
-            with configuration_path.open("w") as output:
-                yaml.dump(configuration_dict, output)
+            configuration.save()
             lock.save()
             logger.info("Lockfile and configuration updated")
 

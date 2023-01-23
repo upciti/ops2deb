@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,7 @@ from typer.testing import CliRunner
 
 from ops2deb.cli import app
 from ops2deb.lockfile import Lock
-from ops2deb.parser import load, parse
+from ops2deb.parser import ConfigurationFile
 
 yaml = ruamel.yaml.YAML(typ="safe")
 
@@ -154,10 +155,13 @@ mock_configuration_with_version_matrix = """\
   - mv great-app {{src}}/usr/bin/great-app
 """
 
-
-@pytest.fixture
-def configuration_path(tmp_path) -> Path:
-    return tmp_path / "ops2deb.yml"
+mock_configuration_with_lockfile_path = """\
+# lockfile=lockfile.yml
+name: great-app
+version: 1.0.0
+summary: this is a summary
+fetch: http://testserver/{{version}}/great-app.tar.gz
+"""
 
 
 @pytest.fixture
@@ -350,12 +354,12 @@ def test_ops2deb_update_should_succeed_with_valid_configuration(
     configuration_path, lockfile_path, call_ops2deb
 ):
     result = call_ops2deb("update")
-    configuration = parse(configuration_path)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     lock = Lock(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
-    assert configuration[1].version == "1.1.1"
+    assert blueprints[1].version == "1.1.1"
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
     assert "http://testserver/1.0.0/great-app.tar.gz" not in lockfile_path.read_text()
 
@@ -371,13 +375,13 @@ def test_ops2deb_update_should_append_new_version_to_matrix_when_max_versions_is
         str(summary_path),
         configuration=mock_configuration_with_version_matrix,
     )
-    configuration = parse(configuration_path)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     lock = Lock(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert "Added great-app v1.1.1" in summary_path.read_text()
     assert "great-app can be bumped from 1.1.0 to 1.1.1" in result.stdout
     assert result.exit_code == 0
-    assert configuration[0].matrix.versions == ["1.0.0", "1.0.1", "1.1.0", "1.1.1"]
+    assert blueprints[0].matrix.versions == ["1.0.0", "1.0.1", "1.1.0", "1.1.1"]
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
 
 
@@ -392,9 +396,9 @@ def test_ops2deb_update_should_add_new_version_and_remove_old_versions_when_max_
         str(summary_path),
         configuration=mock_configuration_with_version_matrix,
     )
-    configuration = parse(configuration_path)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     assert result.exit_code == 0
-    assert configuration[0].matrix.versions == ["1.1.0", "1.1.1"]
+    assert blueprints[0].matrix.versions == ["1.1.0", "1.1.1"]
     assert "Added great-app v1.1.1 and removed v1.0.0, v1.0.1" in summary_path.read_text()
     assert "http://testserver/1.0.0/great-app.tar.gz" not in lockfile_path.read_text()
     assert "http://testserver/1.0.1/great-app.tar.gz" not in lockfile_path.read_text()
@@ -412,9 +416,9 @@ def test_ops2deb_update_should_replace_version_with_versions_matrix_when_max_ver
         "--output-file",
         str(summary_path),
     )
-    configuration = parse(configuration_path)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     assert result.exit_code == 0
-    assert configuration[1].matrix.versions == ["1.0.0", "1.1.1"]
+    assert blueprints[1].matrix.versions == ["1.0.0", "1.1.1"]
     assert "Added great-app v1.1.1" in summary_path.read_text()
     assert "http://testserver/1.0.0/great-app.tar.gz" in lockfile_path.read_text()
     assert "http://testserver/1.1.1/great-app.tar.gz" in lockfile_path.read_text()
@@ -450,16 +454,16 @@ def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
     result = call_ops2deb(
         "update", configuration=mock_configuration_single_blueprint_with_fetch
     )
-    configuration = parse(configuration_path)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     assert result.exit_code == 0
-    assert configuration[0].version == "1.1.1"
+    assert blueprints[0].version == "1.1.1"
 
 
 def test_ops2deb_update_should_reset_blueprint_revision_to_one(
     configuration_path, call_ops2deb
 ):
     call_ops2deb("update")
-    configuration = load(configuration_path)
+    configuration = ConfigurationFile(configuration_path).aslist()
     assert "revision" not in configuration[0].keys()
     assert "revision" not in configuration[1].keys()
 
@@ -480,9 +484,10 @@ def test_ops2deb_update_should_fail_gracefully_when_server_error(
     """
 
     result = call_ops2deb("update", configuration=configuration_with_server_error)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     error = "Server error when requesting http://testserver/1.1.0/bad-app.zip"
     assert error in result.stdout
-    assert parse(configuration_path)[1].version == "1.1.1"
+    assert blueprints[1].version == "1.1.1"
     assert result.exit_code == 77
 
 
@@ -510,10 +515,22 @@ def test_ops2deb_update_should_only_update_blueprints_listed_with_only_option(
     configuration_path, call_ops2deb
 ):
     result = call_ops2deb("update", "--only", "great-app")
-    configuration = parse(configuration_path)
+    blueprints = ConfigurationFile(configuration_path).blueprints
     assert result.exit_code == 0
-    assert configuration[1].version == "1.1.1"
-    assert configuration[2].version == "1.0.0"
+    assert blueprints[1].version == "1.1.1"
+    assert blueprints[2].version == "1.0.0"
+
+
+@pytest.mark.parametrize(
+    "configuration", [mock_configuration_with_version_matrix, mock_valid_configuration]
+)
+def test_ops2deb_update_config_should_not_need_formatting_when_formatted_before_update(
+    configuration, configuration_path, call_ops2deb
+):
+    result = call_ops2deb("update", configuration=configuration)
+    assert result.exit_code == 0
+    result = call_ops2deb("format")
+    assert result.exit_code == 0
 
 
 @pytest.mark.parametrize(
@@ -551,6 +568,14 @@ def test_ops2deb_format_should_exit_with_error_code_when_file_gets_reformatted(
     assert result.exit_code == 77
 
 
+def test_ops2deb_format_should_not_remove_lockfile_path_comment(
+    call_ops2deb, configuration_path
+):
+    result = call_ops2deb("format", configuration=mock_configuration_with_lockfile_path)
+    assert result.exit_code == 77
+    assert "# lockfile=lockfile.yml" in configuration_path.read_text()
+
+
 def test_ops2deb_lock_should_succeed_when_configuration_file_is_valid(call_ops2deb):
     result = call_ops2deb("lock")
     assert result.exit_code == 0
@@ -561,6 +586,16 @@ def test_ops2deb_lock_should_succeed_with_valid_multi_arch_fetch(call_ops2deb):
         "lock", configuration=mock_configuration_with_multi_arch_remote_file
     )
     assert result.exit_code == 0
+
+
+@pytest.mark.parametrize("subcommand", ["default", "update", "generate", "lock"])
+def test_ops2deb_lockfile_path_in_configuration_file_should_take_precedence_over_arg(
+    call_ops2deb, subcommand, tmp_path, lockfile_path, tmp_working_directory
+):
+    shutil.move(lockfile_path, "lockfile.yml")
+    result = call_ops2deb(subcommand, configuration=mock_configuration_with_lockfile_path)
+    assert result.exit_code == 0
+    assert lockfile_path.is_file() is False
 
 
 @pytest.mark.parametrize(
