@@ -516,8 +516,19 @@ def test_ops2deb_update_should_only_update_blueprints_listed_with_only_option(
     assert configuration[2].version == "1.0.0"
 
 
-def test_ops2deb_format_should_be_idempotent(configuration_path, call_ops2deb):
-    call_ops2deb("format", configuration=mock_configuration_not_properly_formatted)
+@pytest.mark.parametrize(
+    "configuration",
+    [
+        mock_configuration_not_properly_formatted,
+        mock_configuration_with_version_matrix,
+        mock_configuration_with_multi_arch_remote_file,
+        mock_configuration_single_blueprint_with_fetch,
+    ],
+)
+def test_ops2deb_format_should_be_idempotent(
+    configuration, configuration_path, call_ops2deb
+):
+    call_ops2deb("format", configuration=configuration)
     formatted_configuration = configuration_path.read_text()
     call_ops2deb("format", write=False)
     assert formatted_configuration == configuration_path.read_text()
