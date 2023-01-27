@@ -11,7 +11,7 @@ from typer.core import TyperGroup
 from ops2deb import __version__, builder, formatter, generator, logger, updater
 from ops2deb.exceptions import Ops2debError
 from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
-from ops2deb.parser import ConfigurationFile
+from ops2deb.parser import Configuration
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -148,7 +148,7 @@ def default(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        configuration = ConfigurationFile(configuration_path)
+        configuration = Configuration(configuration_path)
         fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         packages = generator.generate(
             fetcher,
@@ -175,7 +175,7 @@ def generate(
     only: Optional[List[str]] = option_only,
 ) -> None:
     try:
-        configuration = ConfigurationFile(configuration_path)
+        configuration = Configuration(configuration_path)
         fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         generator.generate(
             fetcher,
@@ -236,7 +236,7 @@ def update(
     ),
 ) -> None:
     try:
-        configuration = ConfigurationFile(configuration_path)
+        configuration = Configuration(configuration_path)
         fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         updater.update(
             configuration,
@@ -258,7 +258,7 @@ def validate(
     configuration_path: Path = option_configuration,
 ) -> None:
     try:
-        ConfigurationFile(configuration_path)
+        Configuration(configuration_path)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -289,7 +289,7 @@ def lock(
     cache_directory: Path = option_cache_directory,
 ) -> None:
     try:
-        configuration = ConfigurationFile(configuration_path)
+        configuration = Configuration(configuration_path)
         fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
         fetcher.update_lockfile(configuration_path)
     except Ops2debError as e:

@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional, OrderedDict, Tuple
 import yaml
 
 from ops2deb.exceptions import Ops2debFormatterError
-from ops2deb.parser import Blueprint, ConfigurationFile
+from ops2deb.parser import Blueprint, Configuration
 from ops2deb.utils import PrettyYAMLDumper
 
 
@@ -50,7 +50,7 @@ def format(
     configuration_path: Path,
     additional_blueprint_formatting: Optional[Callable[[dict[str, Any]], None]] = None,
 ) -> None:
-    configuration = ConfigurationFile(configuration_path)
+    configuration = Configuration(configuration_path)
 
     # sort blueprints by name, version and revision
     raw_blueprints = sort_blueprints(configuration.aslist())

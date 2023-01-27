@@ -13,6 +13,8 @@ from ops2deb.parser import Blueprint, HereDocument, SourceDestinationStr, extend
 from ops2deb.templates import environment
 from ops2deb.utils import working_directory
 
+BASE_TEMPORARY_DIRECTORY = Path("/tmp/ops2deb_tmp")
+
 
 def _format_command_output(output: str) -> str:
     lines = output.splitlines()
@@ -34,6 +36,7 @@ class SourcePackage:
         self.debian_directory = self.package_directory / "debian"
         self.source_directory = self.package_directory / "src"
         self.fetch_directory = self.package_directory / "fetched"
+        self.temporary_directory = Path("/tmp/ops2deb_tmp") / self.directory_name
         self.fetch_url = blueprint.render_fetch_url()
         self.blueprint = blueprint
 
@@ -49,6 +52,8 @@ class SourcePackage:
         shutil.rmtree(self.fetch_directory, ignore_errors=True)
         shutil.rmtree(self.source_directory, ignore_errors=True)
         self.source_directory.mkdir(parents=True)
+        shutil.rmtree(self.temporary_directory, ignore_errors=True)
+        self.temporary_directory.mkdir(parents=True)
         for path in ["usr/bin", "usr/share", "usr/lib", "etc"]:
             (self.source_directory / path).mkdir(parents=True)
 
@@ -69,9 +74,20 @@ class SourcePackage:
                 logger=dirsync_logger,
             )
 
+    def _render_string(self, string: str) -> str:
+        return self.blueprint.render_string(
+            string,
+            src=self.source_directory,
+            debian=self.debian_directory,
+            cwd=self.configuration_directory,
+            tmp=self.temporary_directory,
+        )
+
     def _install_here_document(self, entry: HereDocument, destination: Path) -> None:
         if destination.exists():
-            raise Ops2debGeneratorError(f"Destination {destination} already exists")
+            raise Ops2debGeneratorError(
+                f"Failed to write {destination}, file already exists"
+            )
         destination.write_text(self._render_string(entry.content))
 
     def _install_source_destination_str(
@@ -79,23 +95,17 @@ class SourcePackage:
     ) -> None:
         source = Path(self._render_string(entry.source))
         if source.exists() is False:
-            raise Ops2debGeneratorError(f"Source {str(source)} does not exist")
+            raise Ops2debGeneratorError(
+                f"Failed to copy {str(source)}, it does not exist"
+            )
         if source.is_dir() is True:
             shutil.copytree(source, destination, dirs_exist_ok=True, symlinks=True)
         elif source.is_file() is True:
             shutil.copy2(source, destination)
         else:
             raise Ops2debGeneratorError(
-                f"Source {str(source)} is not a file nor a directory"
+                f"Failed to copy {str(source)}, it is not a file nor a directory"
             )
-
-    def _render_string(self, string: str) -> str:
-        return self.blueprint.render_string(
-            string,
-            src=self.source_directory,
-            debian=self.debian_directory,
-            cwd=self.configuration_directory,
-        )
 
     def _install_files(self) -> None:
         for entry in self.blueprint.install:
@@ -103,6 +113,7 @@ class SourcePackage:
             if (
                 destination.is_absolute() is True
                 and destination.is_relative_to(self.package_directory) is False
+                and destination.is_relative_to(self.temporary_directory) is False
             ):
                 destination = self.source_directory / destination.relative_to("/")
             if destination.is_absolute() is False:

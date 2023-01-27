@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from ops2deb.cli import app
 from ops2deb.lockfile import Lock
-from ops2deb.parser import ConfigurationFile
+from ops2deb.parser import Configuration
 
 yaml = ruamel.yaml.YAML(typ="safe")
 
@@ -354,7 +354,7 @@ def test_ops2deb_update_should_succeed_with_valid_configuration(
     configuration_path, lockfile_path, call_ops2deb
 ):
     result = call_ops2deb("update")
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     lock = Lock(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
@@ -375,7 +375,7 @@ def test_ops2deb_update_should_append_new_version_to_matrix_when_max_versions_is
         str(summary_path),
         configuration=mock_configuration_with_version_matrix,
     )
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     lock = Lock(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert "Added great-app v1.1.1" in summary_path.read_text()
@@ -396,7 +396,7 @@ def test_ops2deb_update_should_add_new_version_and_remove_old_versions_when_max_
         str(summary_path),
         configuration=mock_configuration_with_version_matrix,
     )
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     assert result.exit_code == 0
     assert blueprints[0].matrix.versions == ["1.1.0", "1.1.1"]
     assert "Added great-app v1.1.1 and removed v1.0.0, v1.0.1" in summary_path.read_text()
@@ -416,7 +416,7 @@ def test_ops2deb_update_should_replace_version_with_versions_matrix_when_max_ver
         "--output-file",
         str(summary_path),
     )
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     assert result.exit_code == 0
     assert blueprints[1].matrix.versions == ["1.0.0", "1.1.1"]
     assert "Added great-app v1.1.1" in summary_path.read_text()
@@ -454,7 +454,7 @@ def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
     result = call_ops2deb(
         "update", configuration=mock_configuration_single_blueprint_with_fetch
     )
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     assert result.exit_code == 0
     assert blueprints[0].version == "1.1.1"
 
@@ -463,7 +463,7 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(
     configuration_path, call_ops2deb
 ):
     call_ops2deb("update")
-    configuration = ConfigurationFile(configuration_path).aslist()
+    configuration = Configuration(configuration_path).aslist()
     assert "revision" not in configuration[0].keys()
     assert "revision" not in configuration[1].keys()
 
@@ -484,7 +484,7 @@ def test_ops2deb_update_should_fail_gracefully_when_server_error(
     """
 
     result = call_ops2deb("update", configuration=configuration_with_server_error)
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     error = "Server error when requesting http://testserver/1.1.0/bad-app.zip"
     assert error in result.stdout
     assert blueprints[1].version == "1.1.1"
@@ -515,7 +515,7 @@ def test_ops2deb_update_should_only_update_blueprints_listed_with_only_option(
     configuration_path, call_ops2deb
 ):
     result = call_ops2deb("update", "--only", "great-app")
-    blueprints = ConfigurationFile(configuration_path).blueprints
+    blueprints = Configuration(configuration_path).blueprints
     assert result.exit_code == 0
     assert blueprints[1].version == "1.1.1"
     assert blueprints[2].version == "1.0.0"
