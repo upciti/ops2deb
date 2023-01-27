@@ -207,11 +207,11 @@ class Blueprint(Base):
         return self._index
 
 
-class Configuration(Base):
+class _ConfigurationFile(Base):
     __root__: list[Blueprint] | Blueprint
 
 
-class ConfigurationFile:
+class Configuration:
     def __init__(self, configuration_path: Path, yaml: YAML | None = None) -> None:
         self.yaml: YAML = yaml or YAML()
         self.yaml.Emitter = FixIndentEmitter
@@ -242,7 +242,7 @@ class ConfigurationFile:
 
     def _validate(self) -> list[Blueprint]:
         try:
-            blueprints = Configuration.parse_obj(self._dict).__root__
+            blueprints = _ConfigurationFile.parse_obj(self._dict).__root__
         except ValidationError as e:
             raise Ops2debParserError(f"Invalid configuration file.\n{e}")
         if isinstance(blueprints, Blueprint):

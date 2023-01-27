@@ -15,7 +15,7 @@ from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
 from ops2deb.fetcher import Fetcher, FetchResult
 from ops2deb.lockfile import Lock
-from ops2deb.parser import Blueprint, ConfigurationFile
+from ops2deb.parser import Blueprint, Configuration
 from ops2deb.utils import separate_results_from_errors
 
 
@@ -296,7 +296,7 @@ def _update_lockfile(
 
 
 def update(
-    configuration: ConfigurationFile,
+    configuration: Configuration,
     fetcher: Fetcher,
     dry_run: bool = False,
     output_path: Path | None = None,
