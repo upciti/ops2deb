@@ -71,7 +71,8 @@ def test_is_archive_format_supported_should_return_false_when_file_is_not_an_arc
 
 
 @pytest.mark.parametrize(
-    "extension", ["deb", "zip", "bz2", "tar", "tar.bz2", "tar.xz", "tar.gz", "gz"]
+    "extension",
+    ["deb", "zip", "bz2", "tar", "tar.bz2", "tar.xz", "tar.gz", "gz", "zst", "tar.zst"],
 )
 def test_is_archive_format_supported_should_return_true_when_archive_format_is_supported(
     tmp_path,
@@ -116,3 +117,24 @@ async def test_extract_archive_should_extract_gz_archive_when_file_name_ends_wit
     await extract_archive(archive_path, extract_path)
     assert (extract_path / "archive").is_file()
     assert (extract_path / "archive").read_text() == "Hello"
+
+
+async def test_extract_archive_should_extract_zst_archive_when_file_name_ends_with_zst(
+    extract_path, decode_and_write
+):
+    archive_path = decode_and_write("zst", b"KLUv/SQLWQAASGVsbG8gc2lyIQqkAdJw")
+    await extract_archive(archive_path, extract_path)
+    assert (extract_path / "archive").is_file()
+    assert (extract_path / "archive").read_text() == "Hello sir!\n"
+
+
+async def test_extract_archive_should_extract_tar_zst_archive_when_file_name_ends_with_tar_zst(  # noqa: E501
+    extract_path, decode_and_write
+):
+    archive_path = decode_and_write(
+        "tar.zst",
+        b"KLUv/QRYvQIAckQPFqCpDQCWnGiqCF+dELPSlpos3N4uRAoGgrSLCispQZTNFmMpxjef1Lv7qPgh8+B"
+        b"ZT+j9N2b+v1ezhLSLjggA9QXwTANUDIUDwFYAkAa41gpXbwJdP2F1GA==",
+    )
+    await extract_archive(archive_path, extract_path)
+    assert (extract_path / "hello.txt").read_text() == "Hello!\n"
