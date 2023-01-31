@@ -2,6 +2,7 @@ import asyncio
 import bz2
 import gzip
 import hashlib
+import io
 import shutil
 import tarfile
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from typing import Sequence
 import aiofiles
 import httpx
 import unix_ar
+import zstandard
 
 from ops2deb import logger
 from ops2deb.client import client_factory
@@ -50,9 +52,27 @@ def _unpack_deb(file_path: str, extract_path: str) -> None:
             tar_file.close()
 
 
+def _unpack_zst(file_path: str, extract_path: str) -> None:
+    output_path = Path(extract_path) / Path(file_path).stem
+    dctx = zstandard.ZstdDecompressor()
+    with open(file_path, "rb") as ifh, output_path.open("wb") as ofh:
+        dctx.copy_stream(ifh, ofh)
+
+
+def _unpack_tar_zst(file_path: str, extract_path: str) -> None:
+    dctx = zstandard.ZstdDecompressor()
+    with open(file_path, "rb") as ifh, io.BytesIO() as ofh:
+        dctx.copy_stream(ifh, ofh)
+        ofh.seek(0)
+        with tarfile.open(fileobj=ofh) as tar_file:
+            tar_file.extractall(extract_path)
+
+
 shutil.register_unpack_format("gz", [".gz"], _unpack_gz)
 shutil.register_unpack_format("bz2", [".bz2"], _unpack_bz2)
 shutil.register_unpack_format("deb", [".deb"], _unpack_deb)
+shutil.register_unpack_format("zsttar", [".tar.zst"], _unpack_tar_zst)
+shutil.register_unpack_format("zst", [".zst"], _unpack_zst)
 
 
 async def _download_file(url: str, download_path: Path) -> None:
