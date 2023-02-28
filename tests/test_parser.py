@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ops2deb.parser import Blueprint, Configuration
+from ops2deb.parser import Blueprint, Parser
 
 
 @pytest.fixture
@@ -165,5 +165,5 @@ def test_parser__should_parse_lockfile_path_in_configuration_first_line(
     summary: this and that
     """
     configuration_path.write_text(configuration)
-    parser = Configuration(configuration_path)
-    assert parser.lockfile_path == Path("mylockfile.yml")
+    parser = Parser(configuration_path)
+    assert Path("mylockfile.yml") in parser.locks

@@ -12,8 +12,7 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debFetcherError
 from ops2deb.extracter import extract_archive, is_archive_format_supported
-from ops2deb.lockfile import Lock
-from ops2deb.parser import Configuration
+from ops2deb.parser import Parser
 from ops2deb.utils import log_and_raise, separate_results_from_errors
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
@@ -102,13 +101,12 @@ class FetchTask:
 
 
 class Fetcher:
-    def __init__(self, cache_directory_path: Path, lockfile_path: Path):
+    def __init__(self, cache_directory_path: Path):
         self.cache_directory_path = cache_directory_path
-        self.lock = Lock(lockfile_path)
 
     async def _run_tasks(
         self,
-        tasks: list[FetchTask],
+        tasks: Sequence[FetchTask],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
         if tasks:
             logger.title(f"Fetching {len(tasks)} files...")
@@ -117,26 +115,31 @@ class Fetcher:
         )
         return separate_results_from_errors(dict(zip([r.url for r in tasks], results)))
 
-    async def fetch_urls(
+    def fetch_urls(
         self,
         urls: Sequence[str],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        return await self._run_tasks([FetchTask(url) for url in set(urls)])
+        return asyncio.run(self._run_tasks([FetchTask(url) for url in set(urls)]))
 
     def fetch_urls_and_check_hashes(
-        self,
-        urls: Sequence[str],
+        self, tasks: Sequence[FetchTask]
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        tasks: list[FetchTask] = []
-        for url in set(urls):
-            tasks.append(FetchTask(url, self.lock.sha256(url)))
         return asyncio.run(self._run_tasks(tasks))
 
-    def update_lockfile(self, configuration_path: Path) -> None:
-        urls: list[str] = []
-        for blueprint in Configuration(configuration_path).blueprints:
-            fetch_urls = blueprint.render_fetch_urls()
-            urls.extend([url for url in fetch_urls if url not in self.lock])
-        results, fetch_errors = asyncio.run(self.fetch_urls(urls))
-        self.lock.add(list(results.values()))
-        self.lock.save()
+    def update_lockfiles(self, search_glob: str) -> None:
+        parser = Parser(search_glob)
+        blueprint_urls: dict[int, list[str]] = {}
+        all_urls: list[str] = []
+        for blueprint in parser.blueprints:
+            lock = parser.get_metadata(blueprint).lock
+            urls = [url for url in blueprint.render_fetch_urls() if url not in lock]
+            if urls:
+                blueprint_urls[blueprint.uid] = urls
+                all_urls.extend(urls)
+        results, fetch_errors = self.fetch_urls(all_urls)
+        for url, fetch_result in results.items():
+            for uid, urls in blueprint_urls.items():
+                if url in urls:
+                    lock = parser.metadatas[uid].lock
+                    lock.add([fetch_result])
+        parser.save()

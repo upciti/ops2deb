@@ -29,6 +29,7 @@ class Lock:
     def __init__(self, lockfile_path: Path) -> None:
         self.lock_file_path = lockfile_path
         self._entries: dict[str, LockEntry] = {}
+        self._tainted: bool = False
         try:
             if lockfile_path.exists() is True:
                 with lockfile_path.open("r") as reader:
@@ -62,13 +63,15 @@ class Lock:
                 self._entries[url] = LockEntry(
                     url=str(entry.url), sha256=entry.sha256, timestamp=now
                 )
+                self._tainted = True
 
     def remove(self, urls: Sequence[str]) -> None:
         for url in urls:
-            self._entries.pop(url, None)
+            if self._entries.pop(url, None) is not None:
+                self._tainted = True
 
     def save(self) -> None:
-        if not self._entries:
+        if not self._entries or self._tainted is False:
             return
         entries = [entry.dict() for entry in self._entries.values()]
         with self.lock_file_path.open("w") as output:

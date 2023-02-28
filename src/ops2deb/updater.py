@@ -15,7 +15,7 @@ from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
 from ops2deb.fetcher import Fetcher, FetchResult
 from ops2deb.lockfile import Lock
-from ops2deb.parser import Blueprint, Configuration
+from ops2deb.parser import Blueprint, Parser
 from ops2deb.utils import separate_results_from_errors
 
 
@@ -190,7 +190,19 @@ def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> l
     return urls
 
 
-async def _find_latest_releases(
+async def _find_latest_versions(
+    blueprints: list[Blueprint],
+) -> tuple[dict[int, str], dict[int, Ops2debError]]:
+    async with client_factory() as client:
+        tasks = [_find_latest_version(client, b) for b in blueprints]
+        tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
+        versions, errors = separate_results_from_errors(
+            dict(zip([b.uid for b in blueprints], tasks_results))
+        )
+    return versions, errors
+
+
+def find_latest_releases(
     blueprints: list[Blueprint],
     fetcher: Fetcher,
     skip_names: list[str] | None,
@@ -202,63 +214,47 @@ async def _find_latest_releases(
     if only_names:
         blueprints = [b for b in blueprints if b.name in only_names]
 
-    async with client_factory() as client:
-        tasks = [_find_latest_version(client, b) for b in blueprints]
-        tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
-        versions, errors = separate_results_from_errors(
-            dict(zip([b.index for b in blueprints], tasks_results))
-        )
-
     # remove blueprints where the current version is still the latest
-    blueprints = [b for b in blueprints if versions.get(b.index, b.version) != b.version]
+    versions, errors = asyncio.run(_find_latest_versions(blueprints))
+    blueprints = [b for b in blueprints if versions.get(b.uid, b.version) != b.version]
 
     # gather the urls of files we need to download to get the new checksums
     urls: dict[int, list[str]] = defaultdict(list)
     for blueprint in blueprints:
-        urls[blueprint.index] = _blueprint_fetch_urls(
-            blueprint, versions[blueprint.index]
-        )
+        urls[blueprint.uid] = _blueprint_fetch_urls(blueprint, versions[blueprint.uid])
 
+    # download new files
     url_list = list(itertools.chain(*[u for u in urls.values()]))
-    results, fetch_errors = await fetcher.fetch_urls(url_list)
+    results, fetch_errors = fetcher.fetch_urls(url_list)
 
     # remove blueprint we can't update because we could not fetch associated files
+    failed_uids: list[int] = []
     for failed_url, exception in fetch_errors.items():
-        for index, blueprint_urls in urls.items():
+        for location, blueprint_urls in urls.items():
             if failed_url in blueprint_urls:
-                errors[index] = exception
-                blueprints.pop(index)
+                errors[location] = exception
+                failed_uids.append(location)
+    blueprints = [b for b in blueprints if b.uid not in failed_uids]
 
     latest_releases: list[LatestRelease] = []
     for blueprint in blueprints:
         latest_releases.append(
             LatestRelease(
                 blueprint=blueprint,
-                version=versions[blueprint.index],
-                fetched=[results[url] for url in urls[blueprint.index]],
+                version=versions[blueprint.uid],
+                fetched=[results[url] for url in urls[blueprint.uid]],
             )
         )
 
     return latest_releases, list(fetch_errors.values()) + list(errors.values())
 
 
-def find_latest_releases(
-    blueprints: list[Blueprint],
-    fetcher: Fetcher,
-    skip_names: list[str] | None,
-    only_names: list[str] | None,
-) -> Tuple[list[LatestRelease], list[Ops2debError]]:
-    return asyncio.run(_find_latest_releases(blueprints, fetcher, skip_names, only_names))
-
-
 def _update_configuration(
     release: LatestRelease,
-    raw_blueprints: list[OrderedDict[str, Any]],
+    raw_blueprint: OrderedDict[str, Any],
     max_versions: int,
 ) -> list[str]:
     removed_versions: list[str] = []
-    raw_blueprint = raw_blueprints[release.blueprint.index]
-
     if max_versions == 1:
         if release.blueprint.matrix and release.blueprint.matrix.versions:
             removed_versions = raw_blueprint["matrix"].pop("versions")
@@ -283,7 +279,6 @@ def _update_configuration(
             raw_blueprint["matrix"]["versions"] = [release.blueprint.version]
         raw_blueprint["matrix"]["versions"].append(release.version)
         raw_blueprint.pop("version", None)
-
     return removed_versions
 
 
@@ -296,7 +291,7 @@ def _update_lockfile(
 
 
 def update(
-    configuration: Configuration,
+    parser: Parser,
     fetcher: Fetcher,
     dry_run: bool = False,
     output_path: Path | None = None,
@@ -305,15 +300,14 @@ def update(
     max_versions: int = 1,
 ) -> None:
     logger.title("Looking for new releases...")
-    blueprints = configuration.blueprints
+    blueprints = list(parser.blueprints)
     releases, errors = find_latest_releases(blueprints, fetcher, skip_names, only_names)
 
     summary: list[str] = []
-    lock = fetcher.lock
 
     for release in releases:
         removed_versions = _update_configuration(
-            release, configuration.raw_blueprints, max_versions
+            release, parser.get_raw_blueprint(release.blueprint), max_versions
         )
         if max_versions == 1:
             line = (
@@ -324,15 +318,16 @@ def update(
             line = f"Added {release.blueprint.name} v{release.version}"
             if removed_versions:
                 line += f" and removed {', '.join([f'v{v}' for v in removed_versions])}"
-        _update_lockfile(release, lock, removed_versions)
+        _update_lockfile(
+            release, parser.get_metadata(release.blueprint).lock, removed_versions
+        )
         summary.append(line)
 
     if not releases:
         logger.info("Did not found any updates")
     else:
         if dry_run is False:
-            configuration.save()
-            lock.save()
+            parser.save()
             logger.info("Lockfile and configuration updated")
 
     if output_path is not None:

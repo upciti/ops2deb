@@ -3,8 +3,7 @@ import shutil
 import pytest
 
 from ops2deb.exceptions import Ops2debGeneratorError
-from ops2deb.fetcher import Fetcher
-from ops2deb.generator import BASE_TEMPORARY_DIRECTORY, SourcePackage, generate
+from ops2deb.generator import BASE_TEMPORARY_DIRECTORY, SourcePackage
 from ops2deb.parser import Blueprint
 
 blueprint_1 = Blueprint(
@@ -124,8 +123,7 @@ Description: My great app without a description
 def test_generate_should_produce_same_control_file_content_as_the_snapshot(
     tmp_path, blueprint, control
 ):
-    fetcher = Fetcher(tmp_path, tmp_path / "ops2deb.lock.yml")
-    generate(fetcher, [blueprint], tmp_path, tmp_path)
+    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
     control_file = tmp_path / f"great-app_1.0.0_{blueprint.architecture}/debian/control"
     assert control_file.read_text() == control
 

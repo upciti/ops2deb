@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from ops2deb.exceptions import Ops2debLockFileError
@@ -50,3 +52,12 @@ def test_save__should_produce_a_lockfile_that_contains_added_entries(
     lock.save()
     lock = Lock(lockfile_path)
     assert lock.sha256("http://tests.com/file.tar.gz") == "deadbeef"
+
+
+@patch("yaml.dump")
+def test_save__should_not_write_file_when_no_entry_have_been_added_nor_removed(
+    mock_dump, lockfile_path, tmp_path
+):
+    lock = Lock(lockfile_path)
+    lock.save()
+    mock_dump.assert_not_called()

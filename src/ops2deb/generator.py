@@ -9,8 +9,8 @@ from dirsync import sync
 from ops2deb import logger
 from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
 from ops2deb.exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
-from ops2deb.fetcher import Fetcher, FetchResult
-from ops2deb.parser import Blueprint, HereDocument, SourceDestinationStr
+from ops2deb.fetcher import Fetcher, FetchResult, FetchTask
+from ops2deb.parser import Blueprint, HereDocument, Parser, SourceDestinationStr
 from ops2deb.templates import environment
 from ops2deb.utils import working_directory
 
@@ -196,40 +196,41 @@ def filter_already_published_packages(
     return filtered_packages
 
 
-def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
-    extended_list: list[Blueprint] = []
-    for blueprint in blueprints:
-        for arch, version in product(blueprint.architectures(), blueprint.versions()):
-            extended_list.append(
-                blueprint.copy(update={"architecture": arch, "version": version})
-            )
-    return extended_list
-
-
 def generate(
+    parser: Parser,
     fetcher: Fetcher,
-    blueprints: list[Blueprint],
     output_directory: Path,
-    configuration_directory: Path,
     debian_repository: str | None = None,
     only_names: list[str] | None = None,
 ) -> list[SourcePackage]:
-    # each blueprint can yield multiple source packages
-    packages = [
-        SourcePackage(b, output_directory, configuration_directory)
-        for b in extend(blueprints)
-    ]
-
+    blueprints = parser.blueprints
     if only_names is not None:
-        packages = [p for p in packages if p.blueprint.name in only_names]
+        blueprints = [b for b in parser.blueprints if b.name in only_names]
+
+    # each blueprint can yield multiple source packages
+    packages: list[SourcePackage] = []
+    for blueprint in blueprints:
+        for arch, version in product(blueprint.architectures(), blueprint.versions()):
+            blueprint = blueprint.copy(update={"architecture": arch, "version": version})
+            packages.append(
+                SourcePackage(
+                    blueprint,
+                    output_directory,
+                    parser.get_metadata(blueprint).configuration.path.parent,
+                )
+            )
 
     # filter out packages already available in the debian repository
     if debian_repository is not None and packages:
         packages = filter_already_published_packages(packages, debian_repository)
 
     # run fetch instructions (download, verify, extract) in parallel
-    urls = [p.fetch_url for p in packages if p.fetch_url is not None]
-    fetch_results, fetch_errors = fetcher.fetch_urls_and_check_hashes(urls)
+    fetch_tasks = [
+        FetchTask(p.fetch_url, parser.get_metadata(p.blueprint).lock.sha256(p.fetch_url))
+        for p in packages
+        if p.fetch_url is not None
+    ]
+    fetch_results, fetch_errors = fetcher.fetch_urls_and_check_hashes(fetch_tasks)
 
     for package in packages:
         package.generate(fetch_results)
