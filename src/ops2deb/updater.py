@@ -313,7 +313,7 @@ def update(
 
     for release in releases:
         removed_versions = _update_configuration(
-            release, configuration.aslist(), max_versions
+            release, configuration.raw_blueprints, max_versions
         )
         if max_versions == 1:
             line = (

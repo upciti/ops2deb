@@ -463,7 +463,7 @@ def test_ops2deb_update_should_reset_blueprint_revision_to_one(
     configuration_path, call_ops2deb
 ):
     call_ops2deb("update")
-    configuration = Configuration(configuration_path).aslist()
+    configuration = Configuration(configuration_path).raw_blueprints
     assert "revision" not in configuration[0].keys()
     assert "revision" not in configuration[1].keys()
 

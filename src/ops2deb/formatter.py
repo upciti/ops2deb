@@ -53,7 +53,7 @@ def format(
     configuration = Configuration(configuration_path)
 
     # sort blueprints by name, version and revision
-    raw_blueprints = sort_blueprints(configuration.aslist())
+    raw_blueprints = sort_blueprints(configuration.raw_blueprints)
 
     if additional_blueprint_formatting is not None:
         for blueprint in raw_blueprints:
