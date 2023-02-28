@@ -1,5 +1,5 @@
 import re
-from functools import lru_cache
+from functools import cached_property
 from itertools import product
 from pathlib import Path
 from typing import Any, Literal, OrderedDict, cast
@@ -216,19 +216,27 @@ class Configuration:
         self.yaml: YAML = yaml or YAML()
         self.yaml.Emitter = FixIndentEmitter
         self.path = configuration_path
-        self._dict = self._load()
-        self.blueprints = self._validate()
+        self._blueprints_dict = self._parse_yaml()
+        self._blueprints = self._parse_blueprints()
         self.lockfile_path = self._parse_lockfile_path()
 
-    @lru_cache
-    def aslist(self) -> list[OrderedDict[str, Any]]:
-        return self._dict if isinstance(self._dict, list) else [self._dict]
+    @property
+    def blueprints(self) -> list[Blueprint]:
+        return self._blueprints
+
+    @cached_property
+    def raw_blueprints(self) -> list[OrderedDict[str, Any]]:
+        return (
+            self._blueprints_dict
+            if isinstance(self._blueprints_dict, list)
+            else [self._blueprints_dict]
+        )
 
     def save(self) -> None:
         with self.path.open("w") as output:
-            self.yaml.dump(self._dict, output)
+            self.yaml.dump(self._blueprints_dict, output)
 
-    def _load(self) -> Any:
+    def _parse_yaml(self) -> Any:
         try:
             return self.yaml.load(self.path.open("r"))
         except YAMLError as e:
@@ -240,9 +248,9 @@ class Configuration:
                 f"Path points to a directory: {self.path.absolute()}"
             )
 
-    def _validate(self) -> list[Blueprint]:
+    def _parse_blueprints(self) -> list[Blueprint]:
         try:
-            blueprints = _ConfigurationFile.parse_obj(self._dict).__root__
+            blueprints = _ConfigurationFile.parse_obj(self._blueprints_dict).__root__
         except ValidationError as e:
             raise Ops2debParserError(f"Invalid configuration file.\n{e}")
         if isinstance(blueprints, Blueprint):
@@ -258,13 +266,3 @@ class Configuration:
         if (match := lockfile_path_re.match(first_line)) is not None:
             return Path(match.group(1))
         return None
-
-
-def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
-    extended_list: list[Blueprint] = []
-    for blueprint in blueprints:
-        for arch, version in product(blueprint.architectures(), blueprint.versions()):
-            extended_list.append(
-                blueprint.copy(update={"architecture": arch, "version": version})
-            )
-    return extended_list

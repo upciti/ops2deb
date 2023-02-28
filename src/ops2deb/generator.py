@@ -1,6 +1,7 @@
 import logging
 import shutil
 import subprocess
+from itertools import product
 from pathlib import Path
 
 from dirsync import sync
@@ -9,7 +10,7 @@ from ops2deb import logger
 from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
 from ops2deb.exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from ops2deb.fetcher import Fetcher, FetchResult
-from ops2deb.parser import Blueprint, HereDocument, SourceDestinationStr, extend
+from ops2deb.parser import Blueprint, HereDocument, SourceDestinationStr
 from ops2deb.templates import environment
 from ops2deb.utils import working_directory
 
@@ -193,6 +194,16 @@ def filter_already_published_packages(
         ):
             filtered_packages.append(package)
     return filtered_packages
+
+
+def extend(blueprints: list[Blueprint]) -> list[Blueprint]:
+    extended_list: list[Blueprint] = []
+    for blueprint in blueprints:
+        for arch, version in product(blueprint.architectures(), blueprint.versions()):
+            extended_list.append(
+                blueprint.copy(update={"architecture": arch, "version": version})
+            )
+    return extended_list
 
 
 def generate(
