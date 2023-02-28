@@ -1,12 +1,16 @@
 import json
-from pathlib import Path
 from textwrap import wrap
-from typing import Any, Callable, Optional, OrderedDict, Tuple
+from typing import Any, OrderedDict, Tuple
 
 import yaml
 
 from ops2deb.exceptions import Ops2debFormatterError
-from ops2deb.parser import Blueprint, Configuration
+from ops2deb.parser import (
+    Blueprint,
+    ConfigurationFile,
+    get_default_lockfile_path,
+    load_configuration,
+)
 from ops2deb.utils import PrettyYAMLDumper
 
 
@@ -46,18 +50,9 @@ def format_blueprint(blueprint: dict[str, Any]) -> dict[str, Any]:
     return blueprint
 
 
-def format(
-    configuration_path: Path,
-    additional_blueprint_formatting: Optional[Callable[[dict[str, Any]], None]] = None,
-) -> None:
-    configuration = Configuration(configuration_path)
-
+def format_configuration_file(configuration: ConfigurationFile) -> bool:
     # sort blueprints by name, version and revision
     raw_blueprints = sort_blueprints(configuration.raw_blueprints)
-
-    if additional_blueprint_formatting is not None:
-        for blueprint in raw_blueprints:
-            additional_blueprint_formatting(blueprint)
 
     # wrap descriptions, remove default values, remove empty lists
     raw_blueprints = [format_blueprint(b) for b in raw_blueprints]
@@ -79,15 +74,26 @@ def format(
             new_yaml_dump_lines.append(b"")
         new_yaml_dump_lines.append(line)
 
-    # re-add lockfile path if present
-    if (lockfile_path := configuration.lockfile_path) is not None:
-        new_yaml_dump_lines.insert(0, f"# lockfile={lockfile_path}".encode())
+    # re-add lockfile path if needed
+    lockfile_path = configuration.lockfile_path
+    if lockfile_path != get_default_lockfile_path(configuration.path):
+        relative_lockfile_path = lockfile_path.relative_to(configuration.path.parent)
+        new_yaml_dump_lines.insert(0, f"# lockfile={relative_lockfile_path}".encode())
         new_yaml_dump_lines.insert(1, b"")
 
     # save formatted configuration file
-    original_configuration_content = configuration_path.read_bytes()
+    original_configuration_content = configuration.path.read_bytes()
     formatted_configuration_content = b"\n".join(new_yaml_dump_lines)
-    configuration_path.write_bytes(formatted_configuration_content)
+    configuration.path.write_bytes(formatted_configuration_content)
 
-    if formatted_configuration_content != original_configuration_content:
-        raise Ops2debFormatterError(f"Reformatted {configuration_path}")
+    return formatted_configuration_content != original_configuration_content
+
+
+def format_all(search_glob: str) -> None:
+    formatted_configuration_files: list[str] = []
+    for configuration in load_configuration(search_glob).configuration_files:
+        if format_configuration_file(configuration) is True:
+            formatted_configuration_files.append(str(configuration.path))
+    if formatted_configuration_files:
+        message: str = "Formatted file(s): " + ", ".join(formatted_configuration_files)
+        raise Ops2debFormatterError(message)

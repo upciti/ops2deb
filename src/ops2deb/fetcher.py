@@ -3,7 +3,7 @@ import hashlib
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Any
 
 import aiofiles
 import httpx
@@ -12,11 +12,31 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debFetcherError
 from ops2deb.extracter import extract_archive, is_archive_format_supported
-from ops2deb.lockfile import Lock
-from ops2deb.parser import Configuration
-from ops2deb.utils import log_and_raise, separate_results_from_errors
+from ops2deb.utils import log_and_raise
 
 DEFAULT_CACHE_DIRECTORY = Path("/tmp/ops2deb_cache")
+
+
+@dataclass
+class FetchResult:
+    url: str
+    sha256: str
+    storage_path: Path
+    task_data: Any
+
+
+@dataclass(frozen=True)
+class FetchFailure:
+    url: str
+    error: Ops2debError
+    task_data: Any
+
+
+@dataclass
+class FetchTask:
+    url: str
+    task_datas: list[Any]
+    expected_sha256: str | None = None
 
 
 async def _download_file(url: str, download_path: Path) -> None:
@@ -50,29 +70,24 @@ async def _hash_file(file_path: Path) -> str:
     return sha256_hash.hexdigest()
 
 
-@dataclass
-class FetchResult:
-    url: str
-    sha256: str
-    storage_path: Path
+class Fetcher:
+    def __init__(self, cache_directory_path: Path):
+        self._cache_directory_path = cache_directory_path
+        self._tasks: dict[str, FetchTask] = {}
+        self._results: list[FetchResult] = []
+        self._failures: list[FetchFailure] = []
 
-
-class FetchTask:
-    def __init__(self, url: str, sha256: str | None = None):
-        self.url = url
-        self.sha256 = sha256
-
-    async def fetch(self, cache_directory_path: Path) -> FetchResult:
-        url_hash = hashlib.sha256(self.url.encode()).hexdigest()
-        file_name = self.url.split("/")[-1]
-        base_path = cache_directory_path / url_hash
+    async def _download_hash_extract(self, task: FetchTask) -> None:
+        url_hash = hashlib.sha256(task.url.encode()).hexdigest()
+        file_name = task.url.split("/")[-1]
+        base_path = self._cache_directory_path / url_hash
         download_path = base_path / file_name
         extract_path = base_path / f"{file_name}_out"
         checksum_path = base_path / f"{file_name}.sum"
 
         base_path.mkdir(exist_ok=True, parents=True)
         if download_path.is_file() is False:
-            await _download_file(self.url, download_path)
+            await _download_file(task.url, download_path)
 
         if checksum_path.is_file() is False:
             computed_hash = await _hash_file(download_path)
@@ -82,61 +97,52 @@ class FetchTask:
 
         storage_path = (
             extract_path
-            if self.sha256 and is_archive_format_supported(download_path)
+            if task.expected_sha256 and is_archive_format_supported(download_path)
             else download_path
         )
 
-        if self.sha256:
-            if computed_hash != self.sha256:
+        if task.expected_sha256:
+            if computed_hash != task.expected_sha256:
                 log_and_raise(
                     Ops2debFetcherError(
                         f"Wrong checksum for file {file_name}. "
-                        f"Expected {self.sha256}, got {computed_hash}."
+                        f"Expected {task.expected_sha256}, got {computed_hash}."
                     )
                 )
             if extract_path.exists() is False and storage_path == extract_path:
                 await extract_archive(download_path, extract_path)
 
         logger.info(f"Done with {download_path.name}")
-        return FetchResult(self.url, computed_hash, storage_path)
+        for task_data in task.task_datas:
+            self._results.append(
+                FetchResult(task.url, computed_hash, storage_path, task_data)
+            )
 
-
-class Fetcher:
-    def __init__(self, cache_directory_path: Path, lockfile_path: Path):
-        self.cache_directory_path = cache_directory_path
-        self.lock = Lock(lockfile_path)
-
-    async def _run_tasks(
+    async def _run_task(
         self,
-        tasks: list[FetchTask],
-    ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        if tasks:
-            logger.title(f"Fetching {len(tasks)} files...")
-        results = await asyncio.gather(
-            *[t.fetch(self.cache_directory_path) for t in tasks], return_exceptions=True
-        )
-        return separate_results_from_errors(dict(zip([r.url for r in tasks], results)))
+        task: FetchTask,
+    ) -> None:
+        try:
+            await self._download_hash_extract(task)
+        except Ops2debError as exception:
+            for task_data in task.task_datas:
+                self._failures.append(FetchFailure(task.url, exception, task_data))
 
-    async def fetch_urls(
-        self,
-        urls: Sequence[str],
-    ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        return await self._run_tasks([FetchTask(url) for url in set(urls)])
+    async def _run_tasks(self) -> None:
+        if self._tasks:
+            logger.title(f"Fetching {len(self._tasks)} files...")
+        tasks = self._tasks.values()
+        await asyncio.gather(*[self._run_task(task) for task in tasks])
 
-    def fetch_urls_and_check_hashes(
-        self,
-        urls: Sequence[str],
-    ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
-        tasks: list[FetchTask] = []
-        for url in set(urls):
-            tasks.append(FetchTask(url, self.lock.sha256(url)))
-        return asyncio.run(self._run_tasks(tasks))
+    def add_task(self, url: str, *, data: Any, sha256: str | None = None) -> None:
+        task = self._tasks.get(url, FetchTask(url, [], sha256))
+        task.task_datas.append(data)
+        self._tasks[url] = task
 
-    def update_lockfile(self, configuration_path: Path) -> None:
-        urls: list[str] = []
-        for blueprint in Configuration(configuration_path).blueprints:
-            fetch_urls = blueprint.render_fetch_urls()
-            urls.extend([url for url in fetch_urls if url not in self.lock])
-        results, fetch_errors = asyncio.run(self.fetch_urls(urls))
-        self.lock.add(list(results.values()))
-        self.lock.save()
+    def run_tasks(self) -> tuple[list[FetchResult], list[FetchFailure]]:
+        asyncio.run(self._run_tasks())
+        results = self._results
+        self._results = []
+        failures = self._failures
+        self._failures = []
+        return results, failures

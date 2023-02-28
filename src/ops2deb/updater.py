@@ -1,11 +1,9 @@
 import asyncio
-import itertools
 import os
 import re
-from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, OrderedDict, Tuple, cast
+from typing import Any, Tuple, cast
 
 import httpx
 from semver.version import Version
@@ -13,10 +11,8 @@ from semver.version import Version
 from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
-from ops2deb.fetcher import Fetcher, FetchResult
-from ops2deb.lockfile import Lock
+from ops2deb.fetcher import Fetcher
 from ops2deb.parser import Blueprint, Configuration
-from ops2deb.utils import separate_results_from_errors
 
 
 class BaseUpdateStrategy:
@@ -156,23 +152,25 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
 class LatestRelease:
     blueprint: Blueprint
     version: str
-    fetched: list[FetchResult]
 
 
-async def _find_latest_version(client: httpx.AsyncClient, blueprint: Blueprint) -> str:
+async def _find_latest_version(
+    client: httpx.AsyncClient, blueprint: Blueprint
+) -> LatestRelease | None:
     strategies = [GithubUpdateStrategy(client), GenericUpdateStrategy(client)]
     strategies = [u for u in strategies if u.is_blueprint_supported(blueprint)]
     if not strategies:
-        return blueprint.version
+        return None
     for update_strategy in strategies:
         try:
             version = await update_strategy(blueprint)
-            if version not in blueprint.versions():
-                logger.info(
-                    f"{blueprint.name} can be bumped "
-                    f"from {blueprint.version} to {version}"
-                )
-            return version
+            if version in blueprint.versions():
+                return None
+            logger.info(
+                f"{blueprint.name} can be bumped "
+                f"from {blueprint.version} to {version}"
+            )
+            return LatestRelease(blueprint, version)
         except Ops2debUpdaterError as e:
             logger.debug(
                 f"{update_strategy.__class__.__name__} - {blueprint.name} - {str(e)}"
@@ -190,7 +188,24 @@ def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> l
     return urls
 
 
-async def _find_latest_releases(
+async def _find_latest_versions(
+    blueprints: list[Blueprint],
+) -> tuple[list[LatestRelease], list[Ops2debError]]:
+    async with client_factory() as client:
+        tasks = [_find_latest_version(client, b) for b in blueprints]
+        tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
+        releases: list[LatestRelease] = []
+        errors: list[Ops2debError] = []
+        for result in tasks_results:
+            if isinstance(result, Ops2debError):
+                errors.append(result)
+            elif isinstance(result, LatestRelease):
+                releases.append(result)
+    return releases, errors
+
+
+def find_latest_releases(
+    configuration: Configuration,
     blueprints: list[Blueprint],
     fetcher: Fetcher,
     skip_names: list[str] | None,
@@ -202,63 +217,39 @@ async def _find_latest_releases(
     if only_names:
         blueprints = [b for b in blueprints if b.name in only_names]
 
-    async with client_factory() as client:
-        tasks = [_find_latest_version(client, b) for b in blueprints]
-        tasks_results = await asyncio.gather(*tasks, return_exceptions=True)
-        versions, errors = separate_results_from_errors(
-            dict(zip([b.index for b in blueprints], tasks_results))
-        )
+    # find new releases for the selected list of blueprints
+    releases, errors = asyncio.run(_find_latest_versions(blueprints))
 
-    # remove blueprints where the current version is still the latest
-    blueprints = [b for b in blueprints if versions.get(b.index, b.version) != b.version]
-
-    # gather the urls of files we need to download to get the new checksums
-    urls: dict[int, list[str]] = defaultdict(list)
-    for blueprint in blueprints:
-        urls[blueprint.index] = _blueprint_fetch_urls(
-            blueprint, versions[blueprint.index]
-        )
-
-    url_list = list(itertools.chain(*[u for u in urls.values()]))
-    results, fetch_errors = await fetcher.fetch_urls(url_list)
+    # download new files
+    releases_by_id: dict[int, LatestRelease] = {}
+    for i, release in enumerate(releases):
+        releases_by_id[i] = release
+        for url in _blueprint_fetch_urls(release.blueprint, release.version):
+            fetcher.add_task(url, data=i)
+    results, failures = fetcher.run_tasks()
 
     # remove blueprint we can't update because we could not fetch associated files
-    for failed_url, exception in fetch_errors.items():
-        for index, blueprint_urls in urls.items():
-            if failed_url in blueprint_urls:
-                errors[index] = exception
-                blueprints.pop(index)
+    for failure in failures:
+        releases_by_id.pop(failure.task_data)
+    releases = list(releases_by_id.values())
 
-    latest_releases: list[LatestRelease] = []
-    for blueprint in blueprints:
-        latest_releases.append(
-            LatestRelease(
-                blueprint=blueprint,
-                version=versions[blueprint.index],
-                fetched=[results[url] for url in urls[blueprint.index]],
-            )
-        )
+    # add new urls to lock file
+    for result in results:
+        if (a_release := releases_by_id.get(result.task_data)) is not None:
+            lock = configuration.get_blueprint_lock(a_release.blueprint)
+            lock.add([result])
 
-    return latest_releases, list(fetch_errors.values()) + list(errors.values())
-
-
-def find_latest_releases(
-    blueprints: list[Blueprint],
-    fetcher: Fetcher,
-    skip_names: list[str] | None,
-    only_names: list[str] | None,
-) -> Tuple[list[LatestRelease], list[Ops2debError]]:
-    return asyncio.run(_find_latest_releases(blueprints, fetcher, skip_names, only_names))
+    return releases, list([failure.error for failure in failures]) + list(errors)
 
 
 def _update_configuration(
+    configuration: Configuration,
     release: LatestRelease,
-    raw_blueprints: list[OrderedDict[str, Any]],
     max_versions: int,
 ) -> list[str]:
-    removed_versions: list[str] = []
-    raw_blueprint = raw_blueprints[release.blueprint.index]
+    raw_blueprint = configuration.get_raw_blueprint(release.blueprint)
 
+    removed_versions: list[str] = []
     if max_versions == 1:
         if release.blueprint.matrix and release.blueprint.matrix.versions:
             removed_versions = raw_blueprint["matrix"].pop("versions")
@@ -283,16 +274,18 @@ def _update_configuration(
             raw_blueprint["matrix"]["versions"] = [release.blueprint.version]
         raw_blueprint["matrix"]["versions"].append(release.version)
         raw_blueprint.pop("version", None)
-
     return removed_versions
 
 
 def _update_lockfile(
-    release: LatestRelease, lock: Lock, removed_versions: list[str]
+    configuration: Configuration, release: LatestRelease, removed_versions: list[str]
 ) -> None:
-    lock.add(release.fetched)
+    blueprint = release.blueprint
+    lock = configuration.get_blueprint_lock(blueprint)
     for version in removed_versions:
-        lock.remove(_blueprint_fetch_urls(release.blueprint, version))
+        lock.remove(_blueprint_fetch_urls(blueprint, version))
+    _blueprint_fetch_urls(blueprint, release.version)
+    # blueprint.metadata.lock.add(urls)
 
 
 def update(
@@ -305,16 +298,15 @@ def update(
     max_versions: int = 1,
 ) -> None:
     logger.title("Looking for new releases...")
-    blueprints = configuration.blueprints
-    releases, errors = find_latest_releases(blueprints, fetcher, skip_names, only_names)
+    blueprints = list(configuration.blueprints)
+    releases, errors = find_latest_releases(
+        configuration, blueprints, fetcher, skip_names, only_names
+    )
 
     summary: list[str] = []
-    lock = fetcher.lock
 
     for release in releases:
-        removed_versions = _update_configuration(
-            release, configuration.raw_blueprints, max_versions
-        )
+        removed_versions = _update_configuration(configuration, release, max_versions)
         if max_versions == 1:
             line = (
                 f"Updated {release.blueprint.name} from "
@@ -324,7 +316,7 @@ def update(
             line = f"Added {release.blueprint.name} v{release.version}"
             if removed_versions:
                 line += f" and removed {', '.join([f'v{v}' for v in removed_versions])}"
-        _update_lockfile(release, lock, removed_versions)
+        _update_lockfile(configuration, release, removed_versions)
         summary.append(line)
 
     if not releases:
@@ -332,7 +324,6 @@ def update(
     else:
         if dry_run is False:
             configuration.save()
-            lock.save()
             logger.info("Lockfile and configuration updated")
 
     if output_path is not None:

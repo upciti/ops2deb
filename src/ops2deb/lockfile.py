@@ -25,10 +25,16 @@ class LockFile(BaseModel):
     __root__: list[LockEntry]
 
 
+def get_iso_utc_datetime() -> str:
+    return datetime.now(tz=timezone.utc).isoformat()[:-13] + "Z"
+
+
 class Lock:
     def __init__(self, lockfile_path: Path) -> None:
         self.lock_file_path = lockfile_path
         self._entries: dict[str, LockEntry] = {}
+        self._tainted: bool = False
+        self._new_urls: set[str] = set()
         try:
             if lockfile_path.exists() is True:
                 with lockfile_path.open("r") as reader:
@@ -55,28 +61,45 @@ class Lock:
                 f"Unknown hash for url {url}, please run ops2deb lock"
             )
 
+    def timestamp(self, url: str) -> datetime:
+        return self._entries[url].timestamp
+
     def add(self, entries: Sequence[UrlAndHash]) -> None:
-        now = datetime.now(tz=timezone.utc).isoformat()[:-13] + "Z"
         for entry in entries:
             if (url := str(entry.url)) not in self._entries:
                 self._entries[url] = LockEntry(
-                    url=str(entry.url), sha256=entry.sha256, timestamp=now
+                    url=str(entry.url),
+                    sha256=entry.sha256,
+                    timestamp=get_iso_utc_datetime(),
                 )
+                self._new_urls.add(url)
+                self._tainted = True
 
     def remove(self, urls: Sequence[str]) -> None:
         for url in urls:
-            self._entries.pop(url, None)
+            if self._entries.pop(url, None) is not None:
+                self._tainted = True
 
     def save(self) -> None:
-        if not self._entries:
+        if not self._entries or self._tainted is False:
             return
-        entries = [entry.dict() for entry in self._entries.values()]
+
+        entries = {k: entry.dict() for k, entry in self._entries.items()}
+
+        # make sure all added urls since lock was created have the same timestamp
+        # and make sure this timestamp is when save() was called
+        now = get_iso_utc_datetime()
+        for new_url in self._new_urls:
+            if (entry := entries.get(new_url, None)) is not None:
+                entry["timestamp"] = now
+
         with self.lock_file_path.open("w") as output:
             yaml.dump(
-                sorted(entries, key=itemgetter("url")),
+                sorted(entries.values(), key=itemgetter("url")),
                 output,
                 Dumper=PrettyYAMLDumper,
                 default_flow_style=False,
                 sort_keys=False,
                 encoding="utf-8",
             )
+        self._tainted = False

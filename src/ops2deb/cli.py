@@ -11,7 +11,7 @@ from typer.core import TyperGroup
 from ops2deb import __version__, builder, formatter, generator, logger, updater
 from ops2deb.exceptions import Ops2debError
 from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
-from ops2deb.parser import Configuration
+from ops2deb.parser import load_configuration
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -75,20 +75,12 @@ option_exit_code: int = typer.Option(
     callback=validate_exit_code,
 )
 
-option_configuration: Path = typer.Option(
-    Path("ops2deb.yml"),
+option_search_glob: str = typer.Option(
+    "./**/ops2deb.yml",
     "--config",
     "-c",
     envvar="OPS2DEB_CONFIG",
-    help="Path to configuration file.",
-)
-
-option_lockfile: Path = typer.Option(
-    Path("ops2deb.lock.yml"),
-    "--lock",
-    "-k",
-    envvar="OPS2DEB_LOCKFILE",
-    help="Path to lockfile.",
+    help="Path to configuration file or glob pattern.",
 )
 
 option_cache_directory: Path = typer.Option(
@@ -139,8 +131,7 @@ app = typer.Typer(cls=DefaultCommandGroup)
 def default(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    configuration_path: Path = option_configuration,
-    lockfile_path: Path = option_lockfile,
+    search_glob: str = option_search_glob,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
     debian_repository: Optional[str] = option_debian_repository,
@@ -148,13 +139,12 @@ def default(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        configuration = Configuration(configuration_path)
-        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
+        configuration = load_configuration(search_glob)
+        fetcher = Fetcher(cache_directory)
         packages = generator.generate(
+            configuration,
             fetcher,
-            configuration.blueprints,
             output_directory,
-            configuration_path.parent,
             debian_repository,
             only or None,
         )
@@ -167,21 +157,19 @@ def default(
 def generate(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    configuration_path: Path = option_configuration,
-    lockfile_path: Path = option_lockfile,
+    search_glob: str = option_search_glob,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
     debian_repository: Optional[str] = option_debian_repository,
     only: Optional[List[str]] = option_only,
 ) -> None:
     try:
-        configuration = Configuration(configuration_path)
-        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
+        configuration = load_configuration(search_glob)
+        fetcher = Fetcher(cache_directory)
         generator.generate(
+            configuration,
             fetcher,
-            configuration.blueprints,
             output_directory,
-            configuration_path.parent,
             debian_repository,
             only or None,
         )
@@ -211,8 +199,7 @@ def purge(cache_directory: Path = option_cache_directory) -> None:
 def update(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    configuration_path: Path = option_configuration,
-    lockfile_path: Path = option_lockfile,
+    search_glob: str = option_search_glob,
     cache_directory: Path = option_cache_directory,
     dry_run: bool = typer.Option(
         False, "--dry-run", "-d", help="Don't edit config file."
@@ -236,8 +223,8 @@ def update(
     ),
 ) -> None:
     try:
-        configuration = Configuration(configuration_path)
-        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
+        configuration = load_configuration(search_glob)
+        fetcher = Fetcher(cache_directory)
         updater.update(
             configuration,
             fetcher,
@@ -255,10 +242,10 @@ def update(
 def validate(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    configuration_path: Path = option_configuration,
+    search_glob: str = option_search_glob,
 ) -> None:
     try:
-        Configuration(configuration_path)
+        load_configuration(search_glob)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -267,10 +254,10 @@ def validate(
 def format(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    configuration_path: Path = option_configuration,
+    search_glob: str = option_search_glob,
 ) -> None:
     try:
-        formatter.format(configuration_path)
+        formatter.format_all(search_glob)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -284,14 +271,20 @@ def version() -> None:
 def lock(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    configuration_path: Path = option_configuration,
-    lockfile_path: Path = option_lockfile,
+    search_glob: str = option_search_glob,
     cache_directory: Path = option_cache_directory,
 ) -> None:
     try:
-        configuration = Configuration(configuration_path)
-        fetcher = Fetcher(cache_directory, configuration.lockfile_path or lockfile_path)
-        fetcher.update_lockfile(configuration_path)
+        fetcher = Fetcher(cache_directory)
+        configuration = load_configuration(search_glob)
+        for blueprint in configuration.blueprints:
+            lock_file = configuration.get_blueprint_lock(blueprint)
+            for url in blueprint.render_fetch_urls():
+                if url not in lock_file:
+                    fetcher.add_task(url, data=lock_file)
+        for result in fetcher.run_tasks()[0]:
+            result.task_data.add([result])
+        configuration.save()
     except Ops2debError as e:
         error(e, exit_code)
 

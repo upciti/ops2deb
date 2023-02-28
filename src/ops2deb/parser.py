@@ -1,4 +1,6 @@
+import glob
 import re
+from dataclasses import dataclass
 from functools import cached_property
 from itertools import product
 from pathlib import Path
@@ -16,11 +18,15 @@ from pydantic import (
 from pydantic.fields import ModelField
 from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
 
+from ops2deb import logger
 from ops2deb.exceptions import Ops2debParserError
 from ops2deb.jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
+from ops2deb.lockfile import Lock
 from ops2deb.utils import FixIndentEmitter
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
+
+LOCKFILE_PATH_HEADER_RE = re.compile(r"^# lockfile=(.+)$")
 
 
 class Base(BaseModel):
@@ -128,7 +134,7 @@ class Blueprint(Base):
     install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
     script: list[str] = Field(default_factory=list, description="Build instructions")
 
-    _index: int = PrivateAttr()
+    _uid: int = PrivateAttr()
 
     @root_validator(pre=False)
     def _version_must_be_set(cls, values: Any) -> Any:
@@ -203,66 +209,140 @@ class Blueprint(Base):
         return urls
 
     @property
-    def index(self) -> int:
-        return self._index
+    def uid(self) -> int:
+        return self._uid
 
 
-class _ConfigurationFile(Base):
-    __root__: list[Blueprint] | Blueprint
-
-
-class Configuration:
-    def __init__(self, configuration_path: Path, yaml: YAML | None = None) -> None:
-        self.yaml: YAML = yaml or YAML()
-        self.yaml.Emitter = FixIndentEmitter
-        self.path = configuration_path
-        self._blueprints_dict = self._parse_yaml()
-        self._blueprints = self._parse_blueprints()
-        self.lockfile_path = self._parse_lockfile_path()
-
-    @property
-    def blueprints(self) -> list[Blueprint]:
-        return self._blueprints
+@dataclass
+class ConfigurationFile:
+    path: Path
+    lockfile_path: Path
+    content: OrderedDict[str, Any] | list[OrderedDict[str, Any]]
+    yaml: YAML
 
     @cached_property
     def raw_blueprints(self) -> list[OrderedDict[str, Any]]:
-        return (
-            self._blueprints_dict
-            if isinstance(self._blueprints_dict, list)
-            else [self._blueprints_dict]
-        )
+        return self.content if isinstance(self.content, list) else [self.content]
 
     def save(self) -> None:
         with self.path.open("w") as output:
-            self.yaml.dump(self._blueprints_dict, output)
+            self.yaml.dump(self.content, output)
 
-    def _parse_yaml(self) -> Any:
-        try:
-            return self.yaml.load(self.path.open("r"))
-        except YAMLError as e:
-            raise Ops2debParserError(f"Invalid YAML file.\n{e}")
-        except FileNotFoundError:
-            raise Ops2debParserError(f"File not found: {self.path.absolute()}")
-        except IsADirectoryError:
-            raise Ops2debParserError(
-                f"Path points to a directory: {self.path.absolute()}"
-            )
 
-    def _parse_blueprints(self) -> list[Blueprint]:
-        try:
-            blueprints = _ConfigurationFile.parse_obj(self._blueprints_dict).__root__
-        except ValidationError as e:
-            raise Ops2debParserError(f"Invalid configuration file.\n{e}")
-        if isinstance(blueprints, Blueprint):
-            blueprints = [blueprints]
-        for index, blueprint in enumerate(blueprints):
-            blueprint._index = index
-        return blueprints
+def get_default_lockfile_path(configuration_path: Path) -> Path:
+    return configuration_path.parent / "ops2deb.lock.yml"
 
-    def _parse_lockfile_path(self) -> Path | None:
-        lockfile_path_re = re.compile(r"^# lockfile=(.+)$")
-        with self.path.open() as file:
-            first_line = file.readline().strip()
-        if (match := lockfile_path_re.match(first_line)) is not None:
-            return Path(match.group(1))
-        return None
+
+def load_configuration_file(configuration_path: Path) -> ConfigurationFile:
+    configuration_path = configuration_path.absolute()
+    yaml = YAML()
+    yaml.Emitter = FixIndentEmitter
+
+    try:
+        with configuration_path.open("r") as fd:
+            content = yaml.load(fd)
+    except YAMLError as e:
+        raise Ops2debParserError(f"Failed to parse {configuration_path}.\n{e}")
+    except FileNotFoundError:
+        raise Ops2debParserError(f"File not found: {configuration_path}")
+    except IsADirectoryError:
+        raise Ops2debParserError(f"Path points to a directory: {configuration_path}")
+
+    # configuration file can start with "# lockfile={path_to_lockfile}"
+    lockfile_path = get_default_lockfile_path(configuration_path)
+    with configuration_path.open() as file:
+        first_line = file.readline().strip()
+        if (match := LOCKFILE_PATH_HEADER_RE.match(first_line)) is not None:
+            lockfile_path = (configuration_path.parent / match.group(1)).absolute()
+
+    return ConfigurationFile(configuration_path, lockfile_path, content, yaml)
+
+
+@dataclass(frozen=True)
+class BlueprintMetadata:
+    configuration_file: ConfigurationFile
+    index_in_configuration_file: int
+    lock: Lock
+
+
+@dataclass(frozen=True)
+class Configuration:
+    configuration_files: list[ConfigurationFile]
+    lock_files: list[Lock]
+    blueprints: list[Blueprint]
+    metadatas: list[BlueprintMetadata]
+
+    def get_blueprint_lock(self, blueprint: Blueprint) -> Lock:
+        return self.metadatas[blueprint.uid].lock
+
+    def get_blueprint_configuration_file(self, blueprint: Blueprint) -> ConfigurationFile:
+        return self.metadatas[blueprint.uid].configuration_file
+
+    def get_raw_blueprint(self, blueprint: Blueprint) -> OrderedDict[str, Any]:
+        metadata = self.metadatas[blueprint.uid]
+        configuration_file = metadata.configuration_file
+        return configuration_file.raw_blueprints[metadata.index_in_configuration_file]
+
+    def save(self) -> None:
+        for configuration in self.configuration_files:
+            configuration.save()
+        for lock in self.lock_files:
+            lock.save()
+
+
+def load_configuration(search_glob: str) -> Configuration:
+    # parse yaml of all configuration files matching glob pattern
+    configuration_files: list[ConfigurationFile] = []
+    for result in glob.iglob(search_glob, recursive=True):
+        if (path := Path(result)).is_file() is False:
+            continue
+        if path.name.endswith(".lock.yml"):
+            continue
+        configuration_files.append(load_configuration_file(path))
+
+    if not configuration_files:
+        raise Ops2debParserError(
+            f"Glob expression {search_glob} did not match any configuration file."
+        )
+
+    # parse all lock files, multiple config files can use the same lock file
+    locks: dict[Path, Lock] = {}
+    for configuration_file in configuration_files:
+        lockfile_path = configuration_file.lockfile_path
+        if (lock := locks.get(lockfile_path, None)) is None:
+            lock = Lock(lockfile_path)
+        locks[lockfile_path] = lock
+
+    # parse blueprints from all configuration files
+    blueprints: list[Blueprint] = []
+    metadatas: list[BlueprintMetadata] = []
+    for configuration_file in configuration_files:
+        for index, raw_blueprint in enumerate(configuration_file.raw_blueprints):
+            try:
+                blueprint = Blueprint.parse_obj(raw_blueprint)
+                blueprints.append(blueprint)
+                metadata = BlueprintMetadata(
+                    configuration_file, index, locks[configuration_file.lockfile_path]
+                )
+                metadatas.append(metadata)
+            except ValidationError as e:
+                raise Ops2debParserError(
+                    f"Failed to parse blueprint at index {index} "
+                    f"in {configuration_file.path}.\n{e}"
+                )
+
+    # assign a unique id to all ids
+    for uid, blueprint in enumerate(blueprints):
+        blueprint._uid = uid
+
+    logger.title(
+        f"Loaded {len(configuration_files)} configuration file(s) and "
+        f"{len(blueprints)} blueprint(s)"
+    )
+
+    return Configuration(
+        configuration_files=configuration_files,
+        blueprints=blueprints,
+        lock_files=list(locks.values()),
+        metadatas=metadatas,
+    )
