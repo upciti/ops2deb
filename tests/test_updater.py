@@ -1,10 +1,9 @@
 from typing import Optional
 
 import pytest
+from fastapi import FastAPI, HTTPException
 from httpx import AsyncClient
-from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse
 
 from ops2deb.exceptions import Ops2debUpdaterError
 from ops2deb.logger import enable_debug
@@ -15,15 +14,14 @@ enable_debug(True)
 
 @pytest.fixture
 def app_factory():
-    def _app_response(request: Request):
-        return Response(status_code=200)
-
     def _app_factory(versions: list[str]):
-        app = Starlette(debug=True)
-        for version in versions:
-            app.add_route(
-                f"/releases/{version}/some-app.tar.gz", _app_response, ["HEAD", "GET"]
-            )
+        app = FastAPI(debug=True)
+
+        @app.head("/releases/{version}/some-app.tar.gz")
+        def download_release(version: str):
+            if version not in versions:
+                raise HTTPException(status_code=404)
+
         return app
 
     return _app_factory
@@ -33,16 +31,15 @@ def app_factory():
 def github_app_factory():
     def _github_app_factory(latest_release: str, versions: Optional[list[str]] = None):
         versions = versions or []
-        app = Starlette(debug=True)
+        app = FastAPI(debug=True)
 
-        @app.route("/owner/name/releases/{version}/some-app.tar.gz")
-        def github_asset(request: Request):
-            version = request.path_params["version"]
-            status = 200 if version in versions or version == latest_release else 404
-            return Response(status_code=status)
+        @app.head("/owner/name/releases/{version}/some-app.tar.gz")
+        def github_asset(version: str):
+            if version not in versions and version != latest_release:
+                raise HTTPException(status_code=404)
 
-        @app.route("/repos/owner/name/releases/latest")
-        def github_release_api(request: Request):
+        @app.get("/repos/owner/name/releases/latest")
+        def github_release_api():
             return JSONResponse({"tag_name": latest_release})
 
         return app
