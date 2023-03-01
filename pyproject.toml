@@ -52,8 +52,6 @@ types-PyYAML = "*"
 pytest-asyncio = ">=0.18.0"
 poetry-dynamic-versioning = ">=0.13.0"
 fastapi = "^0.90.0"
-
-[tool.poetry.group.dev.dependencies]
 ruff = "^0.0.253"
 
 [tool.taskipy.tasks]
