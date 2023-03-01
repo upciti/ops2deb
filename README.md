@@ -165,7 +165,7 @@ matrix:
     - arm64
 version: 3.7.2
 homepage: https://helm.sh/
-summary: Kubernetes package manager
+summary: kubernetes package manager
 description: |-
   Tool for managing Kubernetes charts.
   Charts are packages of pre-configured Kubernetes resources.

@@ -8,7 +8,7 @@
       - 3.9.0
       - 3.10.3
   homepage: https://helm.sh/
-  summary: The Kubernetes package manager
+  summary: the kubernetes package manager
   description: |-
     Tool for managing Kubernetes charts.
     Charts are packages of pre-configured Kubernetes resources.
@@ -25,7 +25,7 @@
       - arm64
   version: 0.144.0
   homepage: https://github.com/roboll/helmfile
-  summary: Deploy Kubernetes Helm Charts
+  summary: deploy kubernetes helm charts
   description: |-
     Helmfile is a declarative spec for deploying helm charts. It lets you...
 
@@ -43,7 +43,7 @@
 - name: istioctl
   version: 1.16.1
   homepage: https://istio.io/
-  summary: Istio service mesh CLI
+  summary: istio service mesh cli
   description: Istio is an open platform to connect, manage, and secure microservices.
   depends:
     - kubectl
@@ -56,7 +56,7 @@
 - name: kubectl
   version: 1.26.0
   homepage: https://github.com/kubernetes/kubectl
-  summary: Command line client for controlling a Kubernetes cluster
+  summary: command line client for controlling a kubernetes cluster
   description: |-
     kubectl is a command line client for running commands against Kubernetes
     clusters.
@@ -67,7 +67,7 @@
 - name: kubeseal
   version: 0.19.3
   homepage: https://github.com/bitnami-labs/sealed-secrets
-  summary: Secret management solution for k8s
+  summary: secret management solution for k8s
   description: |-
     Encrypt your Secret into a SealedSecret, which is safe to store - even to a
     public repository.
@@ -78,7 +78,7 @@
 - name: kustomize
   version: 4.5.7
   homepage: https://kustomize.io/
-  summary: Kubernetes native configuration management
+  summary: kubernetes native configuration management
   description: |-
     kustomize lets you customize raw, template-free YAML files for multiple
     purposes, leaving the original YAML untouched and usable as is. kustomize
@@ -94,7 +94,7 @@
 - name: minikube
   version: 1.28.0
   homepage: https://minikube.sigs.k8s.io/
-  summary: Quickly set up a local Kubernetes cluster
+  summary: quickly set up a local kubernetes cluster
   description: |-
     Focus on helping application developers and new Kubernetes users.
     Supports the latest Kubernetes release (+6 previous minor versions)
@@ -111,7 +111,7 @@
 - name: ops2deb
   version: 0.36.1
   homepage: https://github.com/upciti/ops2deb
-  summary: Debian packaging tool for portable applications
+  summary: debian packaging tool for portable applications
   description: |-
     Ops2deb is primarily designed to easily generate Debian packages for portable
     applications such as single binary applications and scripts. Packages are

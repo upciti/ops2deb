@@ -50,7 +50,7 @@ def test_format_blueprint_should_remove_default_values():
     raw_blueprint = dict(
         name="great-app",
         version="1.0.0",
-        summary="A summary",
+        summary="a summary",
         description="A description",
     )
     blueprint = Blueprint(**raw_blueprint)

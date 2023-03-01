@@ -18,7 +18,7 @@ mock_valid_configuration = """\
   version: "{{env('CI_COMMIT_TAG', '1.0.0')}}"
   epoch: 1
   architecture: all
-  summary: Awesome metapackage
+  summary: awesome metapackage
   description: A detailed description of the awesome metapackage.
   depends:
     - great-app
@@ -28,7 +28,7 @@ mock_valid_configuration = """\
   revision: 2
   architecture: all
   homepage: https://geat-app.io
-  summary: Great package
+  summary: great package
   fetch: http://testserver/{{version}}/great-app.tar.gz
   script:
     - mv great-app {{src}}/usr/bin/great-app
@@ -36,7 +36,7 @@ mock_valid_configuration = """\
 - name: super-app
   version: 1.0.0
   architecture: all
-  summary: Super package
+  summary: super package
   description: |-
     A detailed description of the super package
     Lorem ipsum dolor sit amet, consectetur adipiscing elit
@@ -53,7 +53,7 @@ mock_up_to_date_configuration = """\
   version: 1.1.1
   revision: 2
   architecture: all
-  summary: Great package
+  summary: great package
   description: A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app.tar.gz
   script:
@@ -64,7 +64,7 @@ mock_configuration_with_invalid_archive_checksum = """\
 - name: bad-app
   version: 1.0.0
   architecture: all
-  summary: Bad package
+  summary: bad package
   description: |
     A detailed description of the bad package
   fetch: http://testserver/1.0.0/wrong_checksum-app.tar.gz
@@ -76,7 +76,7 @@ mock_configuration_with_archive_not_found = """\
 - name: bad-app
   version: 1.0.0
   architecture: all
-  summary: Bad package
+  summary: bad package
   description: |
     A detailed description of the bad package
   fetch: http://testserver/{{version}}/not-found.zip
@@ -93,7 +93,7 @@ mock_configuration_with_multi_arch_remote_file_and_404_on_one_file = """\
     - armhf
     - arm64
   version: 1.0.0
-  summary: Great package
+  summary: great package
   description: A detailed description of the great package.
   fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
   script:
@@ -105,7 +105,7 @@ name: great-app
 version: 1.0.0
 revision: 2
 architecture: all
-summary: Great package
+summary: great package
 description: A detailed description of the great package.
 fetch: http://testserver/{{version}}/great-app.tar.gz
 script:
@@ -114,7 +114,7 @@ script:
 
 mock_configuration_not_properly_formatted = """\
 - name: great-app
-  summary: Great package
+  summary: great package
   revision: 2
   version: 1.0.0
   architecture: all
@@ -132,7 +132,7 @@ mock_configuration_with_multi_arch_remote_file = """\
     - amd64
     - armhf
   version: 1.0.0
-  summary: Great package
+  summary: great package
   description: A detailed description of the great package.
   fetch:
     url: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
@@ -149,7 +149,7 @@ mock_configuration_with_version_matrix = """\
     - 1.0.0
     - 1.0.1
     - 1.1.0
-  summary: Great package
+  summary: great package
   fetch: http://testserver/{{version}}/great-app.tar.gz
   script:
   - mv great-app {{src}}/usr/bin/great-app

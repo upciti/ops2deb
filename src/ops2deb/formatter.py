@@ -29,6 +29,11 @@ def format_description(description: str) -> str:
     return "\n".join(lines)
 
 
+def format_summary(summary: str) -> str:
+    summary = summary.strip("\n ")
+    return summary.lower()
+
+
 def format_blueprint(blueprint: dict[str, Any]) -> dict[str, Any]:
     if blueprint_arch := blueprint.pop("arch", None):
         blueprint["architecture"] = blueprint_arch
@@ -37,6 +42,8 @@ def format_blueprint(blueprint: dict[str, Any]) -> dict[str, Any]:
         blueprint["fetch"] = blueprint_fetch["url"]
     if blueprint_desc := blueprint.get("description", None):
         blueprint["description"] = format_description(blueprint_desc)
+    if blueprint_sum := blueprint.get("summary", None):
+        blueprint["summary"] = format_summary(blueprint_sum)
     keys_to_remove: list[str] = []
     for key, value in blueprint.items():
         if isinstance(value, list) and not blueprint.get(key):
