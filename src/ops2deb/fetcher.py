@@ -210,14 +210,15 @@ class Fetcher:
         urls: Sequence[str],
     ) -> tuple[dict[str, FetchResult], dict[str, Ops2debError]]:
         tasks: list[FetchTask] = []
-        for urls in set(urls):
-            tasks.append(FetchTask(urls, self.lock.sha256(urls)))
+        for url in set(urls):
+            tasks.append(FetchTask(url, self.lock.sha256(url)))
         return asyncio.run(self._run_tasks(tasks))
 
     def update_lockfile(self, configuration_path: Path) -> None:
         urls: list[str] = []
         for blueprint in Configuration(configuration_path).blueprints:
-            urls += blueprint.render_fetch_urls()
+            fetch_urls = blueprint.render_fetch_urls()
+            urls.extend([url for url in fetch_urls if url not in self.lock])
         results, fetch_errors = asyncio.run(self.fetch_urls(urls))
         self.lock.add(list(results.values()))
         self.lock.save()

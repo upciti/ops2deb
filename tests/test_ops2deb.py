@@ -170,8 +170,18 @@ def summary_path(tmp_path) -> Path:
 
 
 @pytest.fixture
+def cache_path(tmp_path) -> Path:
+    return tmp_path / "cache"
+
+
+@pytest.fixture
 def call_ops2deb(
-    tmp_path, mock_httpx_client, configuration_path, lockfile_path, mock_lockfile
+    tmp_path,
+    configuration_path,
+    lockfile_path,
+    cache_path,
+    mock_httpx_client,
+    mock_lockfile,
 ):
     def _invoke(*args, configuration: str | None = None, write: bool = True):
         runner = CliRunner()
@@ -181,7 +191,7 @@ def call_ops2deb(
             {
                 "OPS2DEB_VERBOSE": "1",
                 "OPS2DEB_OUTPUT_DIR": str(tmp_path),
-                "OPS2DEB_CACHE_DIR": str(tmp_path / "cache"),
+                "OPS2DEB_CACHE_DIR": str(cache_path),
                 "OPS2DEB_CONFIG": str(configuration_path),
                 "OPS2DEB_LOCKFILE": str(lockfile_path),
                 "OPS2DEB_EXIT_CODE": "77",
@@ -586,6 +596,26 @@ def test_ops2deb_lock_should_succeed_with_valid_multi_arch_fetch(call_ops2deb):
         "lock", configuration=mock_configuration_with_multi_arch_remote_file
     )
     assert result.exit_code == 0
+
+
+def test_ops2deb_lock_should_only_download_files_that_are_not_locked(
+    call_ops2deb, cache_path
+):
+    configuration = """\
+    - name: great-app
+      version: 1.1.1
+      summary: this file is not locked
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+
+    - name: super-app
+      version: 1.0.0
+      architecture: all
+      summary: this one is
+      fetch: http://testserver/{{version}}/super-app
+    """
+    call_ops2deb("lock", configuration=configuration)
+    fetched = {file.name for file in (cache_path / "").glob("**/*") if file.is_file()}
+    assert fetched == {"great-app.tar.gz", "great-app.tar.gz.sum"}
 
 
 @pytest.mark.parametrize("subcommand", ["default", "update", "generate", "lock"])
