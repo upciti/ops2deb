@@ -48,7 +48,7 @@ def test_save__should_produce_a_lockfile_that_contains_added_entries(
     lockfile_path, tmp_path
 ):
     lock = Lock(lockfile_path)
-    lock.add([FetchResult("http://tests.com/file.tar.gz", "deadbeef", tmp_path)])
+    lock.add([FetchResult("http://tests.com/file.tar.gz", "deadbeef", tmp_path, None)])
     lock.save()
     lock = Lock(lockfile_path)
     assert lock.sha256("http://tests.com/file.tar.gz") == "deadbeef"
@@ -56,8 +56,19 @@ def test_save__should_produce_a_lockfile_that_contains_added_entries(
 
 @patch("yaml.dump")
 def test_save__should_not_write_file_when_no_entry_have_been_added_nor_removed(
-    mock_dump, lockfile_path, tmp_path
+    mock_dump, lockfile_path
 ):
     lock = Lock(lockfile_path)
     lock.save()
     mock_dump.assert_not_called()
+
+
+def test_save__set_the_same_timestamp_to_added_entries(lockfile_path, tmp_path):
+    lock = Lock(lockfile_path)
+    lock.add([FetchResult("http://tests.com/file1.tar.gz", "deadbeef", tmp_path, None)])
+    lock.add([FetchResult("http://tests.com/file2.tar.gz", "deadbeef", tmp_path, None)])
+    lock.save()
+    lock = Lock(lockfile_path)
+    timestamp_1 = lock.timestamp("http://tests.com/file1.tar.gz")
+    timestamp_2 = lock.timestamp("http://tests.com/file2.tar.gz")
+    assert timestamp_1 == timestamp_2

@@ -5,7 +5,7 @@ from textwrap import dedent
 
 import httpx
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse, Response
 
 from ops2deb.parser import Blueprint
@@ -87,72 +87,39 @@ async def serve_snapshot_apt_secops_binary_amd64_packages():
     return PlainTextResponse(content=dedent(snapshot_apt_secops_binary_amd64_packages))
 
 
-def build_server_response(content: bytes, content_type: str = "application/x-gzip"):
+def build_server_response(content: bytes):
     return Response(
         base64.b64decode(content),
         status_code=200,
-        media_type=content_type,
+        media_type="application/octet-stream",
     )
-
-
-@app.get("/1.0.0/great-app-armhf.tar.gz")
-@app.head("/1.1.0/great-app-armhf.tar.gz")
-async def server_great_app_armhf_tar_gz():
-    return build_server_response(
-        b"""H4sIAAAAAAAAA+3SPQrCQBDF8a09xVxA2Ml+5CJeYEFNgpiE3aTw9iYIYhWrIML/17xiXvGKafI
-        lTcc0jmY/dhGjX1PrYD/zxTmjXqNXX1UuGKtaazBid9z0NpcpZRFTuvvQb/S+3f/UqU39TR7DLN"
-        chy/IM565vZGq7cvj1NAAAAAAAAAAAAAAAAADAhie01A/zACgAAA=="""
-    )
-
-
-@app.get("/1.1.1/great-app-armhf.tar.gz")
-async def server_great_app_armhf_1_1_1_tar_gz():
-    return build_server_response(
-        b"""H4sIAAAAAAAAA+3SPQqEQAyG4ak9RS4gTCSOZ7GcQmQLfxj1/irCspXayCK8T/NBkuIr0qYmznk
-        cR/ccvwnB9tSq9L950ODUNJialYU6r1ptI/EPdvpapjkmETd9uqE/ubvav1Q9LBJTI+3+B9m/2w
-        AAAAAAAAAAAAAAAAAA7loBhmMfoQAoAAA="""
-    )
-
-
-@app.get("/1.0.0/great-app.tar.gz")
-@app.head("/1.0.0/great-app.tar.gz")
-@app.get("/1.1.0/great-app.tar.gz")
-@app.head("/1.1.0/great-app.tar.gz")
-@app.get("/1.1.1/great-app.tar.gz")
-@app.head("/1.1.1/great-app.tar.gz")
-@app.get("/1.0.0/great-app-amd64.tar.gz")
-@app.head("/1.0.0/great-app-amd64.tar.gz")
-@app.get("/1.1.0/great-app-amd64.tar.gz")
-@app.head("/1.1.0/great-app-amd64.tar.gz")
-@app.get("/1.1.1/great-app-amd64.tar.gz")
-@app.head("/1.1.1/great-app-amd64.tar.gz")
-@app.get("/1.0.0/wrong_checksum-app.tar.gz")
-async def serve_great_app_tar_gz():
-    return build_server_response(
-        b"""H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF
-        fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf
-        u1BwAAAAAAAAAAgD96AGPmdYsAKAAA"""
-    )
-
-
-@app.get("/1.0.0/super-app")
-async def serve_super_app():
-    return build_server_response(b"aGVsbG8K", content_type="application/octet-stream")
-
-
-@app.get("/1.1.0/bad-app.zip")
-@app.head("/1.1.0/bad-app.zip")
-async def serve_error_500():
-    return Response(status_code=500)
 
 
 @app.get("/1.0.0/dangling-symlink.tar.xz")
 async def serve_dangling_symlink_tar_xz():
     return build_server_response(
         b"""/Td6WFoAAATm1rRGAgAhARYAAAB0L+Wj4AX/AGFdADIYSiE4i4ddgZh67LcVqfV6kAa92oeZZszM
-2Tg8AMYeZqxKzl9Ypxd5dz3hYKZmYWYxihSJZAW6R+XAe2ce+dJboUIlwezUAwemw+f4mQVxSk0S
-tLV2svttG83alyZFRFwAAAAALhYEWE9UVL0AAX2ADAAAAOjF2Y+xxGf7AgAAAAAEWVo="""
+        2Tg8AMYeZqxKzl9Ypxd5dz3hYKZmYWYxihSJZAW6R+XAe2ce+dJboUIlwezUAwemw+f4mQVxSk0S
+        tLV2svttG83alyZFRFwAAAAALhYEWE9UVL0AAX2ADAAAAOjF2Y+xxGf7AgAAAAAEWVo="""
     )
+
+
+@app.get("/{version}/{name}")
+@app.head("/{version}/{name}")
+async def serve_tar_gz(version: str, name: str):
+    if version not in ["1.0.0", "1.1.0", "1.1.1"]:
+        raise HTTPException(status_code=404)
+    if "404" in name:
+        raise HTTPException(status_code=404)
+    if "500" in name:
+        raise HTTPException(status_code=500)
+    if name.endswith(".tar.gz"):
+        response = b"""H4sIAAAAAAAAA+3OMQ7CMBAEQD/FH0CyjSy/xwVCFJAoCf/HFCAqqEI1U9yudF
+        fceTn17dDnOewnDa3VZ+ZW02e+hHxsrYxRagkp59FDTDv+9HZft77EGNbLdbp9uf
+        u1BwAAAAAAAAAAgD96AGPmdYsAKAAA"""
+    else:
+        response = b"aGVsbG8K"
+    return build_server_response(response)
 
 
 @pytest.fixture(scope="function")
@@ -202,12 +169,22 @@ def blueprint_factory():
 
 @pytest.fixture
 def configuration_path(tmp_path) -> Path:
-    return tmp_path / "ops2deb.yml"
+    return tmp_path / "ops2deb-0.yml"
+
+
+@pytest.fixture
+def configuration_paths(tmp_path) -> list[Path]:
+    return [tmp_path / f"ops2deb-{i}.yml" for i in range(10)]
 
 
 @pytest.fixture
 def lockfile_path(tmp_path) -> Path:
     return tmp_path / "ops2deb.lock.yml"
+
+
+@pytest.fixture
+def lockfile_paths(tmp_path) -> list[Path]:
+    return [tmp_path / f"ops2deb-{i}.lock.yml" for i in range(10)]
 
 
 @pytest.fixture
@@ -220,7 +197,7 @@ def mock_lockfile(lockfile_path) -> None:
       sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
       timestamp: 2022-12-29 13:14:57+00:00
     - url: http://testserver/1.0.0/great-app-armhf.tar.gz
-      sha256: abb864290dedcd1e06857f33bf03b0875d485c06fce80f86944e6565080b8fb5
+      sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
       timestamp: 2022-12-29 13:14:57+00:00
     - url: http://testserver/1.0.0/great-app.tar.gz
       sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
@@ -228,7 +205,7 @@ def mock_lockfile(lockfile_path) -> None:
     - url: http://testserver/1.1.0/great-app.tar.gz
       sha256: f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9
       timestamp: 2022-12-29 13:14:57+00:00
-    - url: http://testserver/1.0.0/not-found.zip
+    - url: http://testserver/1.0.0/404.zip
       sha256: 5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
       timestamp: 2022-12-29 13:14:57+00:00
     - url: http://testserver/1.0.0/super-app

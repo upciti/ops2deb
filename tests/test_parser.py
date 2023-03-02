@@ -1,10 +1,9 @@
 import os
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from ops2deb.parser import Blueprint, Parser
+from ops2deb.parser import Blueprint, load_configuration_file
 
 
 @pytest.fixture
@@ -155,7 +154,7 @@ def test_blueprint_should_raise_when_versions_matrix_not_used_and_version_field_
     assert result.match("Version field is required when versions matrix is not used")
 
 
-def test_parser__should_parse_lockfile_path_in_configuration_first_line(
+def test_load_configuration_file__should_parse_lockfile_path_in_configuration_first_line(
     configuration_path,
 ):
     configuration = """\
@@ -165,5 +164,5 @@ def test_parser__should_parse_lockfile_path_in_configuration_first_line(
     summary: this and that
     """
     configuration_path.write_text(configuration)
-    parser = Parser(configuration_path)
-    assert Path("mylockfile.yml") in parser.locks
+    lockfile_path = load_configuration_file(configuration_path).lockfile_path
+    assert lockfile_path == configuration_path.parent / "mylockfile.yml"

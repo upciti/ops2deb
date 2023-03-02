@@ -11,7 +11,7 @@ from typer.core import TyperGroup
 from ops2deb import __version__, builder, formatter, generator, logger, updater
 from ops2deb.exceptions import Ops2debError
 from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
-from ops2deb.parser import Parser
+from ops2deb.parser import load_configuration
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -139,10 +139,10 @@ def default(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        parser = Parser(search_glob)
+        configuration = load_configuration(search_glob)
         fetcher = Fetcher(cache_directory)
         packages = generator.generate(
-            parser,
+            configuration,
             fetcher,
             output_directory,
             debian_repository,
@@ -164,10 +164,10 @@ def generate(
     only: Optional[List[str]] = option_only,
 ) -> None:
     try:
-        parser = Parser(search_glob)
+        configuration = load_configuration(search_glob)
         fetcher = Fetcher(cache_directory)
         generator.generate(
-            parser,
+            configuration,
             fetcher,
             output_directory,
             debian_repository,
@@ -223,10 +223,10 @@ def update(
     ),
 ) -> None:
     try:
-        parser = Parser(search_glob)
+        configuration = load_configuration(search_glob)
         fetcher = Fetcher(cache_directory)
         updater.update(
-            parser,
+            configuration,
             fetcher,
             dry_run,
             output_path,
@@ -245,7 +245,7 @@ def validate(
     search_glob: str = option_search_glob,
 ) -> None:
     try:
-        Parser(search_glob)
+        load_configuration(search_glob)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -271,11 +271,20 @@ def version() -> None:
 def lock(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glog: str = option_search_glob,
+    search_glob: str = option_search_glob,
     cache_directory: Path = option_cache_directory,
 ) -> None:
     try:
-        Fetcher(cache_directory).update_lockfiles(search_glog)
+        fetcher = Fetcher(cache_directory)
+        configuration = load_configuration(search_glob)
+        for blueprint in configuration.blueprints:
+            lock_file = configuration.get_blueprint_lock(blueprint)
+            for url in blueprint.render_fetch_urls():
+                if url not in lock_file:
+                    fetcher.add_task(url, data=lock_file)
+        for result in fetcher.run_tasks()[0]:
+            result.task_data.add([result])
+        configuration.save()
     except Ops2debError as e:
         error(e, exit_code)
 

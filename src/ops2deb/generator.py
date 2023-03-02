@@ -9,8 +9,8 @@ from dirsync import sync
 from ops2deb import logger
 from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
 from ops2deb.exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
-from ops2deb.fetcher import Fetcher, FetchResult, FetchTask
-from ops2deb.parser import Blueprint, HereDocument, Parser, SourceDestinationStr
+from ops2deb.fetcher import Fetcher, FetchResult
+from ops2deb.parser import Blueprint, Configuration, HereDocument, SourceDestinationStr
 from ops2deb.templates import environment
 from ops2deb.utils import working_directory
 
@@ -138,14 +138,7 @@ class SourcePackage:
             if result.returncode:
                 raise Ops2debGeneratorScriptError
 
-    def generate(self, fetch_results: dict[str, FetchResult]) -> None:
-        fetch_result: FetchResult | None = None
-        if self.fetch_url is not None:
-            fetch_result = fetch_results.get(self.fetch_url, None)
-            if fetch_result is None:
-                # we failed to download the archive needed to build this package
-                return
-
+    def generate(self, fetch_result: FetchResult | None = None) -> None:
         logger.title(f"Generating source package {self.directory_name}...")
 
         # make sure we generate source packages in a clean environment
@@ -197,45 +190,46 @@ def filter_already_published_packages(
 
 
 def generate(
-    parser: Parser,
+    configuration: Configuration,
     fetcher: Fetcher,
     output_directory: Path,
     debian_repository: str | None = None,
     only_names: list[str] | None = None,
 ) -> list[SourcePackage]:
-    blueprints = parser.blueprints
+    blueprints = configuration.blueprints
     if only_names is not None:
-        blueprints = [b for b in parser.blueprints if b.name in only_names]
+        blueprints = [b for b in configuration.blueprints if b.name in only_names]
 
     # each blueprint can yield multiple source packages
     packages: list[SourcePackage] = []
     for blueprint in blueprints:
         for arch, version in product(blueprint.architectures(), blueprint.versions()):
             blueprint = blueprint.copy(update={"architecture": arch, "version": version})
-            packages.append(
-                SourcePackage(
-                    blueprint,
-                    output_directory,
-                    parser.get_metadata(blueprint).configuration.path.parent,
-                )
-            )
+            configuration_file = configuration.get_blueprint_configuration_file(blueprint)
+            configuration_directory = configuration_file.path.parent
+            package = SourcePackage(blueprint, output_directory, configuration_directory)
+            packages.append(package)
 
     # filter out packages already available in the debian repository
     if debian_repository is not None and packages:
         packages = filter_already_published_packages(packages, debian_repository)
 
     # run fetch instructions (download, verify, extract) in parallel
-    fetch_tasks = [
-        FetchTask(p.fetch_url, parser.get_metadata(p.blueprint).lock.sha256(p.fetch_url))
-        for p in packages
-        if p.fetch_url is not None
-    ]
-    fetch_results, fetch_errors = fetcher.fetch_urls_and_check_hashes(fetch_tasks)
+    for package in packages:
+        if (url := package.fetch_url) is None:
+            continue
+        sha256 = configuration.get_blueprint_lock(package.blueprint).sha256(url)
+        fetcher.add_task(url, data=package, sha256=sha256)
+
+    results, failures = fetcher.run_tasks()
+    for result in results:
+        result.task_data.generate(result)
 
     for package in packages:
-        package.generate(fetch_results)
+        if package.fetch_url is None:
+            package.generate()
 
-    if fetch_errors:
-        raise Ops2debGeneratorError(f"{len(fetch_errors)} failures occurred")
+    if failures:
+        raise Ops2debGeneratorError(f"{len(failures)} failures occurred")
 
     return packages

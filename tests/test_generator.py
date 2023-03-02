@@ -111,6 +111,14 @@ Description: My great app without a description
 """
 
 
+@pytest.fixture
+def package_factory(tmp_path):
+    def _package_factory(blueprint: Blueprint) -> SourcePackage:
+        return SourcePackage(blueprint, tmp_path, tmp_path)
+
+    return _package_factory
+
+
 @pytest.mark.parametrize(
     "blueprint, control",
     [
@@ -121,114 +129,127 @@ Description: My great app without a description
     ],
 )
 def test_generate_should_produce_same_control_file_content_as_the_snapshot(
-    tmp_path, blueprint, control
+    tmp_path, blueprint, control, package_factory
 ):
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     control_file = tmp_path / f"great-app_1.0.0_{blueprint.architecture}/debian/control"
     assert control_file.read_text() == control
 
 
-def test__render_string_should_render_tmp_jinja_variable(tmp_path, blueprint_factory):
+def test__render_string_should_render_tmp_jinja_variable(
+    blueprint_factory, package_factory
+):
     blueprint = blueprint_factory()
-    string = SourcePackage(blueprint, tmp_path, tmp_path)._render_string("{{tmp}}/test")
+    package = package_factory(blueprint)
+    string = package._render_string("{{tmp}}/test")
     assert string == "/tmp/ops2deb_tmp/great-app_1.0.0_amd64/test"
 
 
 def test_generate_should_create_blueprint_install_here_document_in_src_directory_if_destination_is_absolute(  # noqa: E501
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     files = [dict(path="/test", content="content")]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
 
 
 def test_generate_should_create_blueprint_install_here_document_in_package_directory_if_destination_is_relative(  # noqa: E501
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     files = [dict(path="test", content="content")]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     assert (tmp_path / "great-app_1.0.0_amd64/test").is_file()
 
 
 def test_generate_should_render_content_of_blueprint_install_here_document(
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     files = [dict(path="test", content="{{version}}")]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     assert (tmp_path / "great-app_1.0.0_amd64/test").read_text() == blueprint.version
 
 
 def test_generate_should_fail_to_create_blueprint_install_here_document_if_file_already_exists(  # noqa: E501
-    tmp_path, blueprint_factory
+    blueprint_factory, package_factory
 ):
     files = [dict(path="/test", content="content"), dict(path="/test", content="content")]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
+    package = package_factory(blueprint)
     with pytest.raises(Ops2debGeneratorError) as exc:
-        SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+        package.generate()
     assert exc.match("Failed to write .+, file already exists")
 
 
 def test_generate_should_copy_file_when_blueprint_install_contains_a_source_destination_str(  # noqa: E501
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     source = tmp_path / "test"
     source.write_text("test")
     blueprint = blueprint_factory(fetch=None, install=[f"{source}:/test"], script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").is_file()
     assert (tmp_path / "great-app_1.0.0_amd64/src/test").read_text() == "test"
 
 
 def test_generate_should_copy_dir_tree_when_blueprint_install_contains_a_source_destination_str_and_source_is_a_dir(  # noqa: E501
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     source = tmp_path / "test"
     tree = source / "usr" / "share" / "a"
     tree.mkdir(parents=True)
     (tree / "test").write_text("test")
     blueprint = blueprint_factory(fetch=None, install=[f"{source}:/"], script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/share/a/test").is_file()
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/share/a/test").read_text() == "test"
 
 
 def test_generate_should_fail_when_blueprint_install_contains_a_source_destination_str_and_source_does_not_exist(  # noqa: E501
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     files = [f"{tmp_path}/test:/test"]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
+    package = package_factory(blueprint)
     with pytest.raises(Ops2debGeneratorError) as exc:
-        SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+        package.generate()
     assert exc.match("Failed to copy .+/test, it does not exist")
 
 
 def test_generate_should_render_cwd_and_debian_variables_in_blueprint_install_source_destination_str(  # noqa: E501
-    tmp_path, blueprint_factory
+    tmp_path, blueprint_factory, package_factory
 ):
     (tmp_path / "test").touch()
     files = ["{{cwd}}/test:{{debian}}/test"]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     assert (tmp_path / "great-app_1.0.0_amd64/debian/test").is_file()
 
 
 def test_generate_should_render_and_tmp_variables_in_blueprint_install_here_document(
-    tmp_path, blueprint_factory
+    blueprint_factory, package_factory
 ):
     shutil.rmtree(BASE_TEMPORARY_DIRECTORY, ignore_errors=True)
     files = [dict(path="{{tmp}}/test", content="{{tmp}}")]
     blueprint = blueprint_factory(fetch=None, install=files, script=[])
-    SourcePackage(blueprint, tmp_path, tmp_path).generate({})
+    package = package_factory(blueprint)
+    package.generate()
     content = (BASE_TEMPORARY_DIRECTORY / "great-app_1.0.0_amd64/test").read_text()
     assert content == "/tmp/ops2deb_tmp/great-app_1.0.0_amd64"
 
 
-def test__init__should_use_absolute_paths(blueprint_factory, tmp_path):
+def test__init__should_use_absolute_paths(blueprint_factory, package_factory):
     blueprint = blueprint_factory()
-    package = SourcePackage(blueprint, tmp_path, tmp_path)
+    package = package_factory(blueprint)
     assert package.package_directory.is_absolute() is True
     assert package.debian_directory.is_absolute() is True
     assert package.source_directory.is_absolute() is True

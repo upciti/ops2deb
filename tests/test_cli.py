@@ -27,4 +27,4 @@ def test_app_should_exit_with_0_when_help_option_is_used():
 def test_app_should_call_default_subcommand_when_no_subcommand_is_used(args, tmp_path):
     os.environ["OPS2DEB_CONFIG"] = str(tmp_path)
     result = runner.invoke(app, args, catch_exceptions=False)
-    assert "did not match any file" in result.stdout
+    assert "did not match any configuration file" in result.stdout
