@@ -99,6 +99,7 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
     github_url_re = r"^https://github.com/(?P<owner>[\w-]+)/(?P<name>[\w-]+)/"
     github_media_type = "application/vnd.github.v3+json"
     github_base_api_url = "https://api.github.com"
+    github_token_env_variable = "OPS2DEB_GITHUB_TOKEN"
 
     @classmethod
     def _get_github_repo_api_base_url(cls, blueprint: Blueprint) -> str:
@@ -111,7 +112,8 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
     async def _get_latest_github_release(self, blueprint: Blueprint) -> dict[str, str]:
         repo_api_base_url = self._get_github_repo_api_base_url(blueprint)
         headers = {"accept": self.github_media_type}
-        if (token := os.environ.get("GITHUB_TOKEN")) is not None:
+        token = os.environ.get(GithubUpdateStrategy.github_token_env_variable)
+        if token is not None:
             headers["authorization"] = f"token {token}"
         try:
             response = await self.client.get(
