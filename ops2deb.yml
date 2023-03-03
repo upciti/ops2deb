@@ -76,7 +76,7 @@
     - kubeseal:/usr/bin/kubeseal
 
 - name: kustomize
-  version: 4.5.7
+  version: 5.0.0
   homepage: https://kustomize.io/
   summary: Kubernetes native configuration management
   description: |-
@@ -87,7 +87,7 @@
     in that it emits edited text.
   depends:
     - kubectl
-  fetch: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
+  fetch: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv{{version}}/kustomize_v{{version}}_linux_amd64.tar.gz
   install:
     - kustomize:/usr/bin/
 
