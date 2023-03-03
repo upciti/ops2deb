@@ -168,6 +168,18 @@ def blueprint_factory():
 
 
 @pytest.fixture
+def summary_path(tmp_path) -> Path:
+    return tmp_path / "summary.log"
+
+
+@pytest.fixture
+def cache_path(tmp_path) -> Path:
+    path = tmp_path / "cache"
+    path.mkdir(exist_ok=True)
+    return path
+
+
+@pytest.fixture
 def configuration_path(tmp_path) -> Path:
     return tmp_path / "ops2deb-0.yml"
 
@@ -188,8 +200,8 @@ def lockfile_paths(tmp_path) -> list[Path]:
 
 
 @pytest.fixture
-def mock_lockfile(lockfile_path) -> None:
-    lockfile_content = """
+def lockfile_content(lockfile_path) -> None:
+    content = """
     - url: http://testserver/1.0.0/dangling-symlink.tar.xz
       sha256: 7010dc76519072ceb552433f0eda2904dba197312fc9abd946cdcece65ba2af5
       timestamp: 2022-12-29 13:14:57+00:00
@@ -215,4 +227,4 @@ def mock_lockfile(lockfile_path) -> None:
       sha256: deadbeaf
       timestamp: 2022-12-29 13:14:57+00:00
     """
-    lockfile_path.write_text(dedent(lockfile_content))
+    lockfile_path.write_text(dedent(content))

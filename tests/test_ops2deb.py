@@ -1,6 +1,5 @@
 import os
-import shutil
-from pathlib import Path
+from textwrap import dedent
 
 import pytest
 import ruamel.yaml
@@ -12,8 +11,23 @@ from ops2deb.parser import load_configuration_file
 
 yaml = ruamel.yaml.YAML(typ="safe")
 
+configuration_example_0 = """\
+name: great-app
+matrix:
+  architectures:
+    - amd64
+    - armhf
+version: 1.0.0
+summary: great package
+description: A detailed description of the great package.
+fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
+install:
+  - path: debian/copyright
+    content: 2021 John Doe. All rights reserved.
+  - great-app:/usr/bin/great-app
+"""
 
-mock_valid_configuration = """\
+configuration_example_1 = """\
 - name: awesome-metapackage
   version: "{{env('CI_COMMIT_TAG', '1.0.0')}}"
   epoch: 1
@@ -23,156 +37,17 @@ mock_valid_configuration = """\
   depends:
     - great-app
 
-- name: great-app
-  version: 1.0.0
-  revision: 2
-  architecture: all
-  homepage: https://geat-app.io
-  summary: Great package
-  fetch: http://testserver/{{version}}/great-app.tar.gz
-  script:
-    - mv great-app {{src}}/usr/bin/great-app
-
 - name: super-app
   version: 1.0.0
   architecture: all
-  summary: Super package
+  summary: super package
   description: |-
     A detailed description of the super package
     Lorem ipsum dolor sit amet, consectetur adipiscing elit
   fetch: http://testserver/{{version}}/super-app
-  install:
-    - path: debian/copyright
-      content: 2021 John Doe. All rights reserved.
   script:
     - mv super-app {{src}}/usr/bin/super-app
 """
-
-mock_up_to_date_configuration = """\
-- name: great-app
-  version: 1.1.1
-  revision: 2
-  architecture: all
-  summary: Great package
-  description: A detailed description of the great package.
-  fetch: http://testserver/{{version}}/great-app.tar.gz
-  script:
-    - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_with_invalid_archive_checksum = """\
-- name: bad-app
-  version: 1.0.0
-  architecture: all
-  summary: Bad package
-  description: |
-    A detailed description of the bad package
-  fetch: http://testserver/1.0.0/wrong_checksum-app.tar.gz
-  script:
-    - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_with_archive_not_found = """\
-- name: bad-app
-  version: 1.0.0
-  architecture: all
-  summary: Bad package
-  description: |
-    A detailed description of the bad package
-  fetch: http://testserver/{{version}}/404.zip
-"""
-
-
-mock_configuration_with_multi_arch_remote_file_and_404_on_one_file = """\
-- name: great-app
-  matrix:
-    architectures:
-    - amd64
-    - armhf
-    - arm64
-  version: 1.0.0
-  summary: Great package
-  description: A detailed description of the great package.
-  fetch:
-    url: http://testserver/{{version}}/great-app-{{target}}.tar.gz
-    targets:
-      armhf: 404
-  script:
-  - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_single_blueprint_with_fetch = """\
-name: great-app
-version: 1.0.0
-revision: 2
-architecture: all
-summary: Great package
-description: A detailed description of the great package.
-fetch: http://testserver/{{version}}/great-app.tar.gz
-script:
-  - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_not_properly_formatted = """\
-- name: great-app
-  summary: Great package
-  revision: 2
-  version: 1.0.0
-  architecture: all
-  description: |
-    A detailed description of the great package.
-  fetch: http://testserver/{{version}}/great-app.tar.gz
-  script:
-  - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_with_multi_arch_remote_file = """\
-- name: great-app
-  matrix:
-    architectures:
-    - amd64
-    - armhf
-  version: 1.0.0
-  summary: Great package
-  description: A detailed description of the great package.
-  fetch:
-    url: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
-    targets:
-      armhf: armhf
-  script:
-  - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_with_version_matrix = """\
-- name: great-app
-  matrix:
-    versions:
-    - 1.0.0
-    - 1.0.1
-    - 1.1.0
-  summary: Great package
-  fetch: http://testserver/{{version}}/great-app.tar.gz
-  script:
-  - mv great-app {{src}}/usr/bin/great-app
-"""
-
-mock_configuration_with_lockfile_path = """\
-# lockfile=great-app.lock.yml
-name: great-app
-version: 1.0.0
-summary: this is a summary
-fetch: http://testserver/{{version}}/great-app.tar.gz
-"""
-
-
-@pytest.fixture
-def summary_path(tmp_path) -> Path:
-    return tmp_path / "summary.log"
-
-
-@pytest.fixture
-def cache_path(tmp_path) -> Path:
-    return tmp_path / "cache"
 
 
 @pytest.fixture
@@ -182,23 +57,15 @@ def call_ops2deb(
     lockfile_path,
     cache_path,
     mock_httpx_client,
-    mock_lockfile,
+    lockfile_content,
 ):
     def _invoke(
         *args,
-        configuration: str | None = None,
-        configurations: list[str] | None = None,
-        write: bool = True,
+        configurations: list[str],
     ):
         runner = CliRunner()
-        if write is True:
-            if configuration is None:
-                configuration = mock_valid_configuration
-            if configurations is None:
-                configurations = [configuration]
-            for index, configuration in enumerate(configurations):
-                configuration_paths[index].write_text(configuration)
-
+        for index, configuration in enumerate(configurations):
+            configuration_paths[index].write_text(configuration)
         os.environ.update(
             {
                 "OPS2DEB_VERBOSE": "1",
@@ -208,62 +75,106 @@ def call_ops2deb(
                 "OPS2DEB_EXIT_CODE": "77",
             }
         )
-
         result = runner.invoke(app, [*args], catch_exceptions=False)
         print(result.stdout)
-
         return result
 
     return _invoke
 
 
-def test_ops2deb_purge_should_delete_files_in_cache(tmp_path, call_ops2deb):
-    cache_dir = tmp_path / "cache"
-    cache_dir.mkdir()
-    (cache_dir / "test").write_text("test")
-    result = call_ops2deb("purge")
+def test_purge__deletes_files_in_cache_path(call_ops2deb, cache_path):
+    # Given
+    (cache_path / "test").write_text("test")
+
+    # When
+    result = call_ops2deb("purge", configurations=[])
+
+    # Then
     assert result.exit_code == 0
-    assert (cache_dir / "test").exists() is False
+    assert (cache_path / "test").exists() is False
 
 
-def test_ops2deb_generate_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
-    result = call_ops2deb("generate", configuration=mock_valid_configuration)
-    assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
-    assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
-    assert (tmp_path / "super-app_1.0.0_all/debian/copyright").is_file()
-    assert result.exit_code == 0
-
-
-def test_ops2deb_generate_should_succeed_with_valid_multi_arch_fetch_configuration(
-    tmp_path, call_ops2deb
+def test_generate__converts_blueprints_to_debian_source_packages(
+    call_ops2deb, configuration_paths, tmp_path
 ):
-    result = call_ops2deb(
-        "generate", configuration=mock_configuration_with_multi_arch_remote_file
-    )
+    # Given
+    configurations = [configuration_example_0, configuration_example_1]
+
+    # When
+    result = call_ops2deb("generate", configurations=configurations)
+
+    # Then
     assert result.exit_code == 0
     assert (tmp_path / "great-app_1.0.0_amd64/src/usr/bin/great-app").is_file()
+    assert (tmp_path / "great-app_1.0.0_amd64/debian/control").is_file()
+    assert (tmp_path / "great-app_1.0.0_amd64/debian/install").is_file()
+    assert (tmp_path / "great-app_1.0.0_amd64/debian/copyright").is_file()
+    assert (tmp_path / "great-app_1.0.0_amd64/debian/changelog").is_file()
     assert (tmp_path / "great-app_1.0.0_armhf/src/usr/bin/great-app").is_file()
+    assert (tmp_path / "great-app_1.0.0_armhf/debian/control").is_file()
+    assert (tmp_path / "great-app_1.0.0_armhf/debian/install").is_file()
+    assert (tmp_path / "great-app_1.0.0_armhf/debian/copyright").is_file()
+    assert (tmp_path / "great-app_1.0.0_armhf/debian/changelog").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/src/usr/bin/super-app").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/debian/control").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/debian/install").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/debian/changelog").is_file()
+    assert (tmp_path / "awesome-metapackage_1.0.0_all/debian/control").is_file()
+    assert (tmp_path / "awesome-metapackage_1.0.0_all/debian/rules").is_file()
 
 
-def test_ops2deb_generate_should_not_download_already_cached_archives(call_ops2deb):
-    result = call_ops2deb("generate")
-    assert "Downloading" in result.stdout
-    result = call_ops2deb("generate")
-    assert "Downloading" not in result.stdout
+def test_generate__should_not_download_already_cached_archives(call_ops2deb):
+    # Given
+    configuration = """
+    name: super-app
+    version: 1.0.0
+    summary: super package
+    fetch: http://testserver/{{version}}/super-app
+    """
+
+    # When
+    result_0 = call_ops2deb("generate", configurations=[configuration])
+    result_1 = call_ops2deb("generate", configurations=[configuration])
+
+    # Then
+    assert "Downloading super-app..." in result_0.stdout
+    assert "Downloading super-app..." not in result_1.stdout
 
 
-def test_ops2deb_generate_should_fail_with_invalid_checksum(call_ops2deb):
-    result = call_ops2deb(
-        "generate", configuration=mock_configuration_with_invalid_archive_checksum
-    )
-    assert "Wrong checksum for file wrong_checksum-app.tar.gz" in result.stdout
+def test_generate__should_fail_when_downloaded_file_checksum_does_not_match_lockfile(
+    call_ops2deb,
+):
+    # Given
+    configuration = """
+    name: bad-app
+    version: 1.0.0
+    architecture: all
+    summary: Bad package
+    fetch: http://testserver/1.0.0/wrong_checksum-app.tar.gz
+    """
+
+    # When
+    result = call_ops2deb("generate", configurations=[configuration])
+
+    # Then
     assert result.exit_code == 77
+    assert "Wrong checksum for file wrong_checksum-app.tar.gz" in result.stdout
 
 
-def test_ops2deb_generate_should_fail_when_archive_not_found(call_ops2deb):
-    result = call_ops2deb(
-        "generate", configuration=mock_configuration_with_archive_not_found
-    )
+def test_generate__should_fail_gracefully_when_server_returns_a_404(call_ops2deb):
+    # Given
+    configuration = """
+    name: bad-app
+    version: 1.0.0
+    architecture: all
+    summary: oops test server replies with 404
+    fetch: http://testserver/{{version}}/404.zip
+    """
+
+    # When
+    result = call_ops2deb("generate", configurations=[configuration])
+
+    # Then
     expected_error = (
         "Failed to download http://testserver/1.0.0/404.zip. "
         "Server responded with 404."
@@ -272,98 +183,149 @@ def test_ops2deb_generate_should_fail_when_archive_not_found(call_ops2deb):
     assert result.exit_code == 77
 
 
-def test_ops2deb_generate_should_not_generate_packages_already_published_in_debian_repo(
-    tmp_path, call_ops2deb
+def test_generate__should_not_generate_packages_already_published_in_debian_repo_when_repository_option_is_used(  # noqa: E501
+    call_ops2deb, tmp_path
 ):
-    result = call_ops2deb("generate", "-r", "http://deb.wakemeops.com stable")
-    assert (tmp_path / "great-app_1.0.0_all/src/usr/bin/great-app").is_file()
-    assert (tmp_path / "great-app_1.0.0_all/debian/control").is_file()
-    assert (tmp_path / "super-app_1.0.0_all/debian/control").is_file() is False
+    # Given
+    configuration_0 = """
+    name: great-app
+    version: 1.1.0
+    summary: great package
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    configuration_1 = """
+    name: super-app
+    version: 1.0.0
+    architecture: all
+    summary: super package
+    fetch: http://testserver/{{version}}/super-app
+    """
+
+    # When
+    result = call_ops2deb(
+        "generate",
+        "-r",
+        "http://deb.wakemeops.com stable",
+        configurations=[configuration_0, configuration_1],
+    )
+
+    # Then
     assert result.exit_code == 0
+    assert (tmp_path / "great-app_1.1.0_amd64/debian/control").is_file()
+    assert (tmp_path / "super-app_1.0.0_all/debian/control").is_file() is False
 
 
-def test_ops2deb_generate_should_run_script_from_config_directory_when_blueprint_has_not_fetch_instruction(  # noqa: E501
-    tmp_path, call_ops2deb
+def test_generate__should_run_script_from_config_directory_when_blueprint_has_not_fetch_instruction(  # noqa: E501
+    call_ops2deb, tmp_path
 ):
-    configuration_without_fetch = """\
+    # Given
+    configuration = """\
     name: cool-app
     version: 1.0.0
     architecture: all
     summary: Cool package
     description: |
       A detailed description of the cool package
-    script:
-      - install -m 755 cool-app.sh {{src}}/usr/bin/cool-app
+    install:
+      - cool-app.sh:/usr/bin/cool-app
     """
     (tmp_path / "cool-app.sh").touch()
-    result = call_ops2deb("generate", configuration=configuration_without_fetch)
+
+    # When
+    result = call_ops2deb("generate", configurations=[configuration])
+
+    # Then
     assert result.exit_code == 0
     assert (tmp_path / "cool-app_1.0.0_all/src/usr/bin/cool-app").is_file()
 
 
-def test_ops2deb_generate_should_honor_only_argument(tmp_path, call_ops2deb):
-    result = call_ops2deb("generate", "--only", "great-app")
-    assert list(tmp_path.glob("*_all")) == [tmp_path / "great-app_1.0.0_all"]
+def test_generate__should_honor_only_argument(call_ops2deb, tmp_path):
+    # Given
+    configuration_0 = """
+    - name: cool-app-0
+      version: 1.0.0
+      summary: cool package
+
+    - name: cool-app-1
+      version: 1.0.0
+      summary: cool package
+    """
+
+    configuration_1 = """
+    name: cool-app-2
+    version: 1.0.0
+    summary: Cool package
+    """
+
+    # When
+    result = call_ops2deb(
+        "generate",
+        "--only",
+        "cool-app-0",
+        configurations=[configuration_0, configuration_1],
+    )
+
+    # Then
     assert result.exit_code == 0
+    assert list(tmp_path.glob("*_amd64")) == [tmp_path / "cool-app-0_1.0.0_amd64"]
 
 
-def test_ops2deb_generate_should_not_crash_when_archive_contains_a_dangling_symlink(
-    call_ops2deb,
+def test_generate__should_not_crash_when_archive_contains_a_dangling_symlink(
+    call_ops2deb, tmp_path
 ):
-    mock_configuration_with_dangling_symlink_in_archive = """\
+    # Given
+    configuration = """
     - name: great-app
       summary: Great package
       version: 1.0.0
       description: A detailed description of the great package.
       fetch: http://testserver/{{version}}/dangling-symlink.tar.xz
     """
-    result = call_ops2deb(
-        "generate", configuration=mock_configuration_with_dangling_symlink_in_archive
-    )
+
+    # When
+    result = call_ops2deb("generate", configurations=[configuration])
+
+    # Then
     assert result.exit_code == 0
 
 
-def test_ops2deb_generate_should_set_cwd_variable_to_config_directory_when_blueprint_has_a_fetch_and_path_to_config_is_relative(  # noqa: E501
-    tmp_path, call_ops2deb, tmp_working_directory, configuration_path
+def test_generate__cwd_variable_points_to_config_directory_when_blueprint_has_a_fetch_and_path_to_config_is_relative(  # noqa: E501
+    call_ops2deb, tmp_working_directory, configuration_path, tmp_path
 ):
+    # Given
     configuration = """\
     name: great-app
     version: 1.0.0
-    summary: Great package
+    summary: great package
     fetch: http://testserver/{{version}}/great-app.tar.gz
     script:
       - mv great-app {{src}}/usr/bin/great-app
       - cp {{cwd}}/test.conf {{src}}/etc/test.conf
     """
     (tmp_path / "test.conf").touch()
+
+    # When
     result = call_ops2deb(
-        "generate", "-c", configuration_path.name, configuration=configuration
+        "generate", "-c", configuration_path.name, configurations=[configuration]
     )
+
+    # Then
     assert result.exit_code == 0
 
 
-def test_ops2deb_generate_should_not_crash_when_two_blueprints_download_the_same_file(
-    tmp_path, call_ops2deb, tmp_working_directory
+def test_generate__should_not_crash_when_multiple_blueprints_have_fetch_set_to_the_same_url(  # noqa: E501
+    call_ops2deb, tmp_working_directory, tmp_path
 ):
-    configuration = """\
+    # Given
+    configuration_0 = """\
     - name: great-app-1
       version: 1.0.0
-      summary: Great package
+      summary: great package
       fetch: http://testserver/{{version}}/great-app.tar.gz
+      install:
+      - great-app:/usr/bin/great-app
     - name: great-app-2
-      version: 1.0.0
-      summary: Great package
-      fetch: http://testserver/{{version}}/great-app.tar.gz
-    """
-    result = call_ops2deb("generate", configuration=configuration)
-    assert result.exit_code == 0
-
-
-def test_ops2deb_generate_should_generate_blueprints_from_multiple_configuration_files(
-    tmp_path, call_ops2deb
-):
-    configuration_1 = """\
-    - name: great-app
       version: 1.0.0
       summary: great package
       fetch: http://testserver/{{version}}/great-app.tar.gz
@@ -371,27 +333,26 @@ def test_ops2deb_generate_should_generate_blueprints_from_multiple_configuration
       - great-app:/usr/bin/great-app
     """
 
-    configuration_2 = """\
-    - name: super-app
+    configuration_1 = """\
+    - name: great-app-3
       version: 1.0.0
-      summary: super package
-      fetch: http://testserver/{{version}}/super-app
+      summary: great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
       install:
-      - super-app:/usr/bin/super-app
+      - great-app:/usr/bin/great-app
     """
 
-    result = call_ops2deb("generate", configurations=[configuration_1, configuration_2])
+    # When
+    result = call_ops2deb("generate", configurations=[configuration_0, configuration_1])
+
+    # Then
     assert result.exit_code == 0
-    assert (tmp_path / "great-app_1.0.0_amd64/src/usr/bin/great-app").is_file()
-    assert (tmp_path / "great-app_1.0.0_amd64/debian/control").is_file()
-    assert (tmp_path / "super-app_1.0.0_amd64/src/usr/bin/super-app").is_file()
-    assert (tmp_path / "super-app_1.0.0_amd64/debian/control").is_file()
 
 
-def test_ops2deb_generate_should_fail_gracefully_when_file_is_not_locked_in_lockfile_referenced_by_configuration_file(  # noqa: E501
-    tmp_path,
-    call_ops2deb,
+def test_generate__should_fail_gracefully_when_file_is_not_locked_in_lockfile_referenced_by_configuration_file(  # noqa: E501
+    call_ops2deb, tmp_path
 ):
+    # Given
     configuration_1 = """\
     name: great-app
     version: 1.0.0
@@ -407,36 +368,74 @@ def test_ops2deb_generate_should_fail_gracefully_when_file_is_not_locked_in_lock
     fetch: http://testserver/{{version}}/super-app
     """
 
+    # When
     result = call_ops2deb("generate", configurations=[configuration_1, configuration_2])
+
+    # Then
     assert result.exit_code == 77
     assert "Unknown hash for url http://testserver/1.0.0/super-app" in result.stdout
 
 
-def test_ops2deb_build_should_succeed_with_valid_configuration(tmp_path, call_ops2deb):
-    call_ops2deb("generate")
-    result = call_ops2deb("build")
+def test_build__builds_debian_source_packages(tmp_path, call_ops2deb):
+    # Given
+    configurations = [configuration_example_0, configuration_example_1]
+    expected_package_set = {
+        "great-app_1.0.0-1~ops2deb_armhf.deb",
+        "super-app_1.0.0-1~ops2deb_all.deb",
+        "great-app_1.0.0-1~ops2deb_amd64.deb",
+        "awesome-metapackage_1.0.0-1~ops2deb_all.deb",
+    }
+
+    # When
+    call_ops2deb("generate", configurations=configurations)
+    result = call_ops2deb("build", configurations=configurations)
+
+    # Then
     assert result.exit_code == 0
-    assert (tmp_path / "great-app_1.0.0-2~ops2deb_all.deb").is_file()
+    assert set([path.name for path in tmp_path.glob("*.deb")]) == expected_package_set
 
 
-def test_ops2deb_build_should_exit_with_error_when_build_fails(tmp_path, call_ops2deb):
-    call_ops2deb("generate")
-    (tmp_path / "great-app_1.0.0_all/debian/control").write_text("INVALID_CONTROL")
-    result = call_ops2deb("build")
-    assert result.exit_code == 77
+def test_default__generates_and_builds_debian_source_packages(call_ops2deb, tmp_path):
+    # Given
+    configurations = [configuration_example_0, configuration_example_1]
+    expected_package_set = {
+        "great-app_1.0.0-1~ops2deb_armhf.deb",
+        "super-app_1.0.0-1~ops2deb_all.deb",
+        "great-app_1.0.0-1~ops2deb_amd64.deb",
+        "awesome-metapackage_1.0.0-1~ops2deb_all.deb",
+    }
 
+    # When
+    result = call_ops2deb("default", configurations=configurations)
 
-def test_ops2deb_default_should_build_and_generate_packages_when_configuration_is_valid(
-    tmp_path, call_ops2deb
-):
-    result = call_ops2deb()
+    # Then
     assert result.exit_code == 0
-    assert (tmp_path / "great-app_1.0.0-2~ops2deb_all.deb").is_file()
+    assert set([path.name for path in tmp_path.glob("*.deb")]) == expected_package_set
 
 
-def test_ops2deb_update_should_update_all_matched_configuration_files(
+def test_build__exits_with_error_when_build_fails(call_ops2deb, tmp_path):
+    # Given
+    configuration = """\
+    name: bad-app
+    version: 1.0.0
+    summary: great package
+    script:
+    - echo "invalid_control_file" > {{debian}}/control
+    """
+
+    # When
+    result_generate = call_ops2deb("generate", configurations=[configuration])
+    result_build = call_ops2deb("build", configurations=[configuration])
+
+    # Then
+    assert result_generate.exit_code == 0
+    assert result_build.exit_code == 77
+
+
+def test_update__updates_version_field_when_max_versions_is_set_to_default_value_one(
     call_ops2deb, configuration_paths
 ):
+    # Given
     configuration_1 = """\
     name: great-app
     version: 1.0.0
@@ -451,7 +450,10 @@ def test_ops2deb_update_should_update_all_matched_configuration_files(
     fetch: http://testserver/{{version}}/super-app
     """
 
+    # When
     result = call_ops2deb("update", configurations=[configuration_1, configuration_2])
+
+    # Then
     raw_blueprints_0 = load_configuration_file(configuration_paths[0]).raw_blueprints
     assert result.exit_code == 0
     assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
@@ -461,9 +463,10 @@ def test_ops2deb_update_should_update_all_matched_configuration_files(
     assert raw_blueprints_1[0]["version"] == "1.1.1"
 
 
-def test_ops2deb_update_should_lock_new_urls_when_configuration_file_share_the_same_lockfile(  # noqa: E501
+def test_update__adds_new_urls_to_lockfile_when_configuration_files_share_the_same_lockfile(  # noqa: E501
     call_ops2deb, configuration_paths, lockfile_path
 ):
+    # Given
     configuration_1 = """\
     name: great-app
     version: 1.0.0
@@ -478,7 +481,10 @@ def test_ops2deb_update_should_lock_new_urls_when_configuration_file_share_the_s
     fetch: http://testserver/{{version}}/super-app
     """
 
+    # When
     result = call_ops2deb("update", configurations=[configuration_1, configuration_2])
+
+    # Then
     assert result.exit_code == 0
     lock = Lock(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
@@ -487,7 +493,7 @@ def test_ops2deb_update_should_lock_new_urls_when_configuration_file_share_the_s
     assert lock.sha256("http://testserver/1.1.1/super-app") == sha256
 
 
-def test_ops2deb_update_should_add_new_url_to_lock_file_referenced_by_configuration_file(
+def test_update__adds_new_url_to_lock_file_referenced_by_configuration_file(
     call_ops2deb, configuration_paths, lockfile_paths
 ):
     configuration_1 = """\
@@ -516,9 +522,10 @@ def test_ops2deb_update_should_add_new_url_to_lock_file_referenced_by_configurat
     assert lock_1.sha256("http://testserver/1.1.1/super-app") == sha256
 
 
-def test_ops2deb_update_should_add_new_url_to_both_lock_files_when_two_configuration_files_fetch_the_same_archive(  # noqa: E501
+def test_update__adds_new_url_to_both_lock_files_when_two_configuration_files_with_different_lockfile_fetch_the_same_archive(  # noqa: E501
     call_ops2deb, configuration_paths, lockfile_paths
 ):
+    # Given
     configuration_1 = """\
     # lockfile=ops2deb-0.lock.yml
     name: great-app-1
@@ -535,7 +542,10 @@ def test_ops2deb_update_should_add_new_url_to_both_lock_files_when_two_configura
     fetch: http://testserver/{{version}}/great-app.tar.gz
     """
 
+    # When
     result = call_ops2deb("update", configurations=[configuration_1, configuration_2])
+
+    # Then
     lock_0 = Lock(lockfile_paths[0])
     lock_1 = Lock(lockfile_paths[1])
     assert result.exit_code == 0
@@ -544,89 +554,135 @@ def test_ops2deb_update_should_add_new_url_to_both_lock_files_when_two_configura
     assert lock_1.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
 
 
-def test_ops2deb_update_should_succeed_with_valid_configuration(
-    configuration_path, lockfile_path, call_ops2deb
+def test_update__appends_new_version_to_version_matrix_when_max_versions_is_not_reached(
+    call_ops2deb, configuration_path, lockfile_path, summary_path
 ):
-    result = call_ops2deb("update")
-    raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
-    lock = Lock(lockfile_path)
-    sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
-    assert "great-app can be bumped from 1.0.0 to 1.1.1" in result.stdout
-    assert result.exit_code == 0
-    assert raw_blueprints[1]["version"] == "1.1.1"
-    assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
-    assert "http://testserver/1.0.0/great-app.tar.gz" not in lockfile_path.read_text()
+    # Given
+    configuration = """
+    - name: great-app
+      matrix:
+        versions:
+        - 1.0.0
+        - 1.0.1
+        - 1.1.0
+      summary: great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
 
-
-def test_ops2deb_update_should_append_new_version_to_matrix_when_max_versions_is_not_reached(  # noqa: E501
-    configuration_path, lockfile_path, call_ops2deb, summary_path
-):
+    # When
     result = call_ops2deb(
         "update",
         "--max-versions",
         "4",
         "--output-file",
         str(summary_path),
-        configuration=mock_configuration_with_version_matrix,
+        configurations=[configuration],
     )
+
+    # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     lock = Lock(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert "Added great-app v1.1.1" in summary_path.read_text()
     assert "great-app can be bumped from 1.1.0 to 1.1.1" in result.stdout
-    assert result.exit_code == 0
     assert raw_blueprints[0]["matrix"]["versions"] == ["1.0.0", "1.0.1", "1.1.0", "1.1.1"]
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
+    assert result.exit_code == 0
 
 
-def test_ops2deb_update_should_add_new_version_and_remove_old_versions_when_max_versions_is_reached(  # noqa: E501
+def test_update__adds_new_version_and_remove_old_versions_when_max_versions_is_reached(
     call_ops2deb, configuration_path, lockfile_path, summary_path
 ):
+    # Given
+    configuration = """
+    - name: great-app
+      matrix:
+        versions:
+        - 1.0.0
+        - 1.0.1
+        - 1.1.0
+      summary: great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    # When
     result = call_ops2deb(
         "update",
         "--max-versions",
         "2",
         "--output-file",
         str(summary_path),
-        configuration=mock_configuration_with_version_matrix,
+        configurations=[configuration],
     )
+
+    # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
-    assert result.exit_code == 0
     assert raw_blueprints[0]["matrix"]["versions"] == ["1.1.0", "1.1.1"]
     assert "Added great-app v1.1.1 and removed v1.0.0, v1.0.1" in summary_path.read_text()
     assert "http://testserver/1.0.0/great-app.tar.gz" not in lockfile_path.read_text()
     assert "http://testserver/1.0.1/great-app.tar.gz" not in lockfile_path.read_text()
     assert "http://testserver/1.1.0/great-app.tar.gz" in lockfile_path.read_text()
     assert "http://testserver/1.1.1/great-app.tar.gz" in lockfile_path.read_text()
+    assert result.exit_code == 0
 
 
-def test_ops2deb_update_should_replace_version_with_versions_matrix_when_max_versions_is_superior_to_one(  # noqa: E501
+def test_update__replaces_version_with_versions_matrix_when_max_versions_is_superior_to_one(  # noqa: E501
     call_ops2deb, configuration_path, lockfile_path, summary_path
 ):
+    # Given
+    configuration = """
+    - name: great-app
+      version: 1.0.0
+      summary: great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    # When
     result = call_ops2deb(
         "update",
         "--max-versions",
         "2",
         "--output-file",
         str(summary_path),
+        configurations=[configuration],
     )
+
+    # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     assert result.exit_code == 0
-    assert raw_blueprints[1]["matrix"]["versions"] == ["1.0.0", "1.1.1"]
+    assert raw_blueprints[0]["matrix"]["versions"] == ["1.0.0", "1.1.1"]
     assert "Added great-app v1.1.1" in summary_path.read_text()
     assert "http://testserver/1.0.0/great-app.tar.gz" in lockfile_path.read_text()
     assert "http://testserver/1.1.1/great-app.tar.gz" in lockfile_path.read_text()
 
 
-def test_ops2deb_update_should_create_summary_when_called_with_output_file(
+def test_update__creates_a_summary_of_updated_blueprints_when_called_with_output_file_argument(  # noqa: E501
     call_ops2deb, summary_path
 ):
+    # Given
+    configuration_0 = """\
+    name: great-app
+    version: 1.0.0
+    summary: great package
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    configuration_1 = """\
+    name: super-app
+    version: 1.0.0
+    summary: super package
+    fetch: http://testserver/{{version}}/super-app
+    """
+
+    # When
     call_ops2deb(
         "update",
         "--output-file",
         str(summary_path),
-        configuration=mock_valid_configuration,
+        configurations=[configuration_0, configuration_1],
     )
+
+    # Then
     summary = (
         "Updated great-app from 1.0.0 to 1.1.1\n"
         "Updated super-app from 1.0.0 to 1.1.1\n"
@@ -634,167 +690,337 @@ def test_ops2deb_update_should_create_summary_when_called_with_output_file(
     assert summary_path.read_text() == summary
 
 
-def test_ops2deb_update_should_create_empty_summary_when_called_with_output_file_and_config_is_up_to_date(  # noqa: E501
+def test_update__creates_empty_summary_when_called_with_output_file_and_configuration_is_up_to_date(  # noqa: E501
     call_ops2deb, summary_path
 ):
+    # Given
+    configuration = """
+    - name: great-app
+      version: 1.1.1
+      revision: 2
+      architecture: all
+      summary: great package
+      description: A detailed description of the great package.
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    # When
     call_ops2deb(
         "update",
         "--output-file",
         str(summary_path),
-        configuration=mock_up_to_date_configuration,
+        configurations=[configuration],
     )
+
+    # Then
     assert summary_path.read_text() == ""
 
 
-def test_ops2deb_update_should_succeed_with_single_blueprint_configuration(
-    configuration_path, call_ops2deb
+def test_update__resets_blueprint_revision_to_one_when_a_new_release_is_available(
+    call_ops2deb, configuration_path
 ):
-    result = call_ops2deb(
-        "update", configuration=mock_configuration_single_blueprint_with_fetch
-    )
-    raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
-    assert result.exit_code == 0
-    assert raw_blueprints[0]["version"] == "1.1.1"
-
-
-def test_ops2deb_update_should_reset_blueprint_revision_to_one(
-    configuration_path, call_ops2deb
-):
+    # Given
     configuration = """
-    - name: great-app
-      version: 1.0.0
-      revision: 2
-      summary: Great package
-      fetch: http://testserver/{{version}}/great-app.tar.gz
+    name: great-app
+    version: 1.0.0
+    revision: 2
+    summary: Great package
+    fetch: http://testserver/{{version}}/great-app.tar.gz
     """
-    call_ops2deb("update", configuration=configuration)
+
+    # When
+    call_ops2deb("update", configurations=[configuration])
+
+    # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     assert "revision" not in raw_blueprints[0].keys()
 
 
-def test_ops2deb_update_should_fail_gracefully_when_server_error(
+def test_update__doesnt_stop_when_server_replies_with_a_500_for_one_url(
     call_ops2deb, configuration_path
 ):
-    configuration_with_server_error = """\
+    # Given
+    configuration = """\
     - name: bad-app
       version: 1.0.0
-      summary: Bad package
+      summary: oops, server replies with a 500
       fetch: http://testserver/{{version}}/500.zip
 
     - name: great-app
       version: 1.0.0
-      summary: Great package
+      summary: will still be updated
       fetch: http://testserver/{{version}}/great-app.tar.gz
     """
 
-    result = call_ops2deb("update", configuration=configuration_with_server_error)
+    # When
+    result = call_ops2deb("update", configurations=[configuration])
+
+    # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
-    error = "Server error when requesting http://testserver/1.1.0/500.zip"
-    assert error in result.stdout
+    expected_error = "Server error when requesting http://testserver/1.1.0/500.zip"
+    assert expected_error in result.stdout
     assert raw_blueprints[1]["version"] == "1.1.1"
     assert result.exit_code == 77
 
 
-def test_ops2deb_update_should_fail_gracefully_with_multiarch_blueprint_when_404_error_on_a_file(  # noqa E501
-    call_ops2deb,
+def test_update__doesnt_update_blueprint_when_fetch_fails_for_one_architecture(
+    call_ops2deb, configuration_path
 ):
+    # Given
+    configuration = """
+    - name: great-app
+      matrix:
+        architectures:
+        - amd64
+        - armhf
+        - arm64
+      version: 1.0.0
+      summary: Great package
+      description: A detailed description of the great package.
+      fetch:
+        url: http://testserver/{{version}}/great-app-{{target}}.tar.gz
+        targets:
+          armhf: 404
+      script:
+      - mv great-app {{src}}/usr/bin/great-app
+    """
+
+    # When
+    result = call_ops2deb("update", configurations=[configuration])
+
+    # Then
+    expected_error = "Failed to download http://testserver/1.1.1/great-app-404.tar.gz."
+    assert expected_error in result.stdout
+    assert configuration_path.read_text() == configuration
+    assert result.exit_code == 77
+
+
+def test_update__skips_blueprints_when_skip_option_is_used(
+    call_ops2deb, configuration_paths
+):
+    # Given
+    configuration_0 = """\
+    name: great-app
+    version: 1.0.0
+    summary: great package
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    configuration_1 = """\
+    name: super-app
+    version: 1.0.0
+    summary: super package
+    fetch: http://testserver/{{version}}/super-app
+    """
+
+    # When
     result = call_ops2deb(
         "update",
-        configuration=mock_configuration_with_multi_arch_remote_file_and_404_on_one_file,
+        "--skip",
+        "great-app",
+        "-s",
+        "super-app",
+        configurations=[configuration_0, configuration_1],
     )
-    error = "Failed to download http://testserver/1.1.1/great-app-404.tar.gz."
-    assert error in result.stdout
-    assert result.exit_code == 77
+
+    # Then
+    assert result.exit_code == 0
+    assert configuration_paths[0].read_text() == configuration_0
+    assert configuration_paths[1].read_text() == configuration_1
 
 
-def test_ops2deb_update_should_skip_blueprints_when_skip_option_is_used(
-    configuration_path, call_ops2deb
+def test_update___updates_only_blueprints_listed_with_only_option(
+    call_ops2deb, configuration_paths
 ):
-    result = call_ops2deb("update", "--skip", "great-app", "-s", "super-app")
+    # Given
+    configuration_0 = """\
+    name: great-app
+    version: 1.0.0
+    summary: great package
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    configuration_1 = """\
+    name: super-app
+    version: 1.0.0
+    summary: super package
+    fetch: http://testserver/{{version}}/super-app
+    """
+
+    # When
+    result = call_ops2deb(
+        "update", "--only", "great-app", configurations=[configuration_0, configuration_1]
+    )
+
+    # Then
+    raw_blueprints_0 = load_configuration_file(configuration_paths[0]).raw_blueprints
+    raw_blueprints_1 = load_configuration_file(configuration_paths[1]).raw_blueprints
     assert result.exit_code == 0
-    assert configuration_path.read_text() == mock_valid_configuration
+    assert raw_blueprints_0[0]["version"] == "1.1.1"
+    assert raw_blueprints_1[0]["version"] == "1.0.0"
 
 
-def test_ops2deb_update_should_only_update_blueprints_listed_with_only_option(
-    configuration_path, call_ops2deb
+def test_update__should_not_produce_configuration_files_that_dont_pass_format_command(
+    call_ops2deb,
 ):
-    result = call_ops2deb("update", "--only", "great-app")
-    raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
-    assert result.exit_code == 0
-    assert raw_blueprints[1]["version"] == "1.1.1"
-    assert raw_blueprints[2]["version"] == "1.0.0"
+    # Given
+    configuration = """
+    name: great-app
+    matrix:
+      versions:
+      - 1.0.0
+      - 1.0.1
+      - 1.1.0
+    summary: great package
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    script:
+    - mv great-app {{src}}/usr/bin/great-app
+    """
+
+    # When
+    result_update = call_ops2deb(
+        "update",
+        configurations=[configuration, configuration_example_0, configuration_example_1],
+    )
+    result_format = call_ops2deb("format", configurations=[])
+
+    # Then
+    assert result_update.exit_code == 0
+    assert result_format.exit_code == 0
 
 
-@pytest.mark.parametrize(
-    "configuration", [mock_configuration_with_version_matrix, mock_valid_configuration]
-)
-def test_ops2deb_update_config_should_not_need_formatting_when_formatted_before_update(
-    configuration, configuration_path, call_ops2deb
-):
-    result = call_ops2deb("update", configuration=configuration)
-    assert result.exit_code == 0
-    result = call_ops2deb("format")
-    assert result.exit_code == 0
+def test__format_should_be_idempotent(call_ops2deb, configuration_paths):
+    # Given
+    configuration_0 = """
+    - name: great-app-0
+      summary: great package
+      version: 1.0.0
+      architecture: all
+      description: |
+        A detailed description of the great package.
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+      revision: 2
+      script:
+      - mv great-app {{src}}/usr/bin/great-app
+    """
 
+    configuration_1 = """
+    - name: great-app-1
+      matrix:
+        versions: ["1.0.0"]
+        architectures:
+        - amd64
+        - armhf
+      summary: great package
+      version: 1.0.0
+      architecture: amd64
+      description: |
+        A detailed description of the great package.
+      revision: 1
+      script:
+      - mv great-app {{src}}/usr/bin/great-app
+    """
 
-def test_ops2deb_format_should_be_idempotent(call_ops2deb, configuration_paths):
     configurations = [
-        mock_configuration_not_properly_formatted,
-        mock_configuration_with_version_matrix,
-        mock_configuration_with_multi_arch_remote_file,
-        mock_configuration_single_blueprint_with_fetch,
+        configuration_example_0,
+        configuration_example_1,
+        configuration_0,
+        configuration_1,
     ]
+
+    # When
     call_ops2deb("format", configurations=configurations)
     formatted_configurations = [path.read_text() for path in configuration_paths[:4]]
-    call_ops2deb("format", configurations=configurations, write=False)
+    call_ops2deb("format", configurations=configurations)
     reformatted_configurations = [path.read_text() for path in configuration_paths[:4]]
+
+    # Then
     assert formatted_configurations[0] == reformatted_configurations[0]
     assert formatted_configurations[1] == reformatted_configurations[1]
     assert formatted_configurations[2] == reformatted_configurations[2]
     assert formatted_configurations[3] == reformatted_configurations[3]
 
 
-def test_ops2deb_format_should_not_modify_already_formatted_configuration(
+def test_format__does_not_modify_already_formatted_configuration(
+    call_ops2deb, configuration_paths
+):
+    # Given
+    configurations = [configuration_example_0, configuration_example_1]
+
+    # When
+    result = call_ops2deb("format", configurations=configurations)
+
+    # Then
+    assert configuration_paths[0].read_text() == configuration_example_0
+    assert configuration_paths[1].read_text() == configuration_example_1
+    assert result.exit_code == 0
+
+
+def test_format__formats_and_exits_with_error_code_when_file_is_not_properly_formatted(
     call_ops2deb, configuration_path
 ):
-    result = call_ops2deb("format")
-    assert result.exit_code == 0
-    assert configuration_path.read_text() == mock_valid_configuration
+    # Given
+    configuration = """
+    - name: great-app
+      summary: great package
+      revision: 2
+      matrix:
+        versions: ["1.0.0"]
+      architecture: all
+      description: |
+        A detailed description of the great package.
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+      script:
+      - mv great-app {{src}}/usr/bin/great-app
+    """
 
+    expected_formatting = """\
+    name: great-app
+    matrix:
+      versions:
+        - 1.0.0
+    revision: 2
+    architecture: all
+    summary: great package
+    description: A detailed description of the great package.
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    script:
+      - mv great-app {{src}}/usr/bin/great-app
+    """
 
-def test_ops2deb_format_should_exit_with_error_code_when_file_gets_reformatted(
-    call_ops2deb,
-):
-    result = call_ops2deb(
-        "format", configuration=mock_configuration_not_properly_formatted
-    )
+    # When
+    result = call_ops2deb("format", configurations=[configuration])
+
+    # Then
     assert result.exit_code == 77
+    assert configuration_path.read_text() == dedent(expected_formatting)
 
 
-def test_ops2deb_format_should_not_remove_lockfile_path_comment_when_its_not_the_default(
+def test_format__does_not_remove_lockfile_path_comment_when_its_not_the_default(
     call_ops2deb, configuration_path
 ):
-    result = call_ops2deb("format", configuration=mock_configuration_with_lockfile_path)
-    assert result.exit_code == 77
-    assert "# lockfile=great-app.lock.yml" in configuration_path.read_text()
-
-
-def test_ops2deb_lock_should_succeed_when_configuration_file_is_valid(call_ops2deb):
-    result = call_ops2deb("lock")
-    assert result.exit_code == 0
-
-
-def test_ops2deb_lock_should_succeed_with_valid_multi_arch_fetch(call_ops2deb):
-    result = call_ops2deb(
-        "lock", configuration=mock_configuration_with_multi_arch_remote_file
-    )
-    assert result.exit_code == 0
-
-
-def test_ops2deb_lock_should_only_download_files_that_are_not_locked(
-    call_ops2deb, cache_path
-):
+    # Given
     configuration = """\
+    # lockfile=great-app.lock.yml
+    name: great-app
+    version: 1.0.0
+    summary: this is a summary
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    # When
+    result = call_ops2deb("format", configurations=[configuration])
+
+    # Then
+    assert "# lockfile=great-app.lock.yml" in configuration_path.read_text()
+    assert result.exit_code == 77
+
+
+def test_lock__downloads_only_files_that_are_not_yet_locked(
+    call_ops2deb, cache_path, lockfile_paths
+):
+    # Given
+    configuration_0 = """
     - name: great-app
       version: 1.1.1
       summary: this file is not locked
@@ -806,12 +1032,39 @@ def test_ops2deb_lock_should_only_download_files_that_are_not_locked(
       summary: this one is
       fetch: http://testserver/{{version}}/super-app
     """
-    call_ops2deb("lock", configuration=configuration)
-    fetched = {file.name for file in (cache_path / "").glob("**/*") if file.is_file()}
-    assert fetched == {"great-app.tar.gz", "great-app.tar.gz.sum"}
+
+    configuration_1 = """\
+    # lockfile=ops2deb-1.lock.yml
+    - name: great-app
+      matrix:
+        architectures:
+        - amd64
+        - armhf
+      version: 1.0.0
+      summary: Great package
+      description: A detailed description of the great package.
+      fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
+    """
+
+    expected_files_in_cache = {
+        "great-app-amd64.tar.gz",
+        "great-app-amd64.tar.gz.sum",
+        "great-app-armhf.tar.gz",
+        "great-app-armhf.tar.gz.sum",
+        "great-app.tar.gz",
+        "great-app.tar.gz.sum",
+    }
+
+    # When
+    result = call_ops2deb("lock", configurations=[configuration_0, configuration_1])
+
+    # Then
+    fetched = {file.name for file in cache_path.glob("**/*") if file.is_file()}
+    assert fetched == expected_files_in_cache
+    assert result.exit_code == 0
 
 
-def test_ops2deb_lock_should_add_missing_urls_in_lockfile_referenced_by_configuration_file(  # noqa: E501
+def test_lock__adds_missing_urls_in_lockfile_referenced_by_configuration_file(
     call_ops2deb, cache_path, lockfile_paths
 ):
     configuration_0 = """\
@@ -843,40 +1096,40 @@ def test_ops2deb_lock_should_add_missing_urls_in_lockfile_referenced_by_configur
     assert "http://testserver/1.1.1/great-app.tar.gz" not in lockfile_1
 
 
-@pytest.mark.parametrize("subcommand", ["default", "update", "generate", "lock"])
-def test_ops2deb_should_support_lock_file_header_in_configuration_file(
-    call_ops2deb, subcommand, tmp_path, lockfile_path, tmp_working_directory
-):
-    shutil.move(lockfile_path, "great-app.lock.yml")
-    result = call_ops2deb(subcommand, configuration=mock_configuration_with_lockfile_path)
-    assert result.exit_code == 0
-    assert lockfile_path.is_file() is False
-
-
 @pytest.mark.parametrize(
     "subcommand", ["update", "generate", "format", "validate", "lock"]
 )
-def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_invalid_yaml(
-    call_ops2deb, subcommand
+def test_ops2deb__exits_with_error_code_when_configuration_file_has_invalid_yaml(
+    call_ops2deb, subcommand, configuration_path
 ):
-    configuration_with_yaml_error = """\
+    # Given
+    configuration = """\
     - name: awesome-metapackage
         version: 1.0.0
     """
-    result = call_ops2deb(subcommand, configuration=configuration_with_yaml_error)
-    assert "Failed to parse" in result.stdout
+
+    # When
+    result = call_ops2deb(subcommand, configurations=[configuration])
+
+    # Then
+    assert f"Failed to parse {configuration_path}" in result.stdout
     assert result.exit_code == 77
 
 
 @pytest.mark.parametrize(
     "subcommand", ["update", "generate", "format", "validate", "lock"]
 )
-def test_ops2deb_should_exit_with_error_code_when_configuration_file_has_validation_error(
+def test_ops2deb__exits_with_error_code_when_configuration_file_has_validation_error(
     call_ops2deb, subcommand, configuration_path
 ):
+    # Given
     configuration = """\
     - name: awesome-metapackage
     """
-    result = call_ops2deb(subcommand, configuration=configuration)
+
+    # When
+    result = call_ops2deb(subcommand, configurations=[configuration])
+
+    # Then
     assert f"ailed to parse blueprint at index 0 in {configuration_path}" in result.stdout
     assert result.exit_code == 77
