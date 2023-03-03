@@ -25,8 +25,8 @@ class LockFile(BaseModel):
     __root__: list[LockEntry]
 
 
-def get_iso_utc_datetime() -> str:
-    return datetime.now(tz=timezone.utc).isoformat()[:-13] + "Z"
+def get_iso_utc_datetime() -> datetime:
+    return datetime.now(tz=timezone.utc).replace(microsecond=0)
 
 
 class Lock:
@@ -84,18 +84,20 @@ class Lock:
         if not self._entries or self._tainted is False:
             return
 
-        entries = {k: entry.dict() for k, entry in self._entries.items()}
-
         # make sure all added urls since lock was created have the same timestamp
         # and make sure this timestamp is when save() was called
         now = get_iso_utc_datetime()
         for new_url in self._new_urls:
-            if (entry := entries.get(new_url, None)) is not None:
-                entry["timestamp"] = now
+            if (entry := self._entries.get(new_url, None)) is not None:
+                entry.timestamp = now
+
+        # sort lockfile entries by urls
+        entries = [entry.dict() for entry in self._entries.values()]
+        sorted_entries = sorted(entries, key=itemgetter("url"))
 
         with self.lock_file_path.open("w") as output:
             yaml.dump(
-                sorted(entries.values(), key=itemgetter("url")),
+                sorted_entries,
                 output,
                 Dumper=PrettyYAMLDumper,
                 default_flow_style=False,
