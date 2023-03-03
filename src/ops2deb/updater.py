@@ -253,6 +253,8 @@ def _update_configuration(
     if max_versions == 1:
         if release.blueprint.matrix and release.blueprint.matrix.versions:
             removed_versions = raw_blueprint["matrix"].pop("versions")
+            if not raw_blueprint["matrix"]:
+                raw_blueprint.pop("matrix")
         else:
             removed_versions = [raw_blueprint["version"]]
         raw_blueprint["version"] = release.version
@@ -285,7 +287,6 @@ def _update_lockfile(
     for version in removed_versions:
         lock.remove(_blueprint_fetch_urls(blueprint, version))
     _blueprint_fetch_urls(blueprint, release.version)
-    # blueprint.metadata.lock.add(urls)
 
 
 def update(
