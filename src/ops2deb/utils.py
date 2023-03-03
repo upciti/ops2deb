@@ -1,37 +1,17 @@
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Tuple, TypeVar
+from typing import Any, Iterator
 
 import yaml
 from ruamel.yaml.emitter import Emitter
 
 from ops2deb import logger
-from ops2deb.exceptions import Ops2debError
 
 
 def log_and_raise(exception: Exception) -> None:
     logger.error(str(exception))
     raise exception
-
-
-T = TypeVar("T")
-U = TypeVar("U")
-
-
-def separate_results_from_errors(
-    results_and_errors: dict[U, T | Exception]
-) -> Tuple[dict[U, T], dict[U, Ops2debError]]:
-    results: dict[U, T] = {}
-    errors: dict[U, Ops2debError] = {}
-    for key, value in results_and_errors.items():
-        if isinstance(value, Ops2debError):
-            errors[key] = value
-        elif isinstance(value, Exception):
-            raise value
-        else:
-            results[key] = value
-    return results, errors
 
 
 @contextmanager
@@ -45,6 +25,9 @@ def working_directory(path: Path) -> Iterator[None]:
 
 
 class PrettyYAMLDumper(yaml.dumper.SafeDumper):
+    def ignore_aliases(self, data: Any) -> bool:
+        return True
+
     def expect_block_sequence(self) -> None:
         self.increase_indent(flow=False, indentless=False)
         self.state = self.expect_first_block_sequence_item

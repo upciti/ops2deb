@@ -146,7 +146,9 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
         if Version.isvalid(version) and Version.isvalid(blueprint.version):
             version = str(max(Version.parse(version), Version.parse(blueprint.version)))
         if await self._try_version(blueprint, version) is False:
-            raise Ops2debUpdaterError("Failed to determine latest release URL")
+            raise Ops2debUpdaterError(
+                f"Failed to determine latest release URL (latest tag is {tag_name})"
+            )
         return version
 
 

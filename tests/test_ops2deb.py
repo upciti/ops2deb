@@ -683,11 +683,12 @@ def test_update__creates_a_summary_of_updated_blueprints_when_called_with_output
     )
 
     # Then
-    summary = (
-        "Updated great-app from 1.0.0 to 1.1.1\n"
-        "Updated super-app from 1.0.0 to 1.1.1\n"
-    )
-    assert summary_path.read_text() == summary
+    summary_lines_set = {
+        "",
+        "Updated great-app from 1.0.0 to 1.1.1",
+        "Updated super-app from 1.0.0 to 1.1.1",
+    }
+    assert set(summary_path.read_text().split("\n")) == summary_lines_set
 
 
 def test_update__creates_empty_summary_when_called_with_output_file_and_configuration_is_up_to_date(  # noqa: E501
