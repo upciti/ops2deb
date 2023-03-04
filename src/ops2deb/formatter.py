@@ -3,6 +3,7 @@ from textwrap import wrap
 from typing import Any, OrderedDict, Tuple
 
 import yaml
+from semver.version import Version
 
 from ops2deb.exceptions import Ops2debFormatterError
 from ops2deb.parser import (
@@ -15,12 +16,20 @@ from ops2deb.utils import PrettyYAMLDumper
 
 
 def sort_blueprints(blueprints: list[OrderedDict[str, Any]]) -> list[dict[str, Any]]:
-    def key(blueprint: dict[str, Any]) -> Tuple[str, str, int]:
+    def key(blueprint: dict[str, Any]) -> Tuple[str, Version, int]:
         try:
-            version = blueprint["matrix"]["versions"][-1]
+            version_str = blueprint["matrix"]["versions"][-1]
         except KeyError:
-            version = blueprint["version"]
-        return blueprint["name"], version, blueprint.get("revision", "1")
+            version_str = blueprint["version"]
+        version: Version = Version(0, 0, 0)
+        if Version.isvalid(version_str):
+            version = Version.parse(version_str)
+        revision_str = blueprint.get("revision", "1")
+        try:
+            revision = int(revision_str)
+        except ValueError:
+            revision = 1
+        return blueprint["name"], version, revision
 
     return sorted(blueprints, key=key)
 

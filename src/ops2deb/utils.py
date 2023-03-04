@@ -43,3 +43,9 @@ class FixIndentEmitter(Emitter):
     def expect_block_sequence(self) -> None:
         self.increase_indent(flow=False, indentless=False)
         self.state = self.expect_first_block_sequence_item
+
+    def choose_scalar_style(self) -> str:
+        style: str = super().choose_scalar_style()
+        style = '"' if style == "'" else style
+        style = "|" if self.analysis.multiline else style
+        return style
