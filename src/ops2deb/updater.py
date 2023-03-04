@@ -210,16 +210,22 @@ async def _find_latest_versions(
 
 def find_latest_releases(
     configuration: Configuration,
-    blueprints: list[Blueprint],
     fetcher: Fetcher,
     skip_names: list[str] | None,
     only_names: list[str] | None,
 ) -> Tuple[list[LatestRelease], list[Ops2debError]]:
-    blueprints = [b for b in blueprints if b.fetch is not None]
+    blueprints = [b for b in configuration.blueprints if b.fetch is not None]
     if skip_names:
         blueprints = [b for b in blueprints if b.name not in skip_names]
     if only_names:
         blueprints = [b for b in blueprints if b.name in only_names]
+
+    # when multiple blueprints have the same name, only look for new releases for the
+    # last one in the list
+    blueprints_by_name: dict[str, Blueprint] = {}
+    for blueprint in blueprints:
+        blueprints_by_name[blueprint.name] = blueprint
+    blueprints = list(blueprints_by_name.values())
 
     # find new releases for the selected list of blueprints
     releases, errors = asyncio.run(_find_latest_versions(blueprints))
@@ -303,9 +309,8 @@ def update(
     max_versions: int = 1,
 ) -> None:
     logger.title("Looking for new releases...")
-    blueprints = list(configuration.blueprints)
     releases, errors = find_latest_releases(
-        configuration, blueprints, fetcher, skip_names, only_names
+        configuration, fetcher, skip_names, only_names
     )
 
     summary: list[str] = []

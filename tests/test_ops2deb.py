@@ -890,6 +890,32 @@ def test_update__should_not_produce_configuration_files_that_dont_pass_format_co
     assert result_format.exit_code == 0
 
 
+def test_update___only_looks_for_updates_for_the_last_blueprint_when_multiple_blueprints_have_the_same_name(  # noqa: E501
+    call_ops2deb, configuration_paths
+):
+    # Given
+    configuration = """\
+    - name: great-app
+      version: 1.0.0
+      summary: great package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+
+    - name: great-app
+      version: 1.0.1
+      summary: super package
+      fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    # When
+    result = call_ops2deb("update", "--only", "great-app", configurations=[configuration])
+
+    # Then
+    raw_blueprints = load_configuration_file(configuration_paths[0]).raw_blueprints
+    assert result.exit_code == 0
+    assert raw_blueprints[0]["version"] == "1.0.0"
+    assert raw_blueprints[1]["version"] == "1.1.1"
+
+
 def test__format_should_be_idempotent(call_ops2deb, configuration_paths):
     # Given
     configuration_0 = """
