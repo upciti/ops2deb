@@ -30,6 +30,7 @@ but can be used to package any portable application. In short, it consumes a con
 - [Important notes](#important-notes)
 - [Migration guides](#migration-guides)
   - [Migrating to v1](#migrating-to-v1)
+  - [Breaking changes in v2](#breaking-changes-in-v2)
 
 ## Installation
 
@@ -304,3 +305,8 @@ To migrate from ops2deb <= 1.0.3 to ops2deb > 1.0.3:
 
 - Install ops2deb 1.0.3
 - Run `ops2deb migrate`
+
+### Breaking changes in v2
+
+- `GITHUB_TOKEN` environment variable renamed to `OPS2DEB_GITHUB_TOKEN`
+- Command line argument `-k` was removed. Start `ops2deb.yml` with `# lockfile={path_to_lockfile}` to override the default lockfile path.
