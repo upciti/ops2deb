@@ -9,8 +9,8 @@ from ops2deb.exceptions import Ops2debFormatterError
 from ops2deb.parser import (
     Blueprint,
     ConfigurationFile,
+    Resources,
     get_default_lockfile_path,
-    load_configuration,
 )
 from ops2deb.utils import PrettyYAMLDumper
 
@@ -98,9 +98,9 @@ def format_configuration_file(configuration: ConfigurationFile) -> bool:
     return formatted_configuration_content != original_configuration_content
 
 
-def format_all(search_glob: str) -> None:
+def format_all(resources: Resources) -> None:
     formatted_configuration_files: list[str] = []
-    for configuration in load_configuration(search_glob).configuration_files:
+    for configuration in resources.configuration_files:
         if format_configuration_file(configuration) is True:
             formatted_configuration_files.append(str(configuration.path))
     if formatted_configuration_files:

@@ -3,7 +3,7 @@ import os
 import pytest
 from pydantic import ValidationError
 
-from ops2deb.parser import Blueprint, load_configuration_file
+from ops2deb.parser import Blueprint, Ops2debParserError, load_configuration_file
 
 
 @pytest.fixture
@@ -166,3 +166,35 @@ def test_load_configuration_file__should_parse_lockfile_path_in_configuration_fi
     configuration_path.write_text(configuration)
     lockfile_path = load_configuration_file(configuration_path).lockfile_path
     assert lockfile_path == configuration_path.parent / "mylockfile.yml"
+
+
+def test_load_configuration_file__raises_when_file_does_not_exist(configuration_path):
+    # When
+    with pytest.raises(Ops2debParserError) as error:
+        load_configuration_file(configuration_path)
+
+    # Then
+    assert error.match("File not found")
+
+
+def test_load_configuration_file__raises_when_path_is_a_directory(tmp_path):
+    # When
+    with pytest.raises(Ops2debParserError) as error:
+        load_configuration_file(tmp_path)
+
+    # Then
+    assert error.match("Path points to a directory")
+
+
+def test_load_configuration_file__raises_when_configuration_file_contains_invalid_yaml(
+    configuration_path,
+):
+    # Given
+    configuration_path.write_text("@£¢±")
+
+    # When
+    with pytest.raises(Ops2debParserError) as error:
+        load_configuration_file(configuration_path)
+
+    # Then
+    assert error.match("Failed to parse")

@@ -1,3 +1,4 @@
+import json
 import os
 from textwrap import dedent
 
@@ -6,7 +7,7 @@ import ruamel.yaml
 from typer.testing import CliRunner
 
 from ops2deb.cli import app
-from ops2deb.lockfile import Lock
+from ops2deb.lockfile import LockFile
 from ops2deb.parser import load_configuration_file
 
 yaml = ruamel.yaml.YAML(typ="safe")
@@ -63,7 +64,7 @@ def call_ops2deb(
         *args,
         configurations: list[str],
     ):
-        runner = CliRunner()
+        runner = CliRunner(mix_stderr=False)
         for index, configuration in enumerate(configurations):
             configuration_paths[index].write_text(configuration)
         os.environ.update(
@@ -158,7 +159,7 @@ def test_generate__should_fail_when_downloaded_file_checksum_does_not_match_lock
 
     # Then
     assert result.exit_code == 77
-    assert "Wrong checksum for file wrong_checksum-app.tar.gz" in result.stdout
+    assert "Wrong checksum for file wrong_checksum-app.tar.gz" in result.stderr
 
 
 def test_generate__should_fail_gracefully_when_server_returns_a_404(call_ops2deb):
@@ -179,7 +180,7 @@ def test_generate__should_fail_gracefully_when_server_returns_a_404(call_ops2deb
         "Failed to download http://testserver/1.0.0/404.zip. "
         "Server responded with 404."
     )
-    assert expected_error in result.stdout
+    assert expected_error in result.stderr
     assert result.exit_code == 77
 
 
@@ -373,7 +374,7 @@ def test_generate__should_fail_gracefully_when_file_is_not_locked_in_lockfile_re
 
     # Then
     assert result.exit_code == 77
-    assert "Unknown hash for url http://testserver/1.0.0/super-app" in result.stdout
+    assert "Unknown hash for url http://testserver/1.0.0/super-app" in result.stderr
 
 
 def test_build__builds_debian_source_packages(tmp_path, call_ops2deb):
@@ -486,7 +487,7 @@ def test_update__adds_new_urls_to_lockfile_when_configuration_files_share_the_sa
 
     # Then
     assert result.exit_code == 0
-    lock = Lock(lockfile_path)
+    lock = LockFile(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
     sha256 = "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
@@ -514,10 +515,10 @@ def test_update__adds_new_url_to_lock_file_referenced_by_configuration_file(
 
     result = call_ops2deb("update", configurations=[configuration_1, configuration_2])
     assert result.exit_code == 0
-    lock_0 = Lock(lockfile_paths[0])
+    lock_0 = LockFile(lockfile_paths[0])
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert lock_0.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
-    lock_1 = Lock(lockfile_paths[1])
+    lock_1 = LockFile(lockfile_paths[1])
     sha256 = "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
     assert lock_1.sha256("http://testserver/1.1.1/super-app") == sha256
 
@@ -546,8 +547,8 @@ def test_update__adds_new_url_to_both_lock_files_when_two_configuration_files_wi
     result = call_ops2deb("update", configurations=[configuration_1, configuration_2])
 
     # Then
-    lock_0 = Lock(lockfile_paths[0])
-    lock_1 = Lock(lockfile_paths[1])
+    lock_0 = LockFile(lockfile_paths[0])
+    lock_1 = LockFile(lockfile_paths[1])
     assert result.exit_code == 0
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert lock_0.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
@@ -581,7 +582,7 @@ def test_update__appends_new_version_to_version_matrix_when_max_versions_is_not_
 
     # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
-    lock = Lock(lockfile_path)
+    lock = LockFile(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
     assert "Added great-app v1.1.1" in summary_path.read_text()
     assert "great-app can be bumped from 1.1.0 to 1.1.1" in result.stdout
@@ -759,7 +760,7 @@ def test_update__doesnt_stop_when_server_replies_with_a_500_for_one_url(
     # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     expected_error = "Server error when requesting http://testserver/1.1.0/500.zip"
-    assert expected_error in result.stdout
+    assert expected_error in result.stderr
     assert raw_blueprints[1]["version"] == "1.1.1"
     assert result.exit_code == 77
 
@@ -791,7 +792,7 @@ def test_update__doesnt_update_blueprint_when_fetch_fails_for_one_architecture(
 
     # Then
     expected_error = "Failed to download http://testserver/1.1.1/great-app-404.tar.gz."
-    assert expected_error in result.stdout
+    assert expected_error in result.stderr
     assert configuration_path.read_text() == configuration
     assert result.exit_code == 77
 
@@ -1094,6 +1095,7 @@ def test_lock__downloads_only_files_that_are_not_yet_locked(
 def test_lock__adds_missing_urls_in_lockfile_referenced_by_configuration_file(
     call_ops2deb, cache_path, lockfile_paths
 ):
+    # Given
     configuration_0 = """\
     # lockfile=ops2deb-0.lock.yml
     name: great-app
@@ -1111,25 +1113,98 @@ def test_lock__adds_missing_urls_in_lockfile_referenced_by_configuration_file(
     fetch: http://testserver/{{version}}/super-app
     """
 
+    # When
     result = call_ops2deb("lock", configurations=[configuration_0, configuration_1])
-    assert result.exit_code == 0
 
+    # Then
+    assert result.exit_code == 0
     lockfile_0 = lockfile_paths[0].read_text()
     assert "http://testserver/1.1.1/great-app.tar.gz" in lockfile_0
     assert "http://testserver/1.0.0/super-app" not in lockfile_0
-
     lockfile_1 = lockfile_paths[1].read_text()
     assert "http://testserver/1.0.0/super-app" in lockfile_1
     assert "http://testserver/1.1.1/great-app.tar.gz" not in lockfile_1
 
 
+def test_delta__outputs_rich_table_when_json_option_is_not_used(
+    call_ops2deb, cache_path, lockfile_paths
+):
+    # Given
+    configuration = """\
+    # lockfile=ops2deb-0.lock.yml
+    name: great-app
+    version: 1.1.1
+    summary: this file is not locked
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    expected_output_lines = [
+        "-  great-app   1.0.0-1~ops2deb   all  ",
+        "-  kube-score  1.12.0-1~ops2deb  amd64",
+        "-  super-app   1.0.0-1~ops2deb   all  ",
+        "+  great-app   1.1.1-1~ops2deb   amd64",
+        "",
+    ]
+
+    # When
+    result = call_ops2deb(
+        "delta", "-r", "http://deb.wakemeops.com stable", configurations=[configuration]
+    )
+
+    # Then
+    assert result.exit_code == 0
+    assert result.stdout.split("\n") == expected_output_lines
+
+
+def test_delta__outputs_a_json_when_json_option_is_used(
+    call_ops2deb, cache_path, lockfile_paths
+):
+    # Given
+    configuration = """\
+    # lockfile=ops2deb-0.lock.yml
+    name: great-app
+    version: 1.1.1
+    summary: this file is not locked
+    fetch: http://testserver/{{version}}/great-app.tar.gz
+    """
+
+    expected_output_dict = {
+        "added": [
+            {"architecture": "amd64", "name": "great-app", "version": "1.1.1-1~ops2deb"}
+        ],
+        "removed": [
+            {"architecture": "all", "name": "great-app", "version": "1.0.0-1~ops2deb"},
+            {
+                "architecture": "amd64",
+                "name": "kube-score",
+                "version": "1.12.0-1~ops2deb",
+            },
+            {"architecture": "all", "name": "super-app", "version": "1.0.0-1~ops2deb"},
+        ],
+    }
+
+    # When
+    result = call_ops2deb(
+        "delta",
+        "-r",
+        "http://deb.wakemeops.com stable",
+        "--json",
+        configurations=[configuration],
+    )
+
+    # Then
+    assert result.exit_code == 0
+    assert json.loads(result.stdout) == expected_output_dict
+
+
 @pytest.mark.parametrize(
-    "subcommand", ["update", "generate", "format", "validate", "lock"]
+    "subcommand", ["update", "generate", "format", "validate", "lock", "delta"]
 )
 def test_ops2deb__exits_with_error_code_when_configuration_file_has_invalid_yaml(
     call_ops2deb, subcommand, configuration_path
 ):
     # Given
+    os.environ["OPS2DEB_REPOSITORY"] = "http://deb.wakemeops.com stable"
     configuration = """\
     - name: awesome-metapackage
         version: 1.0.0
@@ -1139,17 +1214,18 @@ def test_ops2deb__exits_with_error_code_when_configuration_file_has_invalid_yaml
     result = call_ops2deb(subcommand, configurations=[configuration])
 
     # Then
-    assert f"Failed to parse {configuration_path}" in result.stdout
+    assert f"Failed to parse {configuration_path}" in result.stderr
     assert result.exit_code == 77
 
 
 @pytest.mark.parametrize(
-    "subcommand", ["update", "generate", "format", "validate", "lock"]
+    "subcommand", ["update", "generate", "format", "validate", "lock", "delta"]
 )
 def test_ops2deb__exits_with_error_code_when_configuration_file_has_validation_error(
     call_ops2deb, subcommand, configuration_path
 ):
     # Given
+    os.environ["OPS2DEB_REPOSITORY"] = "http://deb.wakemeops.com stable"
     configuration = """\
     - name: awesome-metapackage
     """
@@ -1158,5 +1234,5 @@ def test_ops2deb__exits_with_error_code_when_configuration_file_has_validation_e
     result = call_ops2deb(subcommand, configurations=[configuration])
 
     # Then
-    assert f"ailed to parse blueprint at index 0 in {configuration_path}" in result.stdout
+    assert f"ailed to parse blueprint at index 0 in {configuration_path}" in result.stderr
     assert result.exit_code == 77

@@ -7,10 +7,10 @@ from pathlib import Path
 from dirsync import sync
 
 from ops2deb import logger
-from ops2deb.apt import DebianRepositoryPackage, sync_list_repository_packages
+from ops2deb.apt import DebianRepositoryPackage, list_repository_packages
 from ops2deb.exceptions import Ops2debGeneratorError, Ops2debGeneratorScriptError
 from ops2deb.fetcher import Fetcher, FetchResult
-from ops2deb.parser import Blueprint, Configuration, HereDocument, SourceDestinationStr
+from ops2deb.parser import Blueprint, HereDocument, Resources, SourceDestinationStr
 from ops2deb.templates import environment
 from ops2deb.utils import working_directory
 
@@ -174,7 +174,7 @@ class SourcePackage:
 def filter_already_published_packages(
     packages: list[SourcePackage], debian_repository: str
 ) -> list[SourcePackage]:
-    already_published_packages = sync_list_repository_packages(debian_repository)
+    already_published_packages = list_repository_packages(debian_repository)
     filtered_packages: list[SourcePackage] = []
     for package in packages:
         if (
@@ -190,22 +190,22 @@ def filter_already_published_packages(
 
 
 def generate(
-    configuration: Configuration,
+    resources: Resources,
     fetcher: Fetcher,
     output_directory: Path,
     debian_repository: str | None = None,
     only_names: list[str] | None = None,
 ) -> list[SourcePackage]:
-    blueprints = configuration.blueprints
+    blueprints = resources.blueprints
     if only_names is not None:
-        blueprints = [b for b in configuration.blueprints if b.name in only_names]
+        blueprints = [b for b in resources.blueprints if b.name in only_names]
 
     # each blueprint can yield multiple source packages
     packages: list[SourcePackage] = []
     for blueprint in blueprints:
         for arch, version in product(blueprint.architectures(), blueprint.versions()):
             blueprint = blueprint.copy(update={"architecture": arch, "version": version})
-            configuration_file = configuration.get_blueprint_configuration_file(blueprint)
+            configuration_file = resources.get_blueprint_configuration_file(blueprint)
             configuration_directory = configuration_file.path.parent
             package = SourcePackage(blueprint, output_directory, configuration_directory)
             packages.append(package)
@@ -218,7 +218,7 @@ def generate(
     for package in packages:
         if (url := package.fetch_url) is None:
             continue
-        sha256 = configuration.get_blueprint_lock(package.blueprint).sha256(url)
+        sha256 = resources.get_blueprint_lock(package.blueprint).sha256(url)
         fetcher.add_task(url, data=package, sha256=sha256)
 
     results, failures = fetcher.run_tasks()
