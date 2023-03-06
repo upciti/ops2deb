@@ -27,7 +27,7 @@ def parse_debian_control(cwd: Path) -> dict[str, str]:
     return control
 
 
-async def build_package(cwd: Path) -> None:
+async def build_source_package(cwd: Path) -> None:
     """Run dpkg-buildpackage in specified path."""
     args = ["-us", "-uc"]
     arch = parse_debian_control(cwd)["Architecture"]
@@ -56,7 +56,7 @@ async def build_package(cwd: Path) -> None:
         logger.info(f"Successfully built {str(cwd)}")
 
 
-def build(package_paths: list[Path], workers: int) -> None:
+def build_source_packages(package_paths: list[Path], workers: int) -> None:
     """
     Build debian source packages in parallel.
     :param package_paths: list of debian source package paths
@@ -67,7 +67,7 @@ def build(package_paths: list[Path], workers: int) -> None:
 
     async def _build_package(sem: asyncio.Semaphore, _path: Path) -> None:
         async with sem:  # semaphore limits num of simultaneous builds
-            await build_package(_path)
+            await build_source_package(_path)
 
     async def _build_packages() -> Any:
         sem = asyncio.Semaphore(workers)
@@ -81,7 +81,7 @@ def build(package_paths: list[Path], workers: int) -> None:
         raise Ops2debBuilderError(f"{len(errors)} failures occurred")
 
 
-def build_all(output_directory: Path, workers: int) -> None:
+def find_and_build_source_packages(output_directory: Path, workers: int) -> None:
     """
     Build debian source packages in parallel.
     :param output_directory: path where to search for source packages
@@ -97,4 +97,4 @@ def build_all(output_directory: Path, workers: int) -> None:
     for output_directory in output_directory.iterdir():
         if output_directory.is_dir() and (output_directory / "debian/control").is_file():
             paths.append(output_directory)
-    build(paths, workers)
+    build_source_packages(paths, workers)

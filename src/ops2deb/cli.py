@@ -6,12 +6,18 @@ from typing import Any, List, NoReturn, Optional
 
 import click
 import typer
+from rich.console import Console
+from rich.table import Table
 from typer.core import TyperGroup
 
-from ops2deb import __version__, builder, formatter, generator, logger, updater
+from ops2deb import __version__, generator, logger, updater
+from ops2deb.apt import list_repository_packages
+from ops2deb.builder import build_source_packages, find_and_build_source_packages
+from ops2deb.delta import StateDelta, compute_state_delta
 from ops2deb.exceptions import Ops2debError
 from ops2deb.fetcher import DEFAULT_CACHE_DIRECTORY, Fetcher
-from ops2deb.parser import load_configuration
+from ops2deb.formatter import format_all
+from ops2deb.parser import Resources, load_resources
 
 
 class DefaultCommandGroup(TyperGroup):
@@ -51,12 +57,6 @@ def validate_exit_code(exit_code: int) -> int:
     return exit_code
 
 
-def error(exception: Exception, exit_code: int) -> NoReturn:
-    logger.error(str(exception))
-    logger.debug(traceback.format_exc())
-    sys.exit(exit_code)
-
-
 option_verbose: bool = typer.Option(
     False,
     "--verbose",
@@ -75,7 +75,7 @@ option_exit_code: int = typer.Option(
     callback=validate_exit_code,
 )
 
-option_search_glob: str = typer.Option(
+option_configurations_search_pattern: str = typer.Option(
     "./**/ops2deb.yml",
     "--config",
     "-c",
@@ -127,11 +127,34 @@ option_workers_count: int = typer.Option(
 app = typer.Typer(cls=DefaultCommandGroup)
 
 
+def error(exception: Exception, exit_code: int) -> NoReturn:
+    logger.error(str(exception))
+    logger.debug(traceback.format_exc())
+    sys.exit(exit_code)
+
+
+def print_loaded_resources(resources: Resources) -> None:
+    logger.title(
+        f"Loaded {len(resources.configuration_files)} configuration file(s) and "
+        f"{len(resources.blueprints)} blueprint(s)"
+    )
+
+
+def print_state_delta_as_rich_table(state_delta: StateDelta) -> None:
+    table = Table(box=None, pad_edge=False, show_header=False)
+    for package in state_delta.removed:
+        table.add_row("[red]-[/]", package.name, package.version, package.architecture)
+    for package in state_delta.added:
+        table.add_row("[green]+[/]", package.name, package.version, package.architecture)
+    console = Console()
+    console.print(table)
+
+
 @app.command(help="Generate and build source packages.")
 def default(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glob: str = option_search_glob,
+    configurations_search_pattern: str = option_configurations_search_pattern,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
     debian_repository: Optional[str] = option_debian_repository,
@@ -139,35 +162,37 @@ def default(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        configuration = load_configuration(search_glob)
+        resources = load_resources(configurations_search_pattern)
+        print_loaded_resources(resources)
         fetcher = Fetcher(cache_directory)
         packages = generator.generate(
-            configuration,
+            resources,
             fetcher,
             output_directory,
             debian_repository,
             only or None,
         )
-        builder.build([p.package_directory for p in packages], workers_count)
+        build_source_packages([p.package_directory for p in packages], workers_count)
     except Ops2debError as e:
         error(e, exit_code)
 
 
-@app.command(help="Generate debian source packages from configuration file.")
+@app.command(help="Generate debian source packages from configuration files.")
 def generate(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glob: str = option_search_glob,
+    configurations_search_pattern: str = option_configurations_search_pattern,
     output_directory: Path = option_output_directory,
     cache_directory: Path = option_cache_directory,
     debian_repository: Optional[str] = option_debian_repository,
     only: Optional[List[str]] = option_only,
 ) -> None:
     try:
-        configuration = load_configuration(search_glob)
+        resources = load_resources(configurations_search_pattern)
+        print_loaded_resources(resources)
         fetcher = Fetcher(cache_directory)
         generator.generate(
-            configuration,
+            resources,
             fetcher,
             output_directory,
             debian_repository,
@@ -185,7 +210,7 @@ def build(
     workers_count: int = option_workers_count,
 ) -> None:
     try:
-        builder.build_all(output_directory, workers_count)
+        find_and_build_source_packages(output_directory, workers_count)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -195,11 +220,11 @@ def purge(cache_directory: Path = option_cache_directory) -> None:
     shutil.rmtree(cache_directory, ignore_errors=True)
 
 
-@app.command(help="Look for new application releases and edit configuration file.")
+@app.command(help="Look for new application releases and edit configuration files.")
 def update(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glob: str = option_search_glob,
+    configurations_search_pattern: str = option_configurations_search_pattern,
     cache_directory: Path = option_cache_directory,
     dry_run: bool = typer.Option(
         False, "--dry-run", "-d", help="Don't edit config file."
@@ -223,10 +248,11 @@ def update(
     ),
 ) -> None:
     try:
-        configuration = load_configuration(search_glob)
+        resources = load_resources(configurations_search_pattern)
+        print_loaded_resources(resources)
         fetcher = Fetcher(cache_directory)
         updater.update(
-            configuration,
+            resources,
             fetcher,
             dry_run,
             output_path,
@@ -238,26 +264,28 @@ def update(
         error(e, exit_code)
 
 
-@app.command(help="Validate configuration file.")
+@app.command(help="Validate configuration files.")
 def validate(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glob: str = option_search_glob,
+    configurations_search_pattern: str = option_configurations_search_pattern,
 ) -> None:
     try:
-        load_configuration(search_glob)
+        load_resources(configurations_search_pattern)
     except Ops2debError as e:
         error(e, exit_code)
 
 
-@app.command(help="Format configuration file.")
+@app.command(help="Format configuration files.")
 def format(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glob: str = option_search_glob,
+    configurations_search_pattern: str = option_configurations_search_pattern,
 ) -> None:
     try:
-        formatter.format_all(search_glob)
+        resources = load_resources(configurations_search_pattern)
+        print_loaded_resources(resources)
+        format_all(resources)
     except Ops2debError as e:
         error(e, exit_code)
 
@@ -267,24 +295,50 @@ def version() -> None:
     logger.info(__version__)
 
 
-@app.command(help="Update lockfile.")
+@app.command(help="Update lock files.")
 def lock(
     verbose: bool = option_verbose,
     exit_code: int = option_exit_code,
-    search_glob: str = option_search_glob,
+    configurations_search_pattern: str = option_configurations_search_pattern,
     cache_directory: Path = option_cache_directory,
 ) -> None:
     try:
         fetcher = Fetcher(cache_directory)
-        configuration = load_configuration(search_glob)
-        for blueprint in configuration.blueprints:
-            lock_file = configuration.get_blueprint_lock(blueprint)
+        resources = load_resources(configurations_search_pattern)
+        print_loaded_resources(resources)
+        for blueprint in resources.blueprints:
+            lock_file = resources.get_blueprint_lock(blueprint)
             for url in blueprint.render_fetch_urls():
                 if url not in lock_file:
                     fetcher.add_task(url, data=lock_file)
         for result in fetcher.run_tasks()[0]:
             result.task_data.add([result])
-        configuration.save()
+        resources.save()
+    except Ops2debError as e:
+        error(e, exit_code)
+
+
+@app.command(help="Output state drift configuration files and debian repository")
+def delta(
+    verbose: bool = option_verbose,
+    exit_code: int = option_exit_code,
+    debian_repository: Optional[str] = option_debian_repository,
+    configurations_search_pattern: str = option_configurations_search_pattern,
+    output_as_json: bool = typer.Option(
+        False, "--json", help="Output state delta as a JSON"
+    ),
+) -> None:
+    if debian_repository is None:
+        logger.error("Missing command line option --repository")
+        sys.exit(exit_code)
+    try:
+        resources = load_resources(configurations_search_pattern)
+        packages = list_repository_packages(debian_repository)
+        state_delta = compute_state_delta(packages, resources.blueprints)
+        if output_as_json:
+            print(state_delta.json(sort_keys=True, indent=2))
+        else:
+            print_state_delta_as_rich_table(state_delta)
     except Ops2debError as e:
         error(e, exit_code)
 

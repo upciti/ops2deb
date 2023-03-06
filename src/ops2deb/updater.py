@@ -12,7 +12,7 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
 from ops2deb.fetcher import Fetcher
-from ops2deb.parser import Blueprint, Configuration
+from ops2deb.parser import Blueprint, Resources
 
 
 class BaseUpdateStrategy:
@@ -209,12 +209,12 @@ async def _find_latest_versions(
 
 
 def find_latest_releases(
-    configuration: Configuration,
+    resources: Resources,
     fetcher: Fetcher,
     skip_names: list[str] | None,
     only_names: list[str] | None,
 ) -> Tuple[list[LatestRelease], list[Ops2debError]]:
-    blueprints = [b for b in configuration.blueprints if b.fetch is not None]
+    blueprints = [b for b in resources.blueprints if b.fetch is not None]
     if skip_names:
         blueprints = [b for b in blueprints if b.name not in skip_names]
     if only_names:
@@ -246,18 +246,18 @@ def find_latest_releases(
     # add new urls to lock file
     for result in results:
         if (a_release := releases_by_id.get(result.task_data)) is not None:
-            lock = configuration.get_blueprint_lock(a_release.blueprint)
+            lock = resources.get_blueprint_lock(a_release.blueprint)
             lock.add([result])
 
     return releases, list([failure.error for failure in failures]) + list(errors)
 
 
 def _update_configuration(
-    configuration: Configuration,
+    resources: Resources,
     release: LatestRelease,
     max_versions: int,
 ) -> list[str]:
-    raw_blueprint = configuration.get_raw_blueprint(release.blueprint)
+    raw_blueprint = resources.get_raw_blueprint(release.blueprint)
 
     removed_versions: list[str] = []
     if max_versions == 1:
@@ -290,7 +290,7 @@ def _update_configuration(
 
 
 def _update_lockfile(
-    configuration: Configuration, release: LatestRelease, removed_versions: list[str]
+    configuration: Resources, release: LatestRelease, removed_versions: list[str]
 ) -> None:
     blueprint = release.blueprint
     lock = configuration.get_blueprint_lock(blueprint)
@@ -300,7 +300,7 @@ def _update_lockfile(
 
 
 def update(
-    configuration: Configuration,
+    resources: Resources,
     fetcher: Fetcher,
     dry_run: bool = False,
     output_path: Path | None = None,
@@ -309,14 +309,12 @@ def update(
     max_versions: int = 1,
 ) -> None:
     logger.title("Looking for new releases...")
-    releases, errors = find_latest_releases(
-        configuration, fetcher, skip_names, only_names
-    )
+    releases, errors = find_latest_releases(resources, fetcher, skip_names, only_names)
 
     summary: list[str] = []
 
     for release in releases:
-        removed_versions = _update_configuration(configuration, release, max_versions)
+        removed_versions = _update_configuration(resources, release, max_versions)
         if max_versions == 1:
             line = (
                 f"Updated {release.blueprint.name} from "
@@ -326,14 +324,14 @@ def update(
             line = f"Added {release.blueprint.name} v{release.version}"
             if removed_versions:
                 line += f" and removed {', '.join([f'v{v}' for v in removed_versions])}"
-        _update_lockfile(configuration, release, removed_versions)
+        _update_lockfile(resources, release, removed_versions)
         summary.append(line)
 
     if not releases:
         logger.info("Did not found any updates")
     else:
         if dry_run is False:
-            configuration.save()
+            resources.save()
             logger.info("Lockfile and configuration updated")
 
     if output_path is not None:

@@ -14,15 +14,15 @@ def info(message: str) -> None:
 
 def debug(message: str) -> None:
     if _debug is True:
-        secho(message, fg=colors.BRIGHT_BLACK)
+        secho(message, fg=colors.BRIGHT_BLACK, err=True)
 
 
 def warning(message: str) -> None:
-    secho(message, fg=colors.YELLOW)
+    secho(message, fg=colors.YELLOW, err=True)
 
 
 def error(message: str) -> None:
-    secho(message, fg=colors.RED)
+    secho(message, fg=colors.RED, err=True)
 
 
 def title(message: str) -> None:

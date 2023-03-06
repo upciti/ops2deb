@@ -21,7 +21,7 @@ class LockEntry(BaseModel):
     timestamp: datetime
 
 
-class LockFile(BaseModel):
+class LockFileModel(BaseModel):
     __root__: list[LockEntry]
 
 
@@ -29,7 +29,7 @@ def get_iso_utc_datetime() -> datetime:
     return datetime.now(tz=timezone.utc).replace(microsecond=0)
 
 
-class Lock:
+class LockFile:
     def __init__(self, lockfile_path: Path) -> None:
         self.lock_file_path = lockfile_path
         self._entries: dict[str, LockEntry] = {}
@@ -39,7 +39,7 @@ class Lock:
             if lockfile_path.exists() is True:
                 with lockfile_path.open("r") as reader:
                     raw_lockfile = yaml.load(reader, yaml.SafeLoader)
-                lockfile = LockFile.parse_obj(raw_lockfile).__root__
+                lockfile = LockFileModel.parse_obj(raw_lockfile).__root__
                 self._entries.update({entry.url: entry for entry in lockfile})
         except yaml.YAMLError as e:
             raise Ops2debLockFileError(f"Invalid YAML file.\n{e}")

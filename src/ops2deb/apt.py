@@ -17,7 +17,7 @@ class DebianRepository(BaseModel):
     distribution: str = Field(..., regex=r"[a-zA-Z0-9]+")
 
 
-@dataclass
+@dataclass(frozen=True, order=True)
 class DebianRepositoryPackage:
     name: str
     version: str
@@ -69,7 +69,7 @@ def _parse_debian_repository_option(debian_repository: str) -> DebianRepository:
         raise Ops2debAptError(str(e))
 
 
-async def list_repository_packages(
+async def _list_repository_packages(
     debian_repository: str,
 ) -> list[DebianRepositoryPackage]:
     repository = _parse_debian_repository_option(debian_repository)
@@ -77,7 +77,7 @@ async def list_repository_packages(
         release = await _download_repository_release_file(client, repository.distribution)
         architectures = release["Architectures"].split(" ")
         components = release["Components"].split(" ")
-        logger.info(
+        logger.debug(
             f"Repository {repository.url} {repository.distribution} has architectures "
             f"{architectures} and components {components}"
         )
@@ -93,8 +93,8 @@ async def list_repository_packages(
     return list(chain(*results))
 
 
-def sync_list_repository_packages(
+def list_repository_packages(
     debian_repository: str,
 ) -> list[DebianRepositoryPackage]:
     """Example: "http://deb.wakemeops.com/ stable" """
-    return asyncio.run(list_repository_packages(debian_repository))
+    return asyncio.run(_list_repository_packages(debian_repository))
