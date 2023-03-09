@@ -52,7 +52,7 @@ types-PyYAML = "*"
 pytest-asyncio = ">=0.18.0"
 poetry-dynamic-versioning = ">=0.13.0"
 fastapi = "*"
-ruff = "^0.0.253"
+ruff = "^0.0.254"
 
 [tool.taskipy.tasks]
 check = """
@@ -114,4 +114,4 @@ src = ["src", "tests"]
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
-"src/ops2deb/templates.py" = ["E501"]
+"src/ops2deb/templates.py" = ["E501", "W191"]
