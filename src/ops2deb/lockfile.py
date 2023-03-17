@@ -25,7 +25,7 @@ class LockFileModel(BaseModel):
     __root__: list[LockEntry]
 
 
-def get_iso_utc_datetime() -> datetime:
+def get_utc_datetime() -> datetime:
     return datetime.now(tz=timezone.utc).replace(microsecond=0)
 
 
@@ -70,7 +70,7 @@ class LockFile:
                 self._entries[url] = LockEntry(
                     url=str(entry.url),
                     sha256=entry.sha256,
-                    timestamp=get_iso_utc_datetime(),
+                    timestamp=get_utc_datetime(),
                 )
                 self._new_urls.add(url)
                 self._tainted = True
@@ -86,7 +86,7 @@ class LockFile:
 
         # make sure all added urls since lock was created have the same timestamp
         # and make sure this timestamp is when save() was called
-        now = get_iso_utc_datetime()
+        now = get_utc_datetime()
         for new_url in self._new_urls:
             if (entry := self._entries.get(new_url, None)) is not None:
                 entry.timestamp = now
