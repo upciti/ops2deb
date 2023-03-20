@@ -93,7 +93,7 @@ class LockFile:
 
         # sort lockfile entries by urls
         entries = [entry.dict() for entry in self._entries.values()]
-        sorted_entries = sorted(entries, key=itemgetter("url"))
+        sorted_entries = sorted(entries, key=itemgetter("timestamp", "url"))
 
         with self.lock_file_path.open("w") as output:
             yaml.dump(

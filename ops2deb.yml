@@ -5,8 +5,8 @@
       - armhf
       - arm64
     versions:
-      - 3.9.0
       - 3.10.3
+      - 3.11.2
   homepage: https://helm.sh/
   summary: The Kubernetes package manager
   description: |-
@@ -41,7 +41,10 @@
     - install -m 755 helmfile_linux_* {{src}}/usr/bin/helmfile
 
 - name: istioctl
-  version: 1.16.1
+  matrix:
+    versions:
+      - 1.16.1
+      - 1.17.1
   homepage: https://istio.io/
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
@@ -54,7 +57,10 @@
     - ln -s /opt/istio/istio-{{version}}/bin/istioctl {{src}}/usr/bin/istioctl
 
 - name: kubectl
-  version: 1.26.0
+  matrix:
+    versions:
+      - 1.26.0
+      - 1.26.3
   homepage: https://github.com/kubernetes/kubectl
   summary: Command line client for controlling a Kubernetes cluster
   description: |-
@@ -65,7 +71,10 @@
     - kubectl:/usr/bin/
 
 - name: kubeseal
-  version: 0.19.3
+  matrix:
+    versions:
+      - 0.19.3
+      - 0.20.1
   homepage: https://github.com/bitnami-labs/sealed-secrets
   summary: Secret management solution for k8s
   description: |-
@@ -76,7 +85,10 @@
     - kubeseal:/usr/bin/kubeseal
 
 - name: kustomize
-  version: 5.0.0
+  matrix:
+    versions:
+      - 5.0.0
+      - 5.0.1
   homepage: https://kustomize.io/
   summary: Kubernetes native configuration management
   description: |-
@@ -92,7 +104,10 @@
     - kustomize:/usr/bin/
 
 - name: minikube
-  version: 1.28.0
+  matrix:
+    versions:
+      - 1.28.0
+      - 1.29.0
   homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
   description: |-
@@ -109,7 +124,10 @@
     - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
-  version: 0.36.1
+  matrix:
+    versions:
+      - 0.36.1
+      - 2.2.1
   homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-

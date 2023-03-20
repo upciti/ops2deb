@@ -7,24 +7,12 @@
 - url: https://get.helm.sh/helm-v3.10.3-linux-arm64.tar.gz
   sha256: 260cda5ff2ed5d01dd0fd6e7e09bc80126e00d8bdc55f3269d05129e32f6f99d
   timestamp: 2023-03-03 22:48:12+00:00
-- url: https://get.helm.sh/helm-v3.9.0-linux-amd64.tar.gz
-  sha256: 1484ffb0c7a608d8069470f48b88d729e88c41a1b6602f145231e8ea7b43b50a
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://get.helm.sh/helm-v3.9.0-linux-arm.tar.gz
-  sha256: bcdc6c68dacfabeeb6963dc2e6761e2e87026ffd9ea1cde266ee36841e7c6e6a
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://get.helm.sh/helm-v3.9.0-linux-arm64.tar.gz
-  sha256: 5c0aa709c5aaeedd190907d70f9012052c1eea7dff94bffe941b879a33873947
-  timestamp: 2023-03-03 22:48:12+00:00
 - url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.3/kubeseal-0.19.3-linux-amd64.tar.gz
   sha256: f6c420d38f84008deffd040f0bbc527b08c2b70bdb373ab4e0598f64510af566
   timestamp: 2023-03-03 22:48:12+00:00
 - url: https://github.com/istio/istio/releases/download/1.16.1/istio-1.16.1-linux-amd64.tar.gz
   sha256: e5f6efc11c5dde58592478e1976b3c8e7bb9993cf22c57ac8a63003288baafdf
   timestamp: 2023-03-03 22:48:12+00:00
-- url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.0.0/kustomize_v5.0.0_linux_amd64.tar.gz
-  sha256: 2e8c28a80ce213528251f489db8d2dcbea7c63b986c8f7595a39fc76ff871cd7
-  timestamp: 2023-03-03 22:49:02+00:00
 - url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v4.5.7/kustomize_v4.5.7_linux_amd64.tar.gz
   sha256: 701e3c4bfa14e4c520d481fdf7131f902531bfc002cb5062dcf31263a09c70c9
   timestamp: 2023-03-03 22:48:12+00:00
@@ -43,3 +31,33 @@
 - url: https://storage.googleapis.com/minikube/releases/v1.28.0/minikube-linux-amd64
   sha256: 58cead5ece9815a61d4be253a07b2385f8cf373d9e1eba5c9783444e4e9e2d8e
   timestamp: 2023-03-03 22:48:12+00:00
+- url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.0.0/kustomize_v5.0.0_linux_amd64.tar.gz
+  sha256: 2e8c28a80ce213528251f489db8d2dcbea7c63b986c8f7595a39fc76ff871cd7
+  timestamp: 2023-03-03 22:49:02+00:00
+- url: https://get.helm.sh/helm-v3.11.2-linux-amd64.tar.gz
+  sha256: 781d826daec584f9d50a01f0f7dadfd25a3312217a14aa2fbb85107b014ac8ca
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://get.helm.sh/helm-v3.11.2-linux-arm.tar.gz
+  sha256: 444b65100e224beee0a3a3a54cb19dad37388fa9217ab2782ba63551c4a2e128
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://get.helm.sh/helm-v3.11.2-linux-arm64.tar.gz
+  sha256: 0a60baac83c3106017666864e664f52a4e16fbd578ac009f9a85456a9241c5db
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.20.1/kubeseal-0.20.1-linux-amd64.tar.gz
+  sha256: b06f77aafddec9b573fdecec6b373d5be2f577d350e456ff55e599f5dd16a3df
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://github.com/istio/istio/releases/download/1.17.1/istio-1.17.1-linux-amd64.tar.gz
+  sha256: 69e9d29aba94d5cbb713e02f20e4c686a23cb6f9c2bcd1369d7e9ed579b4d7b9
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.0.1/kustomize_v5.0.1_linux_amd64.tar.gz
+  sha256: dca623b36aef84fbdf28f79d02e9b3705ff641424ac1f872d5420dadb12fb78d
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://github.com/upciti/ops2deb/releases/download/2.2.1/ops2deb_linux_amd64
+  sha256: a1627d92517ce896c8d570d2a3d5a54ca8275249a6b9fb8311f44a7a92cf8a0c
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://storage.googleapis.com/kubernetes-release/release/v1.26.3/bin/linux/amd64/kubectl
+  sha256: 026c8412d373064ab0359ed0d1a25c975e9ce803a093d76c8b30c5996ad73e75
+  timestamp: 2023-03-20 14:00:14+00:00
+- url: https://storage.googleapis.com/minikube/releases/v1.29.0/minikube-linux-amd64
+  sha256: aafb65cbee8e971ec00509fdb1817254b17d6bee4890b839c3b6e8f11e97413a
+  timestamp: 2023-03-20 14:00:14+00:00
