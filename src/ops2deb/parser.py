@@ -200,9 +200,13 @@ class Blueprint(Base):
         url = self.fetch if isinstance(self.fetch, str) else self.fetch.url
         return self.render_string(url, version=version, architecture=architecture)
 
-    def render_fetch_urls(self) -> list[str]:
+    def render_fetch_urls(
+        self, version: str | None = None, architecture: str | None = None
+    ) -> list[str]:
         urls = []
-        for architecture, version in product(self.architectures(), self.versions()):
+        architectures = [architecture] if architecture else self.architectures()
+        versions = [version] if version else self.versions()
+        for architecture, version in product(architectures, versions):
             if url := self.render_fetch_url(version=version, architecture=architecture):
                 urls.append(url)
         return urls
@@ -224,10 +228,7 @@ class ConfigurationFile:
     yaml: YAML
     raw_blueprints: list[OrderedDict[str, Any]]
     blueprints: list[Blueprint]
-
-    def save(self) -> None:
-        with self.path.open("w") as output:
-            self.yaml.dump(self.content, output)
+    tainted: bool = False
 
 
 def get_default_lockfile_path(configuration_path: Path) -> Path:
@@ -280,6 +281,13 @@ def load_configuration_file(configuration_path: Path) -> ConfigurationFile:
     )
 
 
+def save_configuration_file(configuration_file: ConfigurationFile) -> None:
+    if configuration_file.tainted is False:
+        return
+    with configuration_file.path.open("w") as output:
+        configuration_file.yaml.dump(configuration_file.content, output)
+
+
 def load_configuration_files(
     configurations_search_pattern: str,
 ) -> list[ConfigurationFile]:
@@ -322,11 +330,12 @@ class Resources:
     def get_raw_blueprint(self, blueprint: Blueprint) -> OrderedDict[str, Any]:
         metadata = self.metadatas[blueprint.uid]
         configuration_file = metadata.configuration_file
+        configuration_file.tainted = True
         return configuration_file.raw_blueprints[blueprint.index]
 
     def save(self) -> None:
         for configuration in self.configuration_files:
-            configuration.save()
+            save_configuration_file(configuration)
         for lock in self.lock_files:
             lock.save()
 

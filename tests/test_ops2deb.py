@@ -584,7 +584,7 @@ def test_update__appends_new_version_to_version_matrix_when_max_versions_is_not_
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     lock = LockFile(lockfile_path)
     sha256 = "f1be6dd36b503641d633765655e81cdae1ff8f7f73a2582b7468adceb5e212a9"
-    assert "Added great-app v1.1.1" in summary_path.read_text()
+    assert "Add great-app v1.1.1" in summary_path.read_text()
     assert "great-app can be bumped from 1.1.0 to 1.1.1" in result.stdout
     assert raw_blueprints[0]["matrix"]["versions"] == ["1.0.0", "1.0.1", "1.1.0", "1.1.1"]
     assert lock.sha256("http://testserver/1.1.1/great-app.tar.gz") == sha256
@@ -619,7 +619,8 @@ def test_update__adds_new_version_and_remove_old_versions_when_max_versions_is_r
     # Then
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     assert raw_blueprints[0]["matrix"]["versions"] == ["1.1.0", "1.1.1"]
-    assert "Added great-app v1.1.1 and removed v1.0.0, v1.0.1" in summary_path.read_text()
+    assert "Add great-app v1.1.1" in summary_path.read_text()
+    assert "Remove great-app v1.0.0\nRemove great-app v1.0.1" in summary_path.read_text()
     assert "http://testserver/1.0.0/great-app.tar.gz" not in lockfile_path.read_text()
     assert "http://testserver/1.0.1/great-app.tar.gz" not in lockfile_path.read_text()
     assert "http://testserver/1.1.0/great-app.tar.gz" in lockfile_path.read_text()
@@ -652,7 +653,7 @@ def test_update__replaces_version_with_versions_matrix_when_max_versions_is_supe
     raw_blueprints = load_configuration_file(configuration_path).raw_blueprints
     assert result.exit_code == 0
     assert raw_blueprints[0]["matrix"]["versions"] == ["1.0.0", "1.1.1"]
-    assert "Added great-app v1.1.1" in summary_path.read_text()
+    assert "Add great-app v1.1.1" in summary_path.read_text()
     assert "http://testserver/1.0.0/great-app.tar.gz" in lockfile_path.read_text()
     assert "http://testserver/1.1.1/great-app.tar.gz" in lockfile_path.read_text()
 
@@ -686,8 +687,8 @@ def test_update__creates_a_summary_of_updated_blueprints_when_called_with_output
     # Then
     summary_lines_set = {
         "",
-        "Updated great-app from 1.0.0 to 1.1.1",
-        "Updated super-app from 1.0.0 to 1.1.1",
+        "Update great-app from v1.0.0 to v1.1.1",
+        "Update super-app from v1.0.0 to v1.1.1",
     }
     assert set(summary_path.read_text().split("\n")) == summary_lines_set
 

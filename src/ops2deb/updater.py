@@ -185,13 +185,6 @@ async def _find_latest_version(
     raise Ops2debUpdaterError(error)
 
 
-def _blueprint_fetch_urls(blueprint: Blueprint, version: str | None = None) -> list[str]:
-    urls: list[str] = []
-    for architecture in blueprint.architectures():
-        urls.append(str(blueprint.render_fetch_url(version, architecture)))
-    return urls
-
-
 async def _find_latest_versions(
     blueprints: list[Blueprint],
 ) -> tuple[list[LatestRelease], list[Ops2debError]]:
@@ -234,7 +227,7 @@ def find_latest_releases(
     releases_by_id: dict[int, LatestRelease] = {}
     for i, release in enumerate(releases):
         releases_by_id[i] = release
-        for url in _blueprint_fetch_urls(release.blueprint, release.version):
+        for url in release.blueprint.render_fetch_urls(release.version):
             fetcher.add_task(url, data=i)
     results, failures = fetcher.run_tasks()
 
@@ -289,14 +282,35 @@ def _update_configuration(
     return removed_versions
 
 
-def _update_lockfile(
+def _remove_versions_from_lockfile(
     configuration: Resources, release: LatestRelease, removed_versions: list[str]
 ) -> None:
     blueprint = release.blueprint
     lock = configuration.get_blueprint_lock(blueprint)
     for version in removed_versions:
-        lock.remove(_blueprint_fetch_urls(blueprint, version))
-    _blueprint_fetch_urls(blueprint, release.version)
+        lock.remove(blueprint.render_fetch_urls(version))
+
+
+def _update_configurations(
+    resources: Resources, max_versions: int, releases: list[LatestRelease]
+) -> list[str]:
+    summary: list[str] = []
+
+    for release in releases:
+        removed_versions = _update_configuration(resources, release, max_versions)
+        if max_versions == 1:
+            lines = [
+                f"Update {release.blueprint.name} from "
+                f"v{release.blueprint.version} to v{release.version}"
+            ]
+        else:
+            lines = [f"Add {release.blueprint.name} v{release.version}"]
+            for version in removed_versions:
+                lines.append(f"Remove {release.blueprint.name} v{version}")
+        _remove_versions_from_lockfile(resources, release, removed_versions)
+        summary.extend(lines)
+
+    return summary
 
 
 def update(
@@ -311,21 +325,7 @@ def update(
     logger.title("Looking for new releases...")
     releases, errors = find_latest_releases(resources, fetcher, skip_names, only_names)
 
-    summary: list[str] = []
-
-    for release in releases:
-        removed_versions = _update_configuration(resources, release, max_versions)
-        if max_versions == 1:
-            line = (
-                f"Updated {release.blueprint.name} from "
-                f"{release.blueprint.version} to {release.version}"
-            )
-        else:
-            line = f"Added {release.blueprint.name} v{release.version}"
-            if removed_versions:
-                line += f" and removed {', '.join([f'v{v}' for v in removed_versions])}"
-        _update_lockfile(resources, release, removed_versions)
-        summary.append(line)
+    summary = _update_configurations(resources, max_versions, releases)
 
     if not releases:
         logger.info("Did not found any updates")
