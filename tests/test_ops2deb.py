@@ -66,7 +66,7 @@ def call_ops2deb(
     ):
         runner = CliRunner(mix_stderr=False)
         for index, configuration in enumerate(configurations):
-            configuration_paths[index].write_text(configuration)
+            configuration_paths[index].write_text(dedent(configuration))
         os.environ.update(
             {
                 "OPS2DEB_VERBOSE": "1",
@@ -794,7 +794,7 @@ def test_update__doesnt_update_blueprint_when_fetch_fails_for_one_architecture(
     # Then
     expected_error = "Failed to download http://testserver/1.1.1/great-app-404.tar.gz."
     assert expected_error in result.stderr
-    assert configuration_path.read_text() == configuration
+    assert configuration_path.read_text() == dedent(configuration)
     assert result.exit_code == 77
 
 
@@ -828,8 +828,8 @@ def test_update__skips_blueprints_when_skip_option_is_used(
 
     # Then
     assert result.exit_code == 0
-    assert configuration_paths[0].read_text() == configuration_0
-    assert configuration_paths[1].read_text() == configuration_1
+    assert configuration_paths[0].read_text() == dedent(configuration_0)
+    assert configuration_paths[1].read_text() == dedent(configuration_1)
 
 
 def test_update___updates_only_blueprints_listed_with_only_option(
@@ -867,17 +867,17 @@ def test_update__should_not_produce_configuration_files_that_dont_pass_format_co
     call_ops2deb,
 ):
     # Given
-    configuration = """
+    configuration = """\
     name: great-app
     matrix:
       versions:
-      - 1.0.0
-      - 1.0.1
-      - 1.1.0
+        - 1.0.0
+        - 1.0.1
+        - 1.1.0
     summary: great package
     fetch: http://testserver/{{version}}/great-app.tar.gz
     script:
-    - mv great-app {{src}}/usr/bin/great-app
+      - mv great-app {{src}}/usr/bin/great-app
     """
 
     # When
