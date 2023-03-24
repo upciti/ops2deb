@@ -181,7 +181,7 @@ The blueprint above will generate three packages: `helm_3.7.2-1~ops2deb_armhf.de
 
 Note the use of the `{{goarch}}` variable which maps debian architectures to sensible go architectures.
 
-You can also define your own architure maps using the `fetch.targets` field and the `{{target}}` jinja variable:
+You can also define your own architecture maps using the `fetch.targets` field and the `{{target}}` jinja variable:
 
 ```yaml
 name: bottom
@@ -244,7 +244,7 @@ Written in YAML and composed of a single blueprint object or a list of blueprint
 | `conflicts`    | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                  | `[]`    |
 | `fetch`        | A file to download. `tar.gz`, `tar.xz`, `tar`, `zip` and `deb` archives are extracted automatically. | `None`  |
 | `install`      | List of here-documents and files/directories to add to the debian package.                           | `[]`    |
-| `script`       | List of build instructions templated with jinja2 and intepreted with the default `shell`.            | `[]`    |
+| `script`       | List of build instructions templated with jinja2 and interpreted with the default `shell`.            | `[]`    |
 
 ## Development
 
