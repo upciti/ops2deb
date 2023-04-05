@@ -1154,7 +1154,7 @@ def test_delta__outputs_rich_table_when_json_option_is_not_used(
 
     # Then
     assert result.exit_code == 0
-    assert result.stdout.split("\n") == expected_output_lines
+    assert result.stderr.split("\n")[3:] == expected_output_lines
 
 
 def test_delta__outputs_a_json_when_json_option_is_used(

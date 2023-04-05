@@ -146,7 +146,7 @@ def print_state_delta_as_rich_table(state_delta: StateDelta) -> None:
         table.add_row("[red]-[/]", package.name, package.version, package.architecture)
     for package in state_delta.added:
         table.add_row("[green]+[/]", package.name, package.version, package.architecture)
-    console = Console()
+    console = Console(stderr=True)
     console.print(table)
 
 
@@ -335,10 +335,9 @@ def delta(
         resources = load_resources(configurations_search_pattern)
         packages = list_repository_packages(debian_repository)
         state_delta = compute_state_delta(packages, resources.blueprints)
+        print_state_delta_as_rich_table(state_delta)
         if output_as_json:
             print(state_delta.json(sort_keys=True, indent=2))
-        else:
-            print_state_delta_as_rich_table(state_delta)
     except Ops2debError as e:
         error(e, exit_code)
 
