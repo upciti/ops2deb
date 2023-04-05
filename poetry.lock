@@ -428,21 +428,6 @@ conda = ["pyyaml"]
 pipenv = ["pipenv"]
 
 [[package]]
-name = "dunamai"
-version = "1.16.0"
-description = "Dynamic version generation"
-category = "dev"
-optional = false
-python-versions = ">=3.5,<4.0"
-files = [
-    {file = "dunamai-1.16.0-py3-none-any.whl", hash = "sha256:dc92d817f3bc155e8b129e8c705c36bb15a7e950e2698a93aea142732a888e98"},
-    {file = "dunamai-1.16.0.tar.gz", hash = "sha256:bfe8e23cc5a1ceed1c7f791674ea24cf832a53a5da73f046eeb43367ccfc3f77"},
-]
-
-[package.dependencies]
-packaging = ">=20.9"
-
-[[package]]
 name = "exceptiongroup"
 version = "1.1.1"
 description = "Backport of PEP 654 (exception groups)"
@@ -829,26 +814,6 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
-
-[[package]]
-name = "poetry-dynamic-versioning"
-version = "0.21.4"
-description = "Plugin for Poetry to enable dynamic versioning based on VCS tags"
-category = "dev"
-optional = false
-python-versions = ">=3.7,<4.0"
-files = [
-    {file = "poetry_dynamic_versioning-0.21.4-py3-none-any.whl", hash = "sha256:a1ed0c25ca8fd64c69bb362adecfbe057b3db9bd1e9aba100b2c85e51e7cf5fb"},
-    {file = "poetry_dynamic_versioning-0.21.4.tar.gz", hash = "sha256:186fbee28ed14969ac2403905330dab9cb9d231d604ed57a05cf9add2f117b79"},
-]
-
-[package.dependencies]
-dunamai = ">=1.16.0,<2.0.0"
-jinja2 = ">=2.11.1,<4"
-tomlkit = ">=0.4"
-
-[package.extras]
-plugin = ["poetry (>=1.2.0,<2.0.0)"]
 
 [[package]]
 name = "psutil"
@@ -1431,18 +1396,6 @@ files = [
 ]
 
 [[package]]
-name = "tomlkit"
-version = "0.11.6"
-description = "Style preserving TOML library"
-category = "dev"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "tomlkit-0.11.6-py3-none-any.whl", hash = "sha256:07de26b0d8cfc18f871aec595fda24d95b08fef89d147caa861939f37230bf4b"},
-    {file = "tomlkit-0.11.6.tar.gz", hash = "sha256:71b952e5721688937fb02cf9d354dbcf0785066149d2855e44531ebdd2b65d73"},
-]
-
-[[package]]
 name = "typer"
 version = "0.7.0"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
@@ -1601,4 +1554,4 @@ pyinstaller = ["pyinstaller"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "eaec6bc970eabf69bc324f29d3905d7319c0ae42e2d5673671b9ae9a25e65781"
+content-hash = "bf9a182191ec9710d09beab647b1993f42f3d4bca955a1f6201d5cde10cf7171"
