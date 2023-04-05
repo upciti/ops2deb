@@ -5,28 +5,24 @@ on:
 
 jobs:
   test_and_build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    container:
+      image: wakemeops/ubuntu:18.04
     steps:
+      - name: Install Poetry, Python 3.10 and other dependencies
+        uses: upciti/wakemeops-action@v1
+        with:
+          packages: |
+            debhelper
+            fakeroot
+            build-essential
+            python3.10-build-standalone
+            poetry
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Load Cached Poetry
-        uses: actions/cache@v3
-        with:
-          path: ~/.local
-          key: poetry-dependencies-v2
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-in-project: true
 
       - name: Load Cached Python Dependencies
         uses: actions/cache@v3
@@ -35,14 +31,9 @@ jobs:
           key: python-dependencies-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Python Dependencies
-        run: poetry install
-
-      - name: Install APT Dependencies
-        uses: upciti/wakemeops-action@v1
-        with:
-          packages: |
-            debhelper
-            fakeroot
+        run: |
+          ln -s /usr/lib/python-build-standalone/3.10/bin/python3.10 /usr/bin/python
+          poetry install
 
       - name: Run black
         run: poetry run black src tests --check
@@ -66,11 +57,15 @@ jobs:
 
       - name: Build single binary application
         run: |
+          export TCL_LIBRARY=/usr/lib/python-build-standalone/3.10/lib/tcl8.6/
           poetry install --extras pyinstaller
-          poetry run poetry-dynamic-versioning
+          [[ "$GITHUB_REF" == *"tags"* ]] && VERSION=$GITHUB_REF_NAME || VERSION=0.0.0
+          poetry version $VERSION
+          sed -i "s/__version__ = \"0\"/__version__ = \"$VERSION\"/g" src/ops2deb/__init__.py
           poetry run pyinstaller --onefile src/ops2deb/__main__.py --name ops2deb -s
           dist/ops2deb version
           mv dist/ops2deb ops2deb_linux_amd64
+        shell: bash
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
