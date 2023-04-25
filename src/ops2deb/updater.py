@@ -86,7 +86,7 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
 
     @classmethod
     def is_blueprint_supported(cls, blueprint: Blueprint) -> bool:
-        if not Version.isvalid(blueprint.version):
+        if not Version.is_valid(blueprint.version):
             logger.warning(f"{blueprint.name} is not using semantic versioning")
             return False
         return True
@@ -150,7 +150,7 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
         if (tag_name := latest_release.get("tag_name")) is None:
             raise Ops2debUpdaterError("Failed to determine latest release version")
         version = tag_name if not tag_name.startswith("v") else tag_name[1:]
-        if Version.isvalid(version) and Version.isvalid(blueprint.version):
+        if Version.is_valid(version) and Version.is_valid(blueprint.version):
             version = str(max(Version.parse(version), Version.parse(blueprint.version)))
         if await self.try_version(blueprint, version) is False:
             raise Ops2debUpdaterError(
