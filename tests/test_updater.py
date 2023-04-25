@@ -1,5 +1,6 @@
 from typing import Optional
 
+import httpx
 import pytest
 from fastapi import FastAPI, HTTPException
 from httpx import AsyncClient
@@ -7,7 +8,11 @@ from starlette.responses import JSONResponse
 
 from ops2deb.exceptions import Ops2debUpdaterError
 from ops2deb.logger import enable_debug
-from ops2deb.updater import GenericUpdateStrategy, GithubUpdateStrategy
+from ops2deb.updater import (
+    BaseUpdateStrategy,
+    GenericUpdateStrategy,
+    GithubUpdateStrategy,
+)
 
 enable_debug(True)
 
@@ -47,6 +52,23 @@ def github_app_factory():
     return _github_app_factory
 
 
+async def test_try_version__returns_false_when_fetch_url_does_not_depend_on_the_blueprint_version(  # noqa: E501
+    blueprint_factory,
+):
+    # Given
+    blueprint = blueprint_factory(
+        version="1.0.0",
+        fetch="http://test/releases/1.0.0/some-app.tar.gz",
+    )
+    update_strategy = BaseUpdateStrategy(httpx.AsyncClient())
+
+    # When
+    result = await update_strategy.try_version(blueprint, "2.0.0")
+
+    # Then
+    assert result is False
+
+
 @pytest.mark.parametrize(
     "versions,expected_result",
     [
@@ -60,16 +82,42 @@ def github_app_factory():
         (["1.0.0", "1.0.1", "1.0.2", "1.1.0", "1.1.1"], "1.1.1"),
     ],
 )
-async def test_generic_update_strategy_should_find_expected_blueprint_release(
+async def test_generic_update_strategy_finds_latest_release_version(
     blueprint_factory, app_factory, versions, expected_result
 ):
+    # Given
     blueprint = blueprint_factory(
+        version="1.0.0",
         fetch="http://test/releases/{{version}}/some-app.tar.gz",
     )
     app = app_factory(versions)
+
+    # When
     async with AsyncClient(app=app) as client:
         update_strategy = GenericUpdateStrategy(client)
-        assert await update_strategy(blueprint) == expected_result
+        latest_version = await update_strategy(blueprint)
+
+    # Then
+    assert latest_version == expected_result
+
+
+async def test_generic_update_strategy_finds_latest_release_version_when_version_has_prerelease_part(  # noqa: E501
+    blueprint_factory, app_factory
+):
+    # Given
+    blueprint = blueprint_factory(
+        version="1.0.0-pre",
+        fetch="http://test/releases/{{version}}/some-app.tar.gz",
+    )
+    app = app_factory(["2.0.0"])
+
+    # When
+    async with AsyncClient(app=app) as client:
+        update_strategy = GenericUpdateStrategy(client)
+        latest_version = await update_strategy(blueprint)
+
+    # Then
+    assert latest_version == "2.0.0"
 
 
 @pytest.mark.parametrize(

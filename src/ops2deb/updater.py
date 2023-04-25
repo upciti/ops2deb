@@ -19,9 +19,16 @@ class BaseUpdateStrategy:
     def __init__(self, client: httpx.AsyncClient):
         self.client = client
 
-    async def _try_version(self, blueprint: Blueprint, version: str) -> bool:
-        if not (url := blueprint.render_fetch_url(version=version)):
+    async def try_version(self, blueprint: Blueprint, version: str) -> bool:
+        # No need to waste an HTTP call when called with the current blueprint version
+        if blueprint.version == version:
+            return True
+
+        # Fetch url does not depend on blueprint version or blueprint has no fetch
+        url = blueprint.render_fetch_url(version=version)
+        if url == blueprint.render_fetch_url() or url is None:
             return False
+
         logger.debug(f"{self.__class__.__name__} - {blueprint.name} - Trying {url}")
         try:
             response = await self.client.head(url)
@@ -53,7 +60,7 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
     ) -> Version | None:
         for i in range(0, 3):
             version = version.bump_patch()
-            if await self._try_version(blueprint, str(version)) is True:
+            if await self.try_version(blueprint, str(version)) is True:
                 return version
         return None
 
@@ -64,7 +71,7 @@ class GenericUpdateStrategy(BaseUpdateStrategy):
         version_part: str,
     ) -> Version:
         bumped_version = getattr(version, f"bump_{version_part}")()
-        if await self._try_version(blueprint, str(bumped_version)) is False:
+        if await self.try_version(blueprint, str(bumped_version)) is False:
             if version_part != "patch":
                 if (
                     result := await self._try_a_few_patches(blueprint, bumped_version)
@@ -145,7 +152,7 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
         version = tag_name if not tag_name.startswith("v") else tag_name[1:]
         if Version.isvalid(version) and Version.isvalid(blueprint.version):
             version = str(max(Version.parse(version), Version.parse(blueprint.version)))
-        if await self._try_version(blueprint, version) is False:
+        if await self.try_version(blueprint, version) is False:
             raise Ops2debUpdaterError(
                 f"Failed to determine latest release URL (latest tag is {tag_name})"
             )
