@@ -1,18 +1,3 @@
-- url: https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz
-  sha256: 950439759ece902157cf915b209b8d694e6f675eaab5099fb7894f30eeaee9a2
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://get.helm.sh/helm-v3.10.3-linux-arm.tar.gz
-  sha256: dca718eb68c72c51fc7157c4c2ebc8ce7ac79b95fc9355c5427ded99e913ec4c
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://get.helm.sh/helm-v3.10.3-linux-arm64.tar.gz
-  sha256: 260cda5ff2ed5d01dd0fd6e7e09bc80126e00d8bdc55f3269d05129e32f6f99d
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.3/kubeseal-0.19.3-linux-amd64.tar.gz
-  sha256: f6c420d38f84008deffd040f0bbc527b08c2b70bdb373ab4e0598f64510af566
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://github.com/istio/istio/releases/download/1.16.1/istio-1.16.1-linux-amd64.tar.gz
-  sha256: e5f6efc11c5dde58592478e1976b3c8e7bb9993cf22c57ac8a63003288baafdf
-  timestamp: 2023-03-03 22:48:12+00:00
 - url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v4.5.7/kustomize_v4.5.7_linux_amd64.tar.gz
   sha256: 701e3c4bfa14e4c520d481fdf7131f902531bfc002cb5062dcf31263a09c70c9
   timestamp: 2023-03-03 22:48:12+00:00
@@ -21,15 +6,6 @@
   timestamp: 2023-03-03 22:48:12+00:00
 - url: https://github.com/roboll/helmfile/releases/download/v0.144.0/helmfile_linux_arm64
   sha256: 8461bbb13ba23f4333dc99d96bf7a24c283cd7683e746acf639d80bbd828926a
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://github.com/upciti/ops2deb/releases/download/0.36.1/ops2deb_linux_amd64
-  sha256: a396c3174141a7c658ae0a7baed366a1dd6e6e2defb009147d8fa9cdd3859ff9
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://storage.googleapis.com/kubernetes-release/release/v1.26.0/bin/linux/amd64/kubectl
-  sha256: b6769d8ac6a0ed0f13b307d289dc092ad86180b08f5b5044af152808c04950ae
-  timestamp: 2023-03-03 22:48:12+00:00
-- url: https://storage.googleapis.com/minikube/releases/v1.28.0/minikube-linux-amd64
-  sha256: 58cead5ece9815a61d4be253a07b2385f8cf373d9e1eba5c9783444e4e9e2d8e
   timestamp: 2023-03-03 22:48:12+00:00
 - url: https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.0.0/kustomize_v5.0.0_linux_amd64.tar.gz
   sha256: 2e8c28a80ce213528251f489db8d2dcbea7c63b986c8f7595a39fc76ff871cd7
@@ -61,3 +37,27 @@
 - url: https://storage.googleapis.com/minikube/releases/v1.29.0/minikube-linux-amd64
   sha256: aafb65cbee8e971ec00509fdb1817254b17d6bee4890b839c3b6e8f11e97413a
   timestamp: 2023-03-20 14:00:14+00:00
+- url: https://get.helm.sh/helm-v3.11.3-linux-amd64.tar.gz
+  sha256: ca2d5d40d4cdfb9a3a6205dd803b5bc8def00bd2f13e5526c127e9b667974a89
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://get.helm.sh/helm-v3.11.3-linux-arm.tar.gz
+  sha256: 0816db0efd033c78c3cc1c37506967947b01965b9c0739fe13ec2b1eea08f601
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://get.helm.sh/helm-v3.11.3-linux-arm64.tar.gz
+  sha256: 9f58e707dcbe9a3b7885c4e24ef57edfb9794490d72705b33a93fa1f3572cce4
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.20.5/kubeseal-0.20.5-linux-amd64.tar.gz
+  sha256: 00de1d33c634af03080ff7c9f409ad1cb00ed863f93e4fb3b5ed1c13572d0069
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://github.com/istio/istio/releases/download/1.17.2/istio-1.17.2-linux-amd64.tar.gz
+  sha256: 9e301bf131be05434807623a2d45af6f625c7b159db4f291f5eb12f262259af7
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://github.com/upciti/ops2deb/releases/download/2.4.0/ops2deb_linux_amd64
+  sha256: e611e8f85f899d4b55777b4212c6ce4f14f2dbedb1c11a3dd44ee1b63be47d7f
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://storage.googleapis.com/kubernetes-release/release/v1.27.1/bin/linux/amd64/kubectl
+  sha256: 7fe3a762d926fb068bae32c399880e946e8caf3d903078bea9b169dcd5c17f6d
+  timestamp: 2023-04-25 12:44:43+00:00
+- url: https://storage.googleapis.com/minikube/releases/v1.30.1/minikube-linux-amd64
+  sha256: e53d9e8c31f4c5f683182f5323d3527aa0725f713945c6d081cf71aa548ab388
+  timestamp: 2023-04-25 12:44:43+00:00

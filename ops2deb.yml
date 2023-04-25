@@ -5,8 +5,8 @@
       - armhf
       - arm64
     versions:
-      - 3.10.3
       - 3.11.2
+      - 3.11.3
   homepage: https://helm.sh/
   summary: The Kubernetes package manager
   description: |-
@@ -43,8 +43,8 @@
 - name: istioctl
   matrix:
     versions:
-      - 1.16.1
       - 1.17.1
+      - 1.17.2
   homepage: https://istio.io/
   summary: Istio service mesh CLI
   description: Istio is an open platform to connect, manage, and secure microservices.
@@ -59,8 +59,8 @@
 - name: kubectl
   matrix:
     versions:
-      - 1.26.0
       - 1.26.3
+      - 1.27.1
   homepage: https://github.com/kubernetes/kubectl
   summary: Command line client for controlling a Kubernetes cluster
   description: |-
@@ -73,8 +73,8 @@
 - name: kubeseal
   matrix:
     versions:
-      - 0.19.3
       - 0.20.1
+      - 0.20.5
   homepage: https://github.com/bitnami-labs/sealed-secrets
   summary: Secret management solution for k8s
   description: |-
@@ -106,8 +106,8 @@
 - name: minikube
   matrix:
     versions:
-      - 1.28.0
       - 1.29.0
+      - 1.30.1
   homepage: https://minikube.sigs.k8s.io/
   summary: Quickly set up a local Kubernetes cluster
   description: |-
@@ -124,10 +124,7 @@
     - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
-  matrix:
-    versions:
-      - 0.36.1
-      - 2.2.1
+  version: 2.4.0
   homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-
