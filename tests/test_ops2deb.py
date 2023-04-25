@@ -766,7 +766,7 @@ def test_update__doesnt_stop_when_server_replies_with_a_500_for_one_url(
     assert result.exit_code == 77
 
 
-def test_update__doesnt_update_blueprint_when_fetch_fails_for_one_architecture(
+def test_update__doesnt_update_blueprint_when_fetch_fails_for_two_architectures(
     call_ops2deb, configuration_path
 ):
     # Given
@@ -784,6 +784,7 @@ def test_update__doesnt_update_blueprint_when_fetch_fails_for_one_architecture(
         url: http://testserver/{{version}}/great-app-{{target}}.tar.gz
         targets:
           armhf: 404
+          arm64: 404
       script:
       - mv great-app {{src}}/usr/bin/great-app
     """
