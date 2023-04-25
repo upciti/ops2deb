@@ -1246,14 +1246,14 @@ gitlab = ["python-gitlab (>=1.3.0)"]
 
 [[package]]
 name = "semver"
-version = "3.0.0.dev4"
+version = "3.0.0"
 description = "Python helper for Semantic Versioning (https://semver.org)"
 category = "main"
 optional = false
-python-versions = ">=3.7.*"
+python-versions = ">=3.7"
 files = [
-    {file = "semver-3.0.0.dev4-py3-none-any.whl", hash = "sha256:5a47cea48ac895de2524528e1585c7d7b2775369a37dd51764db197898ff6609"},
-    {file = "semver-3.0.0.dev4.tar.gz", hash = "sha256:c21ec24e51c4b2ff92e9e51c1d9c93b93fbdedaa3f99268ae2c879256ef391f5"},
+    {file = "semver-3.0.0-py3-none-any.whl", hash = "sha256:ab4f69fb1d1ecfb5d81f96411403d7a611fa788c45d252cf5b408025df3ab6ce"},
+    {file = "semver-3.0.0.tar.gz", hash = "sha256:94df43924c4521ec7d307fc86da1531db6c2c33d9d5cdc3e64cca0eb68569269"},
 ]
 
 [[package]]
@@ -1508,4 +1508,4 @@ pyinstaller = ["pyinstaller"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "08fdb444e01962a4928506b119ec9f9825d6d0bfaca89d6e633ea1a853b9d51a"
+content-hash = "9b17c823a0f1dd3b1601f0527fd7181088d9762b49335758c3ebfc3190359890"
