@@ -22,7 +22,7 @@ def sort_blueprints(blueprints: list[OrderedDict[str, Any]]) -> list[dict[str, A
         except KeyError:
             version_str = blueprint["version"]
         version: Version = Version(0, 0, 0)
-        if Version.isvalid(version_str):
+        if Version.is_valid(version_str):
             version = Version.parse(version_str)
         revision_str = blueprint.get("revision", "1")
         try:
