@@ -240,7 +240,7 @@ def find_latest_releases(
 
     # remove blueprint we can't update because we could not fetch associated files
     for failure in failures:
-        releases_by_id.pop(failure.task_data)
+        releases_by_id.pop(failure.task_data, None)
     releases = list(releases_by_id.values())
 
     # add new urls to lock file
