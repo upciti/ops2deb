@@ -9,14 +9,14 @@ jobs:
     container:
       image: wakemeops/ubuntu:18.04
     steps:
-      - name: Install Poetry, Python 3.10 and other dependencies
+      - name: Install Poetry, Python 3.11 and other dependencies
         uses: upciti/wakemeops-action@v1
         with:
           packages: |
             debhelper
             fakeroot
             build-essential
-            python3.10-build-standalone
+            python3.11-build-standalone
             poetry
 
       - name: Checkout
@@ -32,7 +32,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          ln -s /usr/lib/python-build-standalone/3.10/bin/python3.10 /usr/bin/python
+          ln -s /usr/lib/python-build-standalone/3.11/bin/python3.11 /usr/bin/python
           poetry install
 
       - name: Run black
@@ -57,7 +57,7 @@ jobs:
 
       - name: Build single binary application
         run: |
-          export TCL_LIBRARY=/usr/lib/python-build-standalone/3.10/lib/tcl8.6/
+          export TCL_LIBRARY=/usr/lib/python-build-standalone/3.11/lib/tcl8.6/
           poetry install --extras pyinstaller
           [[ "$GITHUB_REF" == *"tags"* ]] && VERSION=$GITHUB_REF_NAME || VERSION=0.0.0
           poetry version $VERSION
