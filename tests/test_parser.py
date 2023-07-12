@@ -3,7 +3,11 @@ import os
 import pytest
 from pydantic import ValidationError
 
-from ops2deb.parser import Blueprint, Ops2debParserError, load_configuration_file
+from ops2deb.parser import (
+    Blueprint,
+    Ops2debParserError,
+    load_configuration_file,
+)
 
 
 @pytest.fixture
@@ -22,7 +26,7 @@ def test_architectures_should_return_lists_of_architectures(blueprint):
 
 
 def test_render_string_target_should_default_to_blueprint_architecture(blueprint):
-    blueprint = blueprint.copy(update={"architecture": "armhf"})
+    blueprint = blueprint.model_copy(update={"architecture": "armhf"})
     assert blueprint.render_string("{{target}}") == "armhf"
 
 
@@ -34,19 +38,19 @@ def test_render_string_target_should_default_to_blueprint_architecture(blueprint
         ("{{target}}", "x86_64"),
     ],
 )
-def test_render_string_should_evaluate_goarch_and_rust_targets_and_target(
+def test_render_string__should_evaluate_goarch_and_rust_targets_and_target(
     template, result, blueprint
 ):
     assert blueprint.render_string(template) == result
 
 
-def test_render_fetch_url_should_evaluate_goarch_and_rust_targets_and_target(
+def test_render_fetch_url__should_evaluate_goarch_and_rust_targets_and_target(
     blueprint,
 ):
     assert blueprint.render_fetch_url() == "http://amd64/x86_64-unknown-linux-gnu/x86_64"
 
 
-def test_render_fetch_urls_should_return_one_url_per_arch_per_version():
+def test_render_fetch_urls__should_return_one_url_per_arch_per_version():
     blueprint = Blueprint(
         name="great-app",
         summary="summary",
@@ -62,9 +66,8 @@ def test_render_fetch_urls_should_return_one_url_per_arch_per_version():
     assert blueprint.render_fetch_urls() == urls
 
 
-def test_blueprint_should_evaluate_env_jinja_function_when_used_in_string_attributes(
-    blueprint_factory,
-):
+def test_build__should_evaluate_env_jinja_function():
+    # Given
     os.environ.update(
         {
             "CI_PROJECT_NAME": "great-app",
@@ -72,45 +75,55 @@ def test_blueprint_should_evaluate_env_jinja_function_when_used_in_string_attrib
             "CI_PROJECT_URL": "https://great-app.io",
         }
     )
-    blueprint = blueprint_factory(
+
+    blueprint_dict = Blueprint(
         name="{{env('CI_PROJECT_NAME')}}",
         version="{{env('CI_COMMIT_TAG')}}",
         homepage="{{env('CI_PROJECT_URL')}}",
+        summary="My great app",
+        description="Detailed description of the great app.",
+        fetch="http://great-app.io/releases/{{version}}/great-app.tar.gz",
+        script=["cp great-app_linux_{{arch}}_{{version}} {{src}}/usr/bin/great-app"],
     )
+
+    # When
+    blueprint = Blueprint.build(blueprint_dict)
+
+    # Then
     assert blueprint.name == os.environ["CI_PROJECT_NAME"]
     assert blueprint.version == os.environ["CI_COMMIT_TAG"]
     assert blueprint.homepage == os.environ["CI_PROJECT_URL"]
 
 
-def test_blueprint_should_have_source_and_destination_attributes_when_install_is_a_string(
+def test_blueprint__should_have_source_and_destination_attributes_when_install_is_a_string(  # noqa: E501
     blueprint_factory,
 ):
     blueprint = blueprint_factory(install=["a:b"])
     assert repr(blueprint.install[0]) == "SourceDestinationStr(source=a, destination=b)"
 
 
-def test_blueprint_should_raise_when_install_is_a_string_and_colon_separator_is_missing(
+def test_blueprint__should_raise_when_install_is_a_string_and_colon_separator_is_missing(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(install=["invalid_input"])
 
 
-def test_blueprint_should_raise_when_install_is_a_string_with_more_than_one_separator(
+def test_blueprint__should_raise_when_install_is_a_string_with_more_than_one_separator(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(install=["invalid::input"])
 
 
-def test_blueprint_should_raise_when_architectures_is_used_with_architecture(
+def test_blueprint__should_raise_when_architectures_is_used_with_architecture(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(architecture="amd64", architectures=["amd64"])
 
 
-def test_blueprint_should_not_raise_when_architectures_is_used_without_architecture(
+def test_blueprint__should_not_raise_when_architectures_is_used_without_architecture(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
@@ -118,34 +131,43 @@ def test_blueprint_should_not_raise_when_architectures_is_used_without_architect
 
 
 @pytest.mark.parametrize("revision", ["1", "10", "1test+test~test"])
-def test_blueprint_should_not_raise_when_revision_is_a_valid_string(
+def test_blueprint__should_not_raise_when_revision_is_a_valid_string(
     revision, blueprint_factory
 ):
     blueprint_factory(revision=revision)
 
 
-def test_blueprint_should_raise_when_revision_begins_with_a_0(blueprint_factory):
+def test_blueprint__should_raise_when_revision_begins_with_a_0(blueprint_factory):
     with pytest.raises(ValidationError):
         blueprint_factory(revision="0")
 
 
-def test_blueprint_should_raise_when_versions_is_used_with_version(
+def test_blueprint__should_raise_when_versions_is_used_with_version(
     blueprint_factory,
 ):
     with pytest.raises(ValidationError):
         blueprint_factory(version="1.0.0", versions=["1.0.0"])
 
 
-def test_blueprint_should_set_version_when_versions_matrix_is_used():
-    blueprint = Blueprint(
-        matrix=dict(versions=["1.0.0", "1.0.1"]),
+def test_build__should_set_version_when_versions_matrix_is_used():
+    # Given
+    blueprint_dict = dict(
         name="great-app",
+        matrix=dict(versions=["1.0.0", "1.0.1"]),
+        homepage="http://great-app.io",
         summary="My great app",
+        fetch="http://great-app.io/releases/{{version}}/great-app.tar.gz",
+        script=["cp great-app_linux_{{arch}}_{{version}} {{src}}/usr/bin/great-app"],
     )
+
+    # When
+    blueprint = Blueprint.build(blueprint_dict)
+
+    # Then
     assert blueprint.version == "1.0.1"
 
 
-def test_blueprint_should_raise_when_versions_matrix_not_used_and_version_field_not_set():
+def test_blueprint__should_raise_when_versions_matrix_not_used_and_version_field_not_set():  # noqa: E501
     with pytest.raises(ValidationError) as result:
         Blueprint(
             name="great-app",

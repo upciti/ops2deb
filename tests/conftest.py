@@ -158,11 +158,11 @@ def blueprint_factory():
     )
 
     def _blueprint_factory(construct: bool = False, **kwargs):
-        blueprint_dict = blueprint.dict(exclude_defaults=True) | kwargs
+        blueprint_dict = blueprint.model_dump(exclude_defaults=True) | kwargs
         if construct is False:
             return Blueprint(**blueprint_dict)
         else:
-            return Blueprint.construct(**blueprint_dict)
+            return Blueprint.model_construct(**blueprint_dict)
 
     return _blueprint_factory
 

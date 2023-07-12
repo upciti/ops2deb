@@ -14,8 +14,8 @@ def test_list_repository_packages__should_raise_exception_when_http_error_occurs
 def test_list_repository_packages__should_raise_exception_when_repo_url_is_invalid(
     mock_httpx_client,
 ):
-    with pytest.raises(Ops2debAptError, match="invalid or missing URL scheme"):
-        list_repository_packages("invalid-url strable")
+    with pytest.raises(Ops2debAptError, match="Invalid repository URL"):
+        list_repository_packages("invalid-url stable")
 
 
 def test_list_repository_packages__should_raise_exception_when_repo_distribution_is_missing(  # noqa: E501

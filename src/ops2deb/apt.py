@@ -5,16 +5,17 @@ from typing import Iterator
 
 import httpx
 from debian.deb822 import Packages, Release
-from pydantic import BaseModel, Field, HttpUrl, ValidationError
+from pydantic import BaseModel, HttpUrl, TypeAdapter, ValidationError
 
 from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debAptError
 
 
+@dataclass(frozen=True)
 class DebianRepository(BaseModel):
-    url: HttpUrl
-    distribution: str = Field(..., regex=r"[a-zA-Z0-9]+")
+    url: str
+    distribution: str
 
 
 @dataclass(frozen=True, order=True)
@@ -64,9 +65,10 @@ def _parse_debian_repository_option(debian_repository: str) -> DebianRepository:
             '"{repository_url} {distribution}"'
         )
     try:
-        return DebianRepository(url=url, distribution=distribution)
-    except ValidationError as e:
-        raise Ops2debAptError(str(e))
+        TypeAdapter(HttpUrl).validate_python(url)
+    except ValidationError:
+        raise Ops2debAptError("Invalid repository URL")
+    return DebianRepository(url=url, distribution=distribution)
 
 
 async def _list_repository_packages(

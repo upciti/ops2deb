@@ -35,7 +35,7 @@ class PrettyYAMLDumper(yaml.dumper.SafeDumper):
     def choose_scalar_style(self) -> str:
         style: str = super().choose_scalar_style()
         style = '"' if style == "'" else style
-        style = "|" if self.analysis.multiline else style
+        style = "|" if self.analysis and self.analysis.multiline else style
         return style
 
 

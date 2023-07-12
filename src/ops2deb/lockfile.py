@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Protocol, Sequence
 
 import yaml
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, RootModel, ValidationError
 
 from ops2deb.exceptions import Ops2debLockFileError
 from ops2deb.utils import PrettyYAMLDumper
@@ -21,8 +21,7 @@ class LockEntry(BaseModel):
     timestamp: datetime
 
 
-class LockFileModel(BaseModel):
-    __root__: list[LockEntry]
+LockFileModel = RootModel[list[LockEntry]]
 
 
 def get_utc_datetime() -> datetime:
@@ -39,7 +38,7 @@ class LockFile:
             if lockfile_path.exists() is True:
                 with lockfile_path.open("r") as reader:
                     raw_lockfile = yaml.load(reader, yaml.SafeLoader)
-                lockfile = LockFileModel.parse_obj(raw_lockfile).__root__
+                lockfile = LockFileModel.model_validate(raw_lockfile).root
                 self._entries.update({entry.url: entry for entry in lockfile})
         except yaml.YAMLError as e:
             raise Ops2debLockFileError(f"Invalid YAML file.\n{e}")
@@ -92,7 +91,7 @@ class LockFile:
                 entry.timestamp = now
 
         # sort lockfile entries by urls
-        entries = [entry.dict() for entry in self._entries.values()]
+        entries = [entry.model_dump() for entry in self._entries.values()]
         sorted_entries = sorted(entries, key=itemgetter("timestamp", "url"))
 
         with self.lock_file_path.open("w") as output:

@@ -124,7 +124,7 @@
     - minikube-linux-amd64:/usr/bin/minikube
 
 - name: ops2deb
-  version: 2.4.0
+  version: 2.4.1
   homepage: https://github.com/upciti/ops2deb
   summary: Debian packaging tool for portable applications
   description: |-

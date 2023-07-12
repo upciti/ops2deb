@@ -6,15 +6,16 @@ from pathlib import Path
 from typing import Any, Literal, OrderedDict, cast
 
 from pydantic import (
-    AnyHttpUrl,
     BaseModel,
+    ConfigDict,
     Field,
+    GetCoreSchemaHandler,
     PrivateAttr,
     ValidationError,
-    root_validator,
-    validator,
+    field_validator,
+    model_validator,
 )
-from pydantic.fields import ModelField
+from pydantic_core import CoreSchema, core_schema
 from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
 
 from ops2deb.exceptions import Ops2debParserError
@@ -28,10 +29,10 @@ LOCKFILE_PATH_HEADER_RE = re.compile(r"^# lockfile=(.+)$")
 
 
 class Base(BaseModel):
-    class Config:
-        extra = "forbid"
-        frozen = True
-        anystr_strip_whitespace = True
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
 
 
 class ArchitectureMap(Base):
@@ -41,7 +42,7 @@ class ArchitectureMap(Base):
 
 
 class MultiArchitectureFetch(Base):
-    url: AnyHttpUrl = Field(..., description="URL template of the file")
+    url: str = Field(..., description="URL template of the file")
     targets: ArchitectureMap | None = Field(
         None,
         description="Architecture to target name map. The URL can be templated with "
@@ -54,19 +55,20 @@ class SourceDestinationStr(str):
     destination: str
 
     @classmethod
-    def __get_validators__(cls) -> Any:
-        yield cls.validate
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        def validate(v: str) -> "SourceDestinationStr":
+            if not isinstance(v, str):
+                raise ValueError("string required")
+            if len(paths := v.split(":")) != 2:
+                raise ValueError("string must have one ':' separator")
+            string = cls(v)
+            string.source = paths[0]
+            string.destination = paths[1]
+            return string
 
-    @classmethod
-    def validate(cls, v: str) -> "SourceDestinationStr":
-        if not isinstance(v, str):
-            raise TypeError("string required")
-        if len(paths := v.split(":")) != 2:
-            raise TypeError("string must have one ':' separator")
-        string = cls(v)
-        string.source = paths[0]
-        string.destination = paths[1]
-        return string
+        return core_schema.no_info_plain_validator_function(validate)
 
     def __repr__(self) -> str:
         return (
@@ -97,11 +99,11 @@ class Blueprint(Base):
     )
     version: str = Field("", description="Package name")
     revision: str = Field(
-        "1", regex=r"^[1-9][a-z0-9+~]*$", description="Package revision"
+        "1", pattern=r"^[1-9][a-z0-9+~]*$", description="Package revision"
     )
     epoch: int = Field(0, description="Package epoch", ge=0)
     architecture: Architecture = Field("amd64", description="Package architecture")
-    homepage: AnyHttpUrl | None = Field(None, description="Upstream project homepage")
+    homepage: str | None = Field(None, description="Upstream project homepage")
     summary: str = Field(..., description="Package short description, one line only")
     description: str = Field("", description="Package description")
     build_depends: list[str] = Field(
@@ -124,7 +126,7 @@ class Blueprint(Base):
         description="Conflicting packages, for more information read "
         "https://www.debian.org/doc/debian-policy/ch-relationships.html",
     )
-    fetch: AnyHttpUrl | MultiArchitectureFetch | None = Field(
+    fetch: str | MultiArchitectureFetch | None = Field(
         None,
         description="Url of a file (or a file per architecture) to download before "
         "running build and install instructions",
@@ -135,28 +137,22 @@ class Blueprint(Base):
     _uid: int = PrivateAttr()
     _index_in_configuration: int = PrivateAttr()
 
-    @root_validator(pre=False)
-    def _version_must_be_set(cls, values: Any) -> Any:
-        matrix = values.get("matrix", None)
-        if (not matrix or not matrix.versions) and not values.get("version"):
+    @model_validator(mode="after")
+    def _version_and_architecture_cant_be_used_with_matrix(self) -> "Blueprint":
+        matrix = self.matrix
+        for field in "version", "architecture":
+            if field in self.model_fields_set and matrix is not None:
+                if f"{field}s" in matrix.model_fields_set:
+                    raise ValueError(f"'{field}s' cannot be used with '{field}'")
+        if (not matrix or not matrix.versions) and "version" not in self.model_fields_set:
             raise ValueError("Version field is required when versions matrix is not used")
-        if matrix and matrix.versions:
-            values["version"] = matrix.versions[-1]
-        return values
+        return self
 
-    @validator("architecture", "version", pre=True, always=False)
-    def _check_arch_and_version(cls, v: Any, values: Any, field: ModelField) -> Any:
-        if (matrix := values.get("matrix", None)) is not None:
-            getter = getattr if isinstance(matrix, Matrix) else lambda x, y: x[y]
-            if getter(matrix, f"{field.name}s"):
-                raise ValueError(f"'{field.name}s' cannot be used with '{field.name}'")
-        return v
-
-    @validator("name", "version", "summary", "description", "homepage", pre=True)
-    def _render_string_attributes(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            return environment.from_string(v).render()
-        return v
+    @field_validator("revision", mode="before")
+    def _convert_revision_to_str(cls, value: Any) -> Any:
+        if isinstance(value, int):
+            return str(value)
+        return value
 
     def _get_additional_variables(self, architecture: str) -> dict[str, str | None]:
         target = (
@@ -169,6 +165,17 @@ class Blueprint(Base):
             goarch=DEFAULT_GOARCH_MAP.get(architecture, None),
             rust_target=DEFAULT_RUST_TARGET_MAP.get(architecture, None),
         )
+
+    @classmethod
+    def build(cls, obj: Any) -> "Blueprint":
+        blueprint = cls.model_validate(obj)
+        if blueprint.matrix and (versions := blueprint.matrix.versions):
+            blueprint.version = versions[-1]
+        for string in "name", "version", "summary", "description", "homepage":
+            value = getattr(blueprint, string, None)
+            if isinstance(value, str):
+                setattr(blueprint, string, environment.from_string(value).render())
+        return blueprint
 
     def architectures(self) -> list[str]:
         if self.matrix and self.matrix.architectures:
@@ -262,7 +269,7 @@ def load_configuration_file(configuration_path: Path) -> ConfigurationFile:
     blueprints: list[Blueprint] = []
     for index, raw_blueprint in enumerate(raw_blueprints):
         try:
-            blueprint = Blueprint.parse_obj(raw_blueprint)
+            blueprint = Blueprint.build(raw_blueprint)
             blueprint._index_in_configuration = index
             blueprints.append(blueprint)
         except ValidationError as e:
@@ -351,7 +358,7 @@ def load_resources(configurations_search_pattern: str) -> Resources:
             lock = LockFile(lockfile_path)
         locks[lockfile_path] = lock
 
-    # parse blueprints from all configuration files
+    # list all blueprints, and their metadata (associated lockfile and config file)
     blueprints: list[Blueprint] = []
     metadatas: list[BlueprintMetadata] = []
     for configuration_file in configuration_files:

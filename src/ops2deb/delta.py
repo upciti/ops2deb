@@ -28,7 +28,7 @@ def compute_state_delta(
     new_slugs = blueprint_slugs - common_slugs
     deleted_slugs = package_slugs - common_slugs
 
-    state_delta = StateDelta.construct(added=[], removed=[])
+    state_delta = StateDelta.model_construct(added=[], removed=[])
     for slug in new_slugs:
         name, version, architecture = slug.split("_")
         state_delta.added.append(DebianRepositoryPackage(name, version, architecture))

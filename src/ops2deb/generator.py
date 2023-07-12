@@ -43,7 +43,7 @@ class SourcePackage:
 
     def _render_template(self, template_name: str) -> None:
         template = environment.get_template(f"{template_name}")
-        package = self.blueprint.dict(exclude={"fetch", "script"})
+        package = self.blueprint.model_dump(exclude={"fetch", "script"})
         package.update({"version": self.debian_version})
         template.stream(package=package).dump(str(self.debian_directory / template_name))
 
@@ -204,7 +204,9 @@ def generate(
     packages: list[SourcePackage] = []
     for blueprint in blueprints:
         for arch, version in product(blueprint.architectures(), blueprint.versions()):
-            blueprint = blueprint.copy(update={"architecture": arch, "version": version})
+            blueprint = blueprint.model_copy(
+                update={"architecture": arch, "version": version}
+            )
             configuration_file = resources.get_blueprint_configuration_file(blueprint)
             configuration_directory = configuration_file.path.parent
             package = SourcePackage(blueprint, output_directory, configuration_directory)
