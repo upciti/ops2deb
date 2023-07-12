@@ -337,7 +337,7 @@ def delta(
         state_delta = compute_state_delta(packages, resources.blueprints)
         print_state_delta_as_rich_table(state_delta)
         if output_as_json:
-            print(state_delta.json(sort_keys=True, indent=2))
+            print(state_delta.model_dump_json(indent=2))
     except Ops2debError as e:
         error(e, exit_code)
 

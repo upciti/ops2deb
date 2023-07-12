@@ -23,8 +23,8 @@ summary: great package
 description: A detailed description of the great package.
 fetch: http://testserver/{{version}}/great-app-{{arch}}.tar.gz
 install:
-  - path: debian/copyright
-    content: 2021 John Doe. All rights reserved.
+  - content: 2021 John Doe. All rights reserved.
+    path: debian/copyright
   - great-app:/usr/bin/great-app
 """
 
@@ -783,8 +783,8 @@ def test_update__doesnt_update_blueprint_when_fetch_fails_for_two_architectures(
       fetch:
         url: http://testserver/{{version}}/great-app-{{target}}.tar.gz
         targets:
-          armhf: 404
-          arm64: 404
+          armhf: "404"
+          arm64: "404"
       script:
       - mv great-app {{src}}/usr/bin/great-app
     """
@@ -865,7 +865,7 @@ def test_update___updates_only_blueprints_listed_with_only_option(
 
 
 def test_update__should_not_produce_configuration_files_that_dont_pass_format_command(
-    call_ops2deb,
+    call_ops2deb, configuration_paths
 ):
     # Given
     configuration = """\
@@ -1009,7 +1009,7 @@ def test_format__formats_and_exits_with_error_code_when_file_is_not_properly_for
     matrix:
       versions:
         - 1.0.0
-    revision: 2
+    revision: "2"
     architecture: all
     summary: great package
     description: A detailed description of the great package.

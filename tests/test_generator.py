@@ -9,7 +9,7 @@ from ops2deb.parser import Blueprint
 blueprint_1 = Blueprint(
     name="great-app",
     version="1.0.0",
-    homepage="http://great-app.io",
+    homepage="https://great-app.io",
     revision="3",
     architecture="all",
     summary="My great app",
@@ -27,7 +27,7 @@ Priority: optional
 Maintainer: ops2deb <ops2deb@upciti.com>
 Build-Depends: debhelper, build-dep-1, build-dep-2
 Standards-Version: 3.9.6
-Homepage: http://great-app.io
+Homepage: https://great-app.io
 
 Package: great-app
 Architecture: all

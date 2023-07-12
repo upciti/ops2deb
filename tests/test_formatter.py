@@ -54,7 +54,7 @@ def test_format_blueprint__should_remove_default_values():
         description="A description",
     )
     blueprint = Blueprint(**raw_blueprint)
-    raw_blueprint_with_defaults = json.loads(blueprint.json())
+    raw_blueprint_with_defaults = json.loads(blueprint.model_dump_json())
     assert raw_blueprint_with_defaults["revision"] == "1"
     assert format_blueprint(raw_blueprint_with_defaults) == raw_blueprint
 
@@ -62,14 +62,14 @@ def test_format_blueprint__should_remove_default_values():
 def test_format_blueprint__should_not_remove_field_when_value_is_not_default(
     blueprint_factory,
 ):
-    blueprint = blueprint_factory(revision=2, depends=["test"])
-    blueprint = format_blueprint(blueprint.dict())
+    blueprint = blueprint_factory(revision="2", depends=["test"])
+    blueprint = format_blueprint(blueprint.model_dump())
     assert {"revision", "depends", "fetch", "script"}.issubset(blueprint.keys())
 
 
 def test_format_blueprint__should_not_render_templated_values(blueprint_factory):
     blueprint = blueprint_factory(version="{{env('TEST', 0)}}", construct=True)
-    assert format_blueprint(blueprint.dict())["version"] == "{{env('TEST', 0)}}"
+    assert format_blueprint(blueprint.model_dump())["version"] == "{{env('TEST', 0)}}"
 
 
 def test_format_blueprint__replaces_fetch_object_with_string_when_only_key_is_url():
