@@ -51,7 +51,7 @@ types-aiofiles = "*"
 types-PyYAML = "*"
 pytest-asyncio = ">=0.18.0"
 fastapi = "*"
-ruff = "^0.0.272"
+ruff = "^0.0.282"
 
 [tool.taskipy.tasks]
 check = """
