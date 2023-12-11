@@ -244,7 +244,7 @@ Written in YAML and composed of a single blueprint object or a list of blueprint
 | `conflicts`    | List of conflicting packages. Corresponds to `Conflicts` entry in `debian/control`.                  | `[]`    |
 | `fetch`        | A file to download. `tar.gz`, `tar.xz`, `tar`, `zip` and `deb` archives are extracted automatically. | `None`  |
 | `install`      | List of here-documents and files/directories to add to the debian package.                           | `[]`    |
-| `script`       | List of build instructions templated with jinja2 and interpreted with the default `shell`.            | `[]`    |
+| `script`       | List of build instructions templated with jinja2 and interpreted with the default `shell`.           | `[]`    |
 
 ## Development
 

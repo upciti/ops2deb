@@ -35,8 +35,8 @@ jobs:
           ln -s /usr/lib/python-build-standalone/3.11/bin/python3.11 /usr/bin/python
           poetry install
 
-      - name: Run black
-        run: poetry run black src tests --check
+      - name: Run ruff format
+        run: poetry run ruff format --diff src tests
 
       - name: Run ruff
         run: poetry run ruff src tests

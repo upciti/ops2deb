@@ -45,7 +45,6 @@ pytest = "*"
 mypy = "*"
 taskipy = "*"
 pytest-cov = "*"
-black = "*"
 safety = "*"
 types-aiofiles = "*"
 types-PyYAML = "*"
@@ -55,28 +54,14 @@ ruff = "*"
 
 [tool.taskipy.tasks]
 check = """
-black src tests\
- && ruff src tests --fix\
+ ruff src tests --fix\
+ && ruff format src tests\
  && mypy src\
  && pytest --cov src tests\
 """
 single_binary_application = """
 pyinstaller --onefile src/ops2deb/__main__.py --name ops2deb -s
 """
-
-[tool.black]
-line-length = 90
-target_version = ['py310']
-exclude = '''
-(
-  /(
-    | \.git
-    | \.venv
-    | \.mypy_cache
-    | src/ops2deb/templates
-  )/
-)
-'''
 
 [tool.mypy]
 files = "src"
