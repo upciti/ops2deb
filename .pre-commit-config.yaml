@@ -9,9 +9,9 @@ repos:
       - id: trailing-whitespace
   - repo: local
     hooks:
-      - id: black
-        name: black
-        entry: poetry run black src tests
+      - id: ruff-format
+        name: ruff format
+        entry: poetry run ruff format src tests
         language: system
         types: [python]
         pass_filenames: false
