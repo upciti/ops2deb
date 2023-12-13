@@ -149,7 +149,9 @@ class GithubUpdateStrategy(BaseUpdateStrategy):
         latest_release = await self._get_latest_github_release(blueprint)
         if (tag_name := latest_release.get("tag_name")) is None:
             raise Ops2debUpdaterError("Failed to determine latest release version")
-        version = tag_name if not tag_name.startswith("v") else tag_name[1:]
+        version = tag_name
+        if matches := re.findall(r"\d+\.\d+\.\d+", tag_name):
+            version = matches[0]
         if Version.is_valid(version) and Version.is_valid(blueprint.version):
             version = str(max(Version.parse(version), Version.parse(blueprint.version)))
         if await self.try_version(blueprint, version) is False:

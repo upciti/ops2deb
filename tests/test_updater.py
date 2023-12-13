@@ -125,6 +125,7 @@ async def test_generic_update_strategy_finds_latest_release_version_when_version
     [
         ("https://github.com/owner/name/releases/{{version}}/some-app.tar.gz", "2.3.0"),
         ("https://github.com/owner/name/releases/v{{version}}/some-app.tar.gz", "v2.3.0"),
+        ("https://github.com/owner/name/releases/k{{version}}/some-app.tar.gz", "k2.3.0"),
     ],
 )
 async def test_github_update_strategy_should_find_expected_blueprint_release(
@@ -151,7 +152,7 @@ async def test_github_update_strategy_should_not_return_an_older_version_than_cu
 async def test_github_update_strategy_should_fail_gracefully_when_asset_not_found(
     blueprint_factory, github_app_factory
 ):
-    app = github_app_factory("someapp-v2.3.0")
+    app = github_app_factory("someapp-v2.3")
     url = "https://github.com/owner/name/releases/someapp-v{{version}}/some-app.tar.gz"
     blueprint = blueprint_factory(fetch=url)
     async with AsyncClient(app=app) as client:
