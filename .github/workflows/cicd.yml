@@ -68,7 +68,7 @@ jobs:
         shell: bash
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ops2deb_linux_amd64
           path: ops2deb_linux_amd64
@@ -80,7 +80,7 @@ jobs:
           poetry run poetry build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: distributions
           path: dist/*
