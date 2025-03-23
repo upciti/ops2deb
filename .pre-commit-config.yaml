@@ -15,9 +15,9 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-      - id: ruff
-        name: ruff
-        entry: poetry run ruff src tests --fix
+      - id: ruff-check
+        name: ruff check
+        entry: poetry run ruff check src tests --fix
         language: system
         types: [python]
         pass_filenames: false

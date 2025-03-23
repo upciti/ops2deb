@@ -93,7 +93,7 @@ async def test_generic_update_strategy_finds_latest_release_version(
     app = app_factory(versions)
 
     # When
-    async with AsyncClient(app=app) as client:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         update_strategy = GenericUpdateStrategy(client)
         latest_version = await update_strategy(blueprint)
 
@@ -112,7 +112,7 @@ async def test_generic_update_strategy_finds_latest_release_version_when_version
     app = app_factory(["2.0.0"])
 
     # When
-    async with AsyncClient(app=app) as client:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         update_strategy = GenericUpdateStrategy(client)
         latest_version = await update_strategy(blueprint)
 
@@ -133,7 +133,7 @@ async def test_github_update_strategy_should_find_expected_blueprint_release(
 ):
     app = github_app_factory(tag_name)
     blueprint = blueprint_factory(fetch=fetch_url)
-    async with AsyncClient(app=app) as client:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         update_strategy = GithubUpdateStrategy(client)
         assert await update_strategy(blueprint) == "2.3.0"
 
@@ -144,7 +144,7 @@ async def test_github_update_strategy_should_not_return_an_older_version_than_cu
     app = github_app_factory("0.1.0", versions=["1.0.0"])
     url = "https://github.com/owner/name/releases/{{version}}/some-app.tar.gz"
     blueprint = blueprint_factory(fetch=url)
-    async with AsyncClient(app=app) as client:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         update_strategy = GithubUpdateStrategy(client)
         assert await update_strategy(blueprint) == "1.0.0"
 
@@ -155,7 +155,7 @@ async def test_github_update_strategy_should_fail_gracefully_when_asset_not_foun
     app = github_app_factory("someapp-v2.3")
     url = "https://github.com/owner/name/releases/someapp-v{{version}}/some-app.tar.gz"
     blueprint = blueprint_factory(fetch=url)
-    async with AsyncClient(app=app) as client:
+    async with AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         with pytest.raises(Ops2debUpdaterError) as e:
             await GithubUpdateStrategy(client)(blueprint)
         assert "Failed to determine latest release URL" in str(e)
