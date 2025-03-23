@@ -128,7 +128,7 @@ def mock_httpx_client():
 
     def async_client_mock(**kwargs):
         kwargs.pop("transport", None)
-        return real_async_client(app=app, **kwargs)
+        return real_async_client(transport=httpx.ASGITransport(app=app), **kwargs)
 
     httpx.AsyncClient = async_client_mock
     yield

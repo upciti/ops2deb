@@ -5,6 +5,7 @@ import io
 import shutil
 import tarfile
 from pathlib import Path
+from typing import BinaryIO, Literal, Optional
 
 import unix_ar
 import zstandard
@@ -12,6 +13,47 @@ import zstandard
 from ops2deb import logger
 from ops2deb.exceptions import Ops2debExtractError
 from ops2deb.utils import log_and_raise
+
+
+# https://github.com/python/cpython/issues/81276
+class TarFile(tarfile.TarFile):
+    """Subclass of tarfile.TarFile that can read and write zstd compressed archives."""
+
+    OPEN_METH = {"zst": "zstopen"} | tarfile.TarFile.OPEN_METH  # type: ignore
+
+    @classmethod
+    def zstopen(
+        cls,
+        name: str,
+        mode: Literal["r", "w", "x"] = "r",
+        fileobj: Optional[BinaryIO] = None,
+    ) -> tarfile.TarFile:
+        if mode not in ("r", "w", "x"):
+            raise NotImplementedError(f"mode `{mode}' not implemented for zst")
+
+        if mode == "r":
+            zfobj = zstandard.open(fileobj or name, "rb")
+        else:
+            zfobj = zstandard.open(
+                fileobj or name,
+                mode + "b",
+                cctx=zstandard.ZstdCompressor(write_checksum=True, threads=-1),
+            )
+        try:
+            tarobj = cls.taropen(name, mode, zfobj)
+        except (OSError, EOFError, zstandard.ZstdError) as exc:
+            zfobj.close()
+            if mode == "r":
+                raise tarfile.ReadError("not a zst file") from exc
+            raise
+        except:
+            zfobj.close()
+            raise
+        # Setting the _extfileobj attribute is important to signal a need to
+        # close this object and thus flush the compressed stream.
+        # Unfortunately, tarfile.pyi doesn't know about it.
+        tarobj._extfileobj = False  # type: ignore
+        return tarobj
 
 
 def _unpack_gz(file_path: str, extract_path: str) -> None:
@@ -35,7 +77,7 @@ def _unpack_deb(file_path: str, extract_path: str) -> None:
         if file_name.startswith("debian-binary"):
             continue
         tarball = ar_file.open(file_name)
-        tar_file = tarfile.open(fileobj=tarball)
+        tar_file = TarFile.open(fileobj=tarball)
         try:
             tar_file.extractall(Path(extract_path) / file_name.split(".")[0])
         finally:

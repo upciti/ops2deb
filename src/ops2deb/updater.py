@@ -180,8 +180,7 @@ async def _find_latest_version(
             if version in blueprint.versions():
                 return None
             logger.info(
-                f"{blueprint.name} can be bumped "
-                f"from {blueprint.version} to {version}"
+                f"{blueprint.name} can be bumped from {blueprint.version} to {version}"
             )
             return LatestRelease(blueprint, version)
         except Ops2debUpdaterError as e:

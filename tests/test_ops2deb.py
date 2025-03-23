@@ -177,8 +177,7 @@ def test_generate__should_fail_gracefully_when_server_returns_a_404(call_ops2deb
 
     # Then
     expected_error = (
-        "Failed to download http://testserver/1.0.0/404.zip. "
-        "Server responded with 404."
+        "Failed to download http://testserver/1.0.0/404.zip. Server responded with 404."
     )
     assert expected_error in result.stderr
     assert result.exit_code == 77
