@@ -1506,18 +1506,18 @@ files = [
 
 [[package]]
 name = "safety"
-version = "3.5.0"
+version = "3.5.1"
 description = "Scan dependencies for known vulnerabilities and licenses."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "safety-3.5.0-py3-none-any.whl", hash = "sha256:b002e863e6e6bf111a1aafdf60e3a0378f8bc66221a3628c2230c7f2617c522e"},
-    {file = "safety-3.5.0.tar.gz", hash = "sha256:7223af388bde5323867eca5495f9817746289be9fd5b1896f168dc7082ea8ff1"},
+    {file = "safety-3.5.1-py3-none-any.whl", hash = "sha256:535bba9e2c274fcabc508db7005407fc348635b29e516a68bb515a686f8e03d9"},
+    {file = "safety-3.5.1.tar.gz", hash = "sha256:7fde2dbb497f2a167fe2dd864c8ab3296bbcd6e8a4f0490b047d5c84a60a653f"},
 ]
 
 [package.dependencies]
 authlib = ">=1.2.0"
-click = ">=8.0.2"
+click = ">=8.0.2,<8.2.0"
 dparse = ">=0.6.4"
 filelock = ">=3.16.1,<3.17.0"
 httpx = "*"
