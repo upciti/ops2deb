@@ -422,16 +422,14 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "dirsync"
-version = "2.2.5"
+version = "2.2.6"
 description = "Advanced directory tree synchronisation tool"
 optional = false
 python-versions = "*"
 files = [
-    {file = "dirsync-2.2.5.tar.gz", hash = "sha256:1e3a4cd2b639a2eae5afc03c2b8a003fc43d56a0da5114db579386da9a14a8be"},
+    {file = "dirsync-2.2.6-py3-none-any.whl", hash = "sha256:88fe72cfcf4d1a6ad307d40439a84e7156b5b3816f1b3ec6b6ff71528e0c807a"},
+    {file = "dirsync-2.2.6.tar.gz", hash = "sha256:53b557ec5b54bda19c155cd04d7bb935f8b4a74450985f22a9f555a0360570bc"},
 ]
-
-[package.dependencies]
-six = "*"
 
 [[package]]
 name = "dparse"
@@ -1600,17 +1598,6 @@ python-versions = ">=3.7"
 files = [
     {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
     {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
-]
-
-[[package]]
-name = "six"
-version = "1.17.0"
-description = "Python 2 and 3 compatibility utilities"
-optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-files = [
-    {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
-    {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
 ]
 
 [[package]]
