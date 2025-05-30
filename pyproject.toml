@@ -21,7 +21,7 @@ packages = [
 python = ">=3.10,<3.12"
 httpx = ">=0.20.0"
 semver = "3.0.2"
-"ruamel.yaml" = "0.18.11"
+"ruamel.yaml" = "0.18.12"
 python-debian = ">=0.1.42"
 PyYAML = "^6"
 typer = ">=0.6.1"
