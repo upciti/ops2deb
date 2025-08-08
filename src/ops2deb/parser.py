@@ -131,8 +131,13 @@ class Blueprint(Base):
         description="Url of a file (or a file per architecture) to download before "
         "running build and install instructions",
     )
+    pre_script: list[str] = Field(
+        default_factory=list, description="Build instructions, runs before install"
+    )
     install: list[HereDocument | SourceDestinationStr] = Field(default_factory=list)
-    script: list[str] = Field(default_factory=list, description="Build instructions")
+    script: list[str] = Field(
+        default_factory=list, description="Build instructions, runs after install"
+    )
 
     _uid: int = PrivateAttr()
     _index_in_configuration: int = PrivateAttr()

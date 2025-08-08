@@ -314,6 +314,29 @@ def test_generate__cwd_variable_points_to_config_directory_when_blueprint_has_a_
     assert result.exit_code == 0
 
 
+def test_generate__runs_pre_script_before_script(
+    call_ops2deb, tmp_working_directory, tmp_path
+):
+    # Given
+    configuration_0 = """\
+    - name: great-app-3
+      version: 1.0.0
+      summary: great package
+      pre_script:
+      - touch {{cwd}}/great-app
+      install:
+      - great-app:/usr/bin/great-app
+      script:
+      - mv {{src}}/usr/bin/great-app {{src}}/usr/bin/lame-app
+    """
+
+    # When
+    result = call_ops2deb("generate", configurations=[configuration_0])
+
+    # Then
+    assert result.exit_code == 0
+
+
 def test_generate__should_not_crash_when_multiple_blueprints_have_fetch_set_to_the_same_url(  # noqa: E501
     call_ops2deb, tmp_working_directory, tmp_path
 ):
