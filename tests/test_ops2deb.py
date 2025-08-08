@@ -64,7 +64,7 @@ def call_ops2deb(
         *args,
         configurations: list[str],
     ):
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         for index, configuration in enumerate(configurations):
             configuration_paths[index].write_text(dedent(configuration))
         os.environ.update(
