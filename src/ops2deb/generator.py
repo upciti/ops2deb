@@ -126,8 +126,9 @@ class SourcePackage:
             elif isinstance(entry, SourceDestinationStr):
                 self._install_source_destination_str(entry, destination)
 
-    def _run_script(self) -> None:
-        for line in self.blueprint.script:
+    def _run_script(self, pre_script: bool) -> None:
+        script = self.blueprint.pre_script if pre_script else self.blueprint.script
+        for line in script:
             line = self._render_string(line)
             logger.info(f"$ {line}")
             result = subprocess.run(line, shell=True, capture_output=True)
@@ -165,10 +166,12 @@ class SourcePackage:
         with working_directory(
             self.fetch_directory if self.blueprint.fetch else self.configuration_directory
         ):
+            # run blueprint pre_script
+            self._run_script(pre_script=True)
             # copy files / create here documents
             self._install_files()
             # run blueprint script
-            self._run_script()
+            self._run_script(pre_script=False)
 
 
 def filter_already_published_packages(
