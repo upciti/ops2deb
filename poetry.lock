@@ -1647,13 +1647,13 @@ files = [
 
 [[package]]
 name = "safety"
-version = "3.6.2"
+version = "3.7.0"
 description = "Scan dependencies for known vulnerabilities and licenses."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "safety-3.6.2-py3-none-any.whl", hash = "sha256:754f8d6068d1504503b0346cbd3cb0e67015d2abc1d842f3a4e4b662cb4f44ec"},
-    {file = "safety-3.6.2.tar.gz", hash = "sha256:2e148cd9a4ad2e387d2c142878b7b5a3a9cb9e6538167043faa1ba7023a032be"},
+    {file = "safety-3.7.0-py3-none-any.whl", hash = "sha256:65e71db45eb832e8840e3456333d44c23927423753d5610596a09e909a66d2bf"},
+    {file = "safety-3.7.0.tar.gz", hash = "sha256:daec15a393cafc32b846b7ef93f9c952a1708863e242341ab5bde2e4beabb54e"},
 ]
 
 [package.dependencies]
@@ -1666,13 +1666,11 @@ jinja2 = ">=3.1.0"
 marshmallow = ">=3.15.0"
 nltk = ">=3.9"
 packaging = ">=21.0"
-psutil = ">=6.1.0,<8.0"
 pydantic = ">=2.6.0"
 requests = "*"
 ruamel-yaml = ">=0.17.21"
 safety-schemas = "0.0.16"
-setuptools = ">=65.5.1"
-tenacity = "*"
+tenacity = ">=8.1.0"
 tomli = {version = "*", markers = "python_version < \"3.11\""}
 tomlkit = "*"
 typer = ">=0.16.0"
@@ -1716,7 +1714,7 @@ files = [
 name = "setuptools"
 version = "80.9.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
-optional = false
+optional = true
 python-versions = ">=3.9"
 files = [
     {file = "setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"},
