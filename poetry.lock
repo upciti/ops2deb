@@ -1388,13 +1388,13 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "virtualenv"]
 
 [[package]]
 name = "python-debian"
-version = "1.0.1"
+version = "1.1.0"
 description = "Modules to read and manipulate many file formats related to Debian packages and repositories"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "python-debian-1.0.1.tar.gz", hash = "sha256:3ada9b83a3d671b58081782c0969cffa0102f6ce433fbbc7cf21275b8b5cc771"},
-    {file = "python_debian-1.0.1-py3-none-any.whl", hash = "sha256:8f137c230c1d9279c2ac892b35915068b2aca090c9fd3da5671ff87af32af12c"},
+    {file = "python_debian-1.1.0-py3-none-any.whl", hash = "sha256:3e553b6d0b886272a26649e13106e33c382bcd21c80b09f5c0c81fc7c8c8c743"},
+    {file = "python_debian-1.1.0.tar.gz", hash = "sha256:afe3c7267d81c29c79ab44d803a0756d0796b0e41bb0a05c5cafcdd2b980d4e6"},
 ]
 
 [package.dependencies]
