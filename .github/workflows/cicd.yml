@@ -120,7 +120,7 @@ jobs:
           files: ops2deb_linux_amd64
 
   publish_pypi:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags')
     needs: [test_and_build]
     steps:
