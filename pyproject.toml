@@ -20,7 +20,7 @@ packages = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 httpx = ">=0.20.0"
-semver = "3.0.2"
+semver = "3.0.4"
 "ruamel.yaml" = "0.18.17"
 python-debian = ">=0.1.42"
 PyYAML = "^6"
