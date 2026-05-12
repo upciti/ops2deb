@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Load Cached Python Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .venv
           key: python-dependencies-${{ hashFiles('**/poetry.lock') }}
