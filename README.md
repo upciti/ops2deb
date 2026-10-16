@@ -147,9 +147,9 @@ description: |-
   releases of upstream applications and automatically bump application versions
   in its configuration file.
 script:
-  - poetry install -E pyinstaller
-  - poetry run task single_binary_application
-  - install -m 755 build/x86_64-unknown-linux-gnu/release/install/ops2deb {{src}}/usr/bin/
+  - uv sync --extra pyinstaller
+  - uv run task single_binary_application
+  - install -m 755 dist/ops2deb {{src}}/usr/bin/
 ```
 
 ### Building packages for multiple architectures at once
@@ -249,26 +249,23 @@ Written in YAML and composed of a single blueprint object or a list of blueprint
 
 ## Development
 
-You will need [poetry](https://python-poetry.org/), and probably [pyenv](https://github.com/pyenv/pyenv) if you don't have python 3.10 on your host.
+You will need [uv](https://docs.astral.sh/uv/), it will install the right version of python if you don't have it on your host.
 
 ```shell
-poetry install
+uv sync
 ```
 
 To run ops2deb test suite run:
 
 ```shell
-poetry run task check
+uv run task check
 ```
 
 To build a python wheel:
 
 ```shell
-poetry run poetry build
+uv build
 ```
-
-Note that the `poetry run` is important to enable [poetry-dynamic-versioning](https://github.com/mtkennerly/poetry-dynamic-versioning)
-which is installed as a dev dependency.
 
 To build a single binary application:
 
@@ -276,13 +273,13 @@ Install required build dependencies:
 
 ```shell
 sudo apt install binutils python3-dev
-poetry install -E pyinstaller
+uv sync --extra pyinstaller
 ```
 
 And run:
 
 ```shell
-poetry run task single_binary_application
+uv run task single_binary_application
 ```
 
 ## Important notes
