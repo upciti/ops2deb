@@ -1,56 +1,66 @@
-[tool.poetry]
+[project]
 name = "ops2deb"
 version = "0"
 description = "Build debian packages"
-repository = "https://github.com/upciti/ops2deb"
+authors = [{ name = "Upciti", email = "support@upciti.com" }]
+requires-python = ">=3.10,<3.12"
+readme = "README.md"
 license = "MIT"
-keywords=["Debian", "DevOps", "Automation", "Kubernetes", "APT"]
-authors = ["Upciti <support@upciti.com>"]
+license-files = ["LICENSE"]
+keywords = [
+    "Debian",
+    "DevOps",
+    "Automation",
+    "Kubernetes",
+    "APT",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Software Development :: Code Generators",
     "Typing :: Typed",
 ]
-readme = "README.md"
-packages = [
-    {include = "ops2deb", from  = "src"},
+dependencies = [
+    "httpx>=0.20.0",
+    "semver==3.0.2",
+    "ruamel.yaml==0.18.17",
+    "python-debian>=0.1.42",
+    "PyYAML>=6,<7",
+    "typer>=0.6.1",
+    "aiofiles>=0.1.9",
+    "Jinja2>=3,<4",
+    "pydantic>=2,<3",
+    "unix-ar>=0.2.1,<0.3",
+    "rich",
+    "dirsync>=2.2.5,<3",
+    "zstandard",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.12"
-httpx = ">=0.20.0"
-semver = "3.0.2"
-"ruamel.yaml" = "0.18.17"
-python-debian = ">=0.1.42"
-PyYAML = "^6"
-typer = ">=0.6.1"
-aiofiles = ">=0.1.9"
-Jinja2 = "^3"
-pydantic = "^2"
-pyinstaller = { version = "6.3.0", optional = true }
-unix-ar = "^0.2.1"
-rich = "*"
-dirsync = "^2.2.5"
-zstandard = "*"
+[project.optional-dependencies]
+pyinstaller = ["pyinstaller==6.3.0"]
 
-[tool.poetry.extras]
-pyinstaller = ["pyinstaller"]
+[project.urls]
+Repository = "https://github.com/upciti/ops2deb"
 
-[tool.poetry.scripts]
+[project.scripts]
 ops2deb = "ops2deb.cli:main"
 
-[tool.poetry.dev-dependencies]
-pytest = "*"
-mypy = "*"
-taskipy = "*"
-pytest-cov = "*"
-safety = "*"
-types-aiofiles = "*"
-types-PyYAML = "*"
-pytest-asyncio = ">=0.18.0"
-fastapi = ">= 0.100"
-ruff = "*"
+[dependency-groups]
+dev = [
+    "pytest",
+    "mypy",
+    "taskipy",
+    "pytest-cov",
+    "safety",
+    "types-aiofiles",
+    "types-PyYAML",
+    "pytest-asyncio>=0.18.0",
+    "fastapi>=0.100",
+    "ruff",
+]
 
 [tool.taskipy.tasks]
 check = """
@@ -74,8 +84,8 @@ module = ['unix_ar', "dirsync"]
 ignore_missing_imports = true
 
 [build-system]
-requires = ["poetry>=1.0.2"]
-build-backend = "poetry.masonry.api"
+requires = ["uv_build>=0.13.1,<0.14"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 90
