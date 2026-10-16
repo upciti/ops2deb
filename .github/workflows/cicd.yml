@@ -7,7 +7,7 @@ jobs:
   test_and_build:
     runs-on: ubuntu-latest
     container:
-      image: wakemeops/ubuntu:20.04
+      image: wakemeops/ubuntu:24.04
     env:
       UV_PYTHON: /usr/lib/python-build-standalone/3.11/bin/python3.11
       UV_PYTHON_DOWNLOADS: never
