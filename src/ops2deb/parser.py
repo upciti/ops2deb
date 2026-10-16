@@ -21,7 +21,6 @@ from ruamel.yaml import YAML, YAMLError  # type: ignore[attr-defined]
 from ops2deb.exceptions import Ops2debParserError
 from ops2deb.jinja import DEFAULT_GOARCH_MAP, DEFAULT_RUST_TARGET_MAP, environment
 from ops2deb.lockfile import LockFile
-from ops2deb.utils import FixIndentEmitter
 
 Architecture = Literal["all", "amd64", "arm64", "armhf"]
 
@@ -236,8 +235,6 @@ class Blueprint(Base):
 class ConfigurationFile:
     path: Path
     lockfile_path: Path
-    content: OrderedDict[str, Any] | list[OrderedDict[str, Any]]
-    yaml: YAML
     raw_blueprints: list[OrderedDict[str, Any]]
     blueprints: list[Blueprint]
     tainted: bool = False
@@ -250,7 +247,6 @@ def get_default_lockfile_path(configuration_path: Path) -> Path:
 def load_configuration_file(configuration_path: Path) -> ConfigurationFile:
     configuration_path = configuration_path.absolute()
     yaml = YAML()
-    yaml.Emitter = FixIndentEmitter
 
     try:
         with configuration_path.open("r") as fd:
@@ -286,18 +282,9 @@ def load_configuration_file(configuration_path: Path) -> ConfigurationFile:
     return ConfigurationFile(
         path=configuration_path,
         lockfile_path=lockfile_path,
-        content=content,
-        yaml=yaml,
         raw_blueprints=raw_blueprints,
         blueprints=blueprints,
     )
-
-
-def save_configuration_file(configuration_file: ConfigurationFile) -> None:
-    if configuration_file.tainted is False:
-        return
-    with configuration_file.path.open("w") as output:
-        configuration_file.yaml.dump(configuration_file.content, output)
 
 
 def load_configuration_files(
@@ -346,8 +333,6 @@ class Resources:
         return configuration_file.raw_blueprints[blueprint.index]
 
     def save(self) -> None:
-        for configuration in self.configuration_files:
-            save_configuration_file(configuration)
         for lock in self.lock_files:
             lock.save()
 

@@ -12,6 +12,7 @@ from ops2deb import logger
 from ops2deb.client import client_factory
 from ops2deb.exceptions import Ops2debError, Ops2debUpdaterError
 from ops2deb.fetcher import Fetcher
+from ops2deb.formatter import format_configuration_file
 from ops2deb.parser import Blueprint, Resources
 
 
@@ -339,6 +340,10 @@ def update(
         logger.info("Did not found any updates")
     else:
         if dry_run is False:
+            # write updated configuration files exactly like "ops2deb format" would
+            for configuration_file in resources.configuration_files:
+                if configuration_file.tainted is True:
+                    format_configuration_file(configuration_file)
             resources.save()
             logger.info("Lockfile and configuration updated")
 
