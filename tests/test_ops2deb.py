@@ -886,26 +886,34 @@ def test_update___updates_only_blueprints_listed_with_only_option(
     assert raw_blueprints_1[0]["version"] == "1.0.0"
 
 
+@pytest.mark.parametrize("max_versions", ["1", "4"])
 def test_update__should_not_produce_configuration_files_that_dont_pass_format_command(
-    call_ops2deb, configuration_paths
+    call_ops2deb, configuration_paths, max_versions
 ):
     # Given
     configuration = """\
-    name: great-app
+    name: wordy-app
     matrix:
       versions:
         - 1.0.0
         - 1.0.1
         - 1.1.0
-    summary: great package
+    homepage: HOMEPAGE
+    summary: SUMMARY
     fetch: http://testserver/{{version}}/great-app.tar.gz
     script:
       - mv great-app {{src}}/usr/bin/great-app
     """
+    # long lines are not wrapped the same way by every yaml library
+    configuration = configuration.replace(
+        "HOMEPAGE", "https://great-app.example.com/" + "very-long-path/" * 5
+    ).replace("SUMMARY", "great package that does " + "a lot of great things, " * 3)
 
     # When
     result_update = call_ops2deb(
         "update",
+        "--max-versions",
+        max_versions,
         configurations=[configuration, configuration_example_0, configuration_example_1],
     )
     result_format = call_ops2deb("format", configurations=[])
