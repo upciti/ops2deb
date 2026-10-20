@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: uv run coverage xml
 
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
 
